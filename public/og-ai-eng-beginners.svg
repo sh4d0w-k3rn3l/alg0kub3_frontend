@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="AI Engineering for Beginners — 68 lessons, 8 modules">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0f0d"/>
+      <stop offset="100%" stop-color="#0b1410"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="80%" cy="15%" r="65%">
+      <stop offset="0%" stop-color="#22c55e" stop-opacity="0.25"/>
+      <stop offset="55%" stop-color="#22c55e" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="chip" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22c55e22"/>
+      <stop offset="100%" stop-color="#22c55e05"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <!-- subtle grid -->
+  <g stroke="#1f2e25" stroke-width="1" opacity="0.5">
+    <line x1="0" y1="540" x2="1200" y2="540"/>
+    <line x1="72" y1="0" x2="72" y2="630"/>
+  </g>
+
+  <!-- Brand mark -->
+  <g transform="translate(72, 72)">
+    <rect x="0" y="0" width="32" height="32" rx="7" fill="#22c55e"/>
+    <text x="16" y="22" text-anchor="middle" font-family="Menlo, Consolas, monospace" font-size="16" font-weight="800" fill="#052e16">AK</text>
+    <text x="48" y="24" font-family="Inter, -apple-system, sans-serif" font-size="18" font-weight="700" fill="#e7f5ee">AlgoKube</text>
+  </g>
+
+  <!-- Launch pill -->
+  <g transform="translate(72, 160)">
+    <rect x="0" y="0" width="250" height="34" rx="17" fill="url(#chip)" stroke="#22c55e55" stroke-width="1"/>
+    <circle cx="18" cy="17" r="4" fill="#22c55e"/>
+    <text x="32" y="22" font-family="Inter, sans-serif" font-size="12" font-weight="700" fill="#22c55e" letter-spacing="0.12em">NOW LIVE · 68 LESSONS</text>
+  </g>
+
+  <!-- Heading -->
+  <g transform="translate(72, 232)">
+    <text x="0" y="0" font-family="Inter, sans-serif" font-size="68" font-weight="800" fill="#ffffff" letter-spacing="-0.02em">AI Engineering</text>
+    <text x="0" y="72" font-family="Inter, sans-serif" font-size="68" font-weight="800" fill="#ffffff" letter-spacing="-0.02em">for Beginners.</text>
+    <text x="0" y="136" font-family="Inter, sans-serif" font-size="34" font-weight="700" fill="#22c55e" letter-spacing="-0.015em">Zero to production — 8 modules.</text>
+  </g>
+
+  <!-- Stats row -->
+  <g transform="translate(72, 475)" font-family="Inter, sans-serif" fill="#8ea39b">
+    <!-- 68 Lessons -->
+    <text x="0" y="0" font-size="40" font-weight="800" fill="#22c55e">68</text>
+    <text x="0" y="22" font-size="11" font-weight="700" letter-spacing="0.2em">LESSONS</text>
+    <!-- 8 Modules -->
+    <text x="170" y="0" font-size="40" font-weight="800" fill="#22c55e">8</text>
+    <text x="170" y="22" font-size="11" font-weight="700" letter-spacing="0.2em">MODULES</text>
+    <!-- 85+ Diagrams -->
+    <text x="290" y="0" font-size="40" font-weight="800" fill="#22c55e">85+</text>
+    <text x="290" y="22" font-size="11" font-weight="700" letter-spacing="0.2em">DIAGRAMS</text>
+    <!-- ~8 hrs -->
+    <text x="470" y="0" font-size="40" font-weight="800" fill="#22c55e">~8h</text>
+    <text x="470" y="22" font-size="11" font-weight="700" letter-spacing="0.2em">DEEP-DIVE</text>
+  </g>
+
+  <!-- 8 module dots (right side visual) -->
+  <g transform="translate(830, 180)" opacity="0.95">
+    <!-- Row 1 -->
+    <circle cx="0"    cy="0"  r="42" fill="#0ea5e9" opacity="0.9"/>
+    <text x="0" y="6" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="800" fill="#fff">LLM</text>
+    <circle cx="100"  cy="0"  r="42" fill="#a855f7" opacity="0.9"/>
+    <text x="100" y="6" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="800" fill="#fff">PE</text>
+    <circle cx="200"  cy="0"  r="42" fill="#f59e0b" opacity="0.9"/>
+    <text x="200" y="6" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="800" fill="#1f2937">FT</text>
+    <!-- Row 2 -->
+    <circle cx="0"    cy="100" r="42" fill="#14b8a6" opacity="0.9"/>
+    <text x="0" y="106" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="800" fill="#fff">RAG</text>
+    <circle cx="100"  cy="100" r="42" fill="#ec4899" opacity="0.9"/>
+    <text x="100" y="106" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="800" fill="#fff">CE</text>
+    <circle cx="200"  cy="100" r="42" fill="#22c55e" opacity="0.95"/>
+    <text x="200" y="106" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="800" fill="#052e16">AGENT</text>
+    <!-- Row 3 -->
+    <circle cx="50"   cy="200" r="42" fill="#ef4444" opacity="0.9"/>
+    <text x="50" y="206" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="800" fill="#fff">MCP</text>
+    <circle cx="150"  cy="200" r="42" fill="#06b6d4" opacity="0.9"/>
+    <text x="150" y="206" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="800" fill="#fff">A2A·AG-UI</text>
+  </g>
+
+  <!-- Footer URL -->
+  <text x="72" y="590" font-family="Menlo, Consolas, monospace" font-size="13" fill="#8ea39b" opacity="0.85">
+    algokube.dev/ai-engineering-for-beginners
+  </text>
+</svg>

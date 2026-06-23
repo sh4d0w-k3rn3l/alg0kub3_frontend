@@ -36,8 +36,10 @@ const slugify = (s: string) =>
 // ───────────────────────────────────────────────────────────────
 // Step 1 — Upload + Generate outline
 // ───────────────────────────────────────────────────────────────
+interface UploadStatus { pdf_id: string | null; num_pages: number; filename: string; preview: string; }
+interface SectionOutline { title: string; summary?: string; page_start: number; page_end: number; lessons?: SectionOutline[]; }
 const StepUpload = ({ onOutlineReady }: { onOutlineReady: (pdfId: string, outline: Record<string, unknown>, filename: string) => void; }) => {
-  const [uploadStatus, setUploadStatus] = useState({ pdf_id: null, num_pages: 0, filename: '', preview: '' });
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>({ pdf_id: null, num_pages: 0, filename: '', preview: '' });
   const [uploading, setUploading] = useState<boolean>(false);
   const [outlining, setOutlining] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -63,7 +65,7 @@ const StepUpload = ({ onOutlineReady }: { onOutlineReady: (pdfId: string, outlin
       const res = await api.post<Record<string, unknown>>('/admin/pdf-to-course/upload', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setUploadStatus(res.data);
+      setUploadStatus(res.data as unknown as UploadStatus);
     } catch (e) {
       setError((e as ApiError).detail || 'Upload failed');
     } finally {
@@ -76,7 +78,7 @@ const StepUpload = ({ onOutlineReady }: { onOutlineReady: (pdfId: string, outlin
     setOutlining(true);
     setError('');
     try {
-      const res = await api.post('/admin/pdf-to-course/outline', {
+      const res = await api.post<Record<string, unknown>>('/admin/pdf-to-course/outline', {
         pdf_id: uploadStatus.pdf_id,
         audience,
         section_count: sectionCount,
@@ -84,7 +86,7 @@ const StepUpload = ({ onOutlineReady }: { onOutlineReady: (pdfId: string, outlin
         focus_areas: focusAreas,
         content_style: contentStyle,
       });
-      onOutlineReady(uploadStatus.pdf_id, res.data, uploadStatus.filename);
+      onOutlineReady(uploadStatus.pdf_id as string, res.data, uploadStatus.filename);
     } catch (e) {
       setError((e as ApiError).detail || 'Outline generation failed');
     } finally {
@@ -233,36 +235,46 @@ const StepUpload = ({ onOutlineReady }: { onOutlineReady: (pdfId: string, outlin
 // Step 2 — Review outline & generate course
 // ───────────────────────────────────────────────────────────────
 const StepReview = ({ pdfId, filename, outline, onGenerated, onBack }: { pdfId: string; filename: string; outline: Record<string, unknown>; onGenerated: (info: Record<string, unknown>) => void; onBack: () => void; }) => {
-  const [title, setTitle] = useState(outline.title || '');
-  const [slug, setSlug] = useState(slugify(outline.title || ''));
-  const [description, setDescription] = useState(outline.description || '');
-  const [category, setCategory] = useState(CATEGORIES.includes(outline.category) ? outline.category : 'Programming Languages');
-  const [language, setLanguage] = useState(outline.language && LANGUAGES.find((l) => l.value === outline.language) ? outline.language : 'python');
-  const [sections, setSections] = useState(outline.sections || []);
+  const rawTitle = (outline.title as string) || '';
+  const rawDescription = (outline.description as string) || '';
+  const rawCategory = (outline.category as string) || '';
+  const rawLanguage = (outline.language as string) || '';
+  const rawSections = (outline.sections as Record<string, unknown>[]) || [];
+  const [title, setTitle] = useState(rawTitle);
+  const [slug, setSlug] = useState(slugify(rawTitle));
+  const [description, setDescription] = useState(rawDescription);
+  const [category, setCategory] = useState(CATEGORIES.includes(rawCategory) ? rawCategory : 'Programming Languages');
+  const [language, setLanguage] = useState(rawLanguage && LANGUAGES.find((l) => l.value === rawLanguage) ? rawLanguage : 'python');
+  const [sections, setSections] = useState<Record<string, unknown>[]>(rawSections);
   const [openSection, setOpenSection] = useState<number>(0);
   const [generating, setGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
-  const totalLessons = sections.reduce((a: number, s: Record<string, unknown>) => a + ((s.lessons as unknown[])?.length || 0), 0);
+  const totalLessons = sections.reduce((a: number, s: Record<string, unknown>) => a + (((s.lessons as unknown[]) || [])?.length || 0), 0);
+
+  const getLessons = (sec: Record<string, unknown>): Record<string, unknown>[] =>
+    (sec.lessons as Record<string, unknown>[]) || [];
 
   const updateLesson = (sIdx: number, lIdx: number, patch: Record<string, unknown>) => {
     const next = [...sections];
-    next[sIdx] = { ...next[sIdx], lessons: [...(next[sIdx].lessons || [])] };
-    next[sIdx].lessons[lIdx] = { ...next[sIdx].lessons[lIdx], ...patch };
+    const lessons = [...getLessons(next[sIdx])];
+    lessons[lIdx] = { ...lessons[lIdx], ...patch };
+    next[sIdx] = { ...next[sIdx], lessons };
     setSections(next);
   };
   const removeLesson = (sIdx: number, lIdx: number) => {
     const next = [...sections];
-    next[sIdx] = { ...next[sIdx], lessons: [...(next[sIdx].lessons || [])] };
-    next[sIdx].lessons.splice(lIdx, 1);
+    const lessons = getLessons(next[sIdx]).filter((_, i) => i !== lIdx);
+    next[sIdx] = { ...next[sIdx], lessons };
     setSections(next);
   };
   const addLesson = (sIdx: number) => {
     const next = [...sections];
-    next[sIdx] = { ...next[sIdx], lessons: [...(next[sIdx].lessons || [])] };
-    const lastLesson = next[sIdx].lessons.at(-1);
-    const p = lastLesson?.page_end || 1;
-    next[sIdx].lessons.push({ title: 'New Lesson', summary: '', page_start: p, page_end: p + 2 });
+    const lessons = [...getLessons(next[sIdx])];
+    const lastLesson = lessons.at(-1) as Record<string, unknown> | undefined;
+    const p = (lastLesson?.page_end as number) || 1;
+    lessons.push({ title: 'New Lesson', summary: '', page_start: p, page_end: p + 2 });
+    next[sIdx] = { ...next[sIdx], lessons };
     setSections(next);
   };
   const updateSection = (sIdx: number, patch: Record<string, unknown>) => {
@@ -275,7 +287,7 @@ const StepReview = ({ pdfId, filename, outline, onGenerated, onBack }: { pdfId: 
   };
 
   const handleGenerate = async () => {
-    if (!title.trim() || !slug.trim()) {
+    if (!(title as string).trim() || !(slug as string).trim()) {
       setError('Title and slug are required');
       return;
     }
@@ -295,10 +307,10 @@ const StepReview = ({ pdfId, filename, outline, onGenerated, onBack }: { pdfId: 
         language,
         audience: 'Beginner',
         content_style: 'mixed',
-          sections: sections.map((s: Record<string, unknown>) => ({
-            title: s.title as string,
-            lessons: ((s.lessons as unknown[]) || []).map((l: Record<string, unknown>) => ({
-            title: l.title as string,
+        sections: sections.map((s: Record<string, unknown>) => ({
+          title: (s.title as string) || '',
+          lessons: (getLessons(s) || []).map((l: Record<string, unknown>) => ({
+            title: (l.title as string) || '',
             summary: (l.summary as string) || '',
             page_start: Math.max(1, parseInt(l.page_start as string) || 1),
             page_end: Math.max(parseInt(l.page_start as string) || 1, parseInt(l.page_end as string) || 1),
@@ -379,7 +391,9 @@ const StepReview = ({ pdfId, filename, outline, onGenerated, onBack }: { pdfId: 
       </div>
 
       <div className="space-y-3 mb-6" data-testid="review-outline-sections">
-        {sections.map((sec: Record<string, unknown>, sIdx: number) => (
+        {sections.map((sec: Record<string, unknown>, sIdx: number) => {
+          const secLessons = (sec.lessons as Record<string, unknown>[]) || [];
+          return (
           <div key={sIdx} className="bg-[#0d1117] border border-[#2d333b] rounded-lg">
             <div className="flex items-center gap-2 p-3 border-b border-[#1e2533]">
               <button onClick={() => setOpenSection(openSection === sIdx ? -1 : sIdx)} className="text-[#8b949e]">
@@ -387,23 +401,23 @@ const StepReview = ({ pdfId, filename, outline, onGenerated, onBack }: { pdfId: 
               </button>
               <input
                 data-testid={`section-title-${sIdx}`}
-                value={sec.title}
+                value={(sec.title as string) || ''}
                 onChange={(e) => updateSection(sIdx, { title: e.target.value })}
                 className="flex-1 bg-transparent text-white font-medium text-sm focus:outline-none"
               />
-              <span className="text-[#8b949e] text-xs">{(sec.lessons || []).length} lessons</span>
+              <span className="text-[#8b949e] text-xs">{secLessons.length} lessons</span>
               <button onClick={() => removeSection(sIdx)} className="text-[#8b949e] hover:text-[#ef4444] p-1" data-testid={`remove-section-${sIdx}`}>
                 <Trash2 size={14} />
               </button>
             </div>
             {openSection === sIdx && (
               <div className="p-3 space-y-2">
-                {(sec.lessons as unknown[] || []).map((lesson: Record<string, unknown>, lIdx: number) => (
+                {secLessons.map((lesson: Record<string, unknown>, lIdx: number) => (
                   <div key={lIdx} className="bg-[#161b22] border border-[#1e2533] rounded p-2">
                     <div className="flex items-center gap-2">
                       <input
                         data-testid={`lesson-title-${sIdx}-${lIdx}`}
-                        value={lesson.title}
+                        value={(lesson.title as string) || ''}
                         onChange={(e) => updateLesson(sIdx, lIdx, { title: e.target.value })}
                         className="flex-1 bg-[#0d1117] border border-[#2d333b] rounded px-2 py-1.5 text-white text-sm focus:border-[#22c55e] outline-none"
                         placeholder="Lesson title"
@@ -412,14 +426,14 @@ const StepReview = ({ pdfId, filename, outline, onGenerated, onBack }: { pdfId: 
                         <span>pp</span>
                         <input
                           type="number" min="1"
-                          value={lesson.page_start}
+                          value={(lesson.page_start as number) || 1}
                           onChange={(e) => updateLesson(sIdx, lIdx, { page_start: parseInt(e.target.value) || 1 })}
                           className="w-14 bg-[#0d1117] border border-[#2d333b] rounded px-1.5 py-1 text-white text-xs focus:border-[#22c55e] outline-none"
                         />
                         <span>–</span>
                         <input
                           type="number" min="1"
-                          value={lesson.page_end}
+                          value={(lesson.page_end as number) || 1}
                           onChange={(e) => updateLesson(sIdx, lIdx, { page_end: parseInt(e.target.value) || 1 })}
                           className="w-14 bg-[#0d1117] border border-[#2d333b] rounded px-1.5 py-1 text-white text-xs focus:border-[#22c55e] outline-none"
                         />
@@ -428,9 +442,9 @@ const StepReview = ({ pdfId, filename, outline, onGenerated, onBack }: { pdfId: 
                         <Trash2 size={12} />
                       </button>
                     </div>
-                    {lesson.summary && (
+                    {!!(lesson.summary as string) && (
                       <input
-                        value={lesson.summary}
+                        value={(lesson.summary as string) || ''}
                         onChange={(e) => updateLesson(sIdx, lIdx, { summary: e.target.value })}
                         className="mt-1.5 w-full bg-transparent text-[#8b949e] text-xs focus:outline-none"
                       />
@@ -443,7 +457,8 @@ const StepReview = ({ pdfId, filename, outline, onGenerated, onBack }: { pdfId: 
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="flex items-center gap-3">
@@ -453,7 +468,7 @@ const StepReview = ({ pdfId, filename, outline, onGenerated, onBack }: { pdfId: 
         <button
           data-testid="pdf-generate-course-btn"
           onClick={handleGenerate}
-          disabled={generating || !title.trim() || !slug.trim() || totalLessons === 0}
+          disabled={generating || !(title as string).trim() || !(slug as string).trim() || totalLessons === 0}
           className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-[#22c55e] to-[#06b6d4] text-white font-medium px-4 py-2.5 rounded-md text-sm disabled:opacity-50 transition-opacity hover:opacity-90"
         >
           {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating course…</> : <><Sparkles className="w-4 h-4" /> Generate {totalLessons} Lessons from PDF</>}
@@ -472,9 +487,10 @@ const StepReview = ({ pdfId, filename, outline, onGenerated, onBack }: { pdfId: 
 // ───────────────────────────────────────────────────────────────
 // Step 3 — Progress
 // ───────────────────────────────────────────────────────────────
+interface StatusState { total_lessons: number; completed_lessons: number; progress_percent: number; current_lesson: string; failed_lessons: unknown[]; status: string; }
 const StepProgress = ({ courseInfo, onDone }: { courseInfo: Record<string, unknown>; onDone: (info: Record<string, unknown>) => void; }) => {
-  const [status, setStatus] = useState({
-    total_lessons: courseInfo.total_lessons || 0,
+  const [status, setStatus] = useState<StatusState>({
+    total_lessons: (courseInfo.total_lessons as number) || 0,
     completed_lessons: 0,
     progress_percent: 0,
     current_lesson: '',
@@ -488,7 +504,7 @@ const StepProgress = ({ courseInfo, onDone }: { courseInfo: Record<string, unkno
         signal,
       });
       if (signal?.aborted) return null;
-      setStatus(res.data);
+      setStatus(res.data as unknown as StatusState);
       return res.data.status;
     } catch (err) {
       if ((err as DOMException)?.name === 'AbortError') return null;
@@ -587,7 +603,7 @@ const PDFCourseCreator = () => {
         {step === 0 && (
           <StepUpload onOutlineReady={(id, o, fn) => { setPdfId(id); setOutline(o); setFilename(fn); setStep(1); }} />
         )}
-        {step === 1 && outline && (
+        {step === 1 && outline && pdfId && (
           <StepReview
             pdfId={pdfId} filename={filename} outline={outline}
             onGenerated={(info) => { setCourseInfo(info); setStep(2); }}

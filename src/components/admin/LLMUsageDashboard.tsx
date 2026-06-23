@@ -25,7 +25,7 @@ const StatCard = ({ icon: Icon, label, value, sub, color }: { icon: React.Compon
     style={{ backgroundColor: '#161b22' }}
   >
     <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3" style={{ backgroundColor: `${color}18` }}>
-      <Icon size={18} style={{ color }} />
+      <span style={{ color }}><Icon size={18} /></span>
     </div>
     <p className="text-2xl font-bold text-white">{value}</p>
     <p className="text-xs text-[#8b949e] mt-1">{label}</p>
@@ -166,12 +166,12 @@ const LLMUsageDashboard = () => {
     );
   }
 
-  const t = stats?.totals || {};
+  const t = (stats?.totals as Record<string, unknown>) ?? {};
   const daily = stats?.daily || [];
   const byProvider = stats?.by_provider || [];
   const byFeature = stats?.by_feature || [];
   const byKey = stats?.by_key || [];
-  const isEmpty = t.total_calls === 0;
+  const isEmpty = (t.total_calls as number) === 0;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#0d1117' }}>
@@ -227,9 +227,9 @@ const LLMUsageDashboard = () => {
         {!isEmpty && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <StatCard icon={Hash} label="Total API Calls" value={fmt(t.total_calls)} color="#3b82f6" />
-              <StatCard icon={Zap} label="Total Tokens" value={fmt(t.total_tokens)} sub={`${fmt(t.total_input_tokens)} in / ${fmt(t.total_output_tokens)} out`} color="#f59e0b" />
-              <StatCard icon={DollarSign} label="Estimated Cost" value={fmtCost(t.total_cost)} color="#22c55e" />
+              <StatCard icon={Hash} label="Total API Calls" value={fmt(t.total_calls as number)} color="#3b82f6" />
+              <StatCard icon={Zap} label="Total Tokens" value={fmt(t.total_tokens as number)} sub={`${fmt(t.total_input_tokens as number)} in / ${fmt(t.total_output_tokens as number)} out`} color="#f59e0b" />
+              <StatCard icon={DollarSign} label="Estimated Cost" value={fmtCost(t.total_cost as number)} color="#22c55e" />
               <StatCard icon={Activity} label="Active Keys" value={byKey.length} sub={`${byProvider.length} providers`} color="#8b5cf6" />
             </div>
 
@@ -389,7 +389,7 @@ const LLMUsageDashboard = () => {
                     <YAxis tick={{ fontSize: 10, fill: '#484f58' }} allowDecimals={false} />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#161b22', border: '1px solid #2d333b', borderRadius: 8, fontSize: 12 }}
-                      formatter={(val: number, name: string) => [name === 'cost' ? fmtCost(val) : fmt(val), name === 'calls' ? 'Calls' : name === 'tokens' ? 'Tokens' : 'Cost'] as [string, string]}
+                      formatter={((val: number, name: string) => [name === 'cost' ? fmtCost(val) : fmt(val), name === 'calls' ? 'Calls' : name === 'tokens' ? 'Tokens' : 'Cost'] as [string, string]) as any}
                     />
                     <Area type="monotone" dataKey="calls" stroke="#3b82f6" fill="url(#usageG)" strokeWidth={2} />
                   </AreaChart>
@@ -414,7 +414,7 @@ const LLMUsageDashboard = () => {
                         </Pie>
                         <Tooltip
                           contentStyle={{ backgroundColor: '#161b22', border: '1px solid #2d333b', borderRadius: 8, fontSize: 12 }}
-                          formatter={(val: number) => [fmtCost(val), 'Cost'] as [string, string]}
+                          formatter={((val: number) => [fmtCost(val), 'Cost'] as [string, string]) as any}
                         />
                       </PieChart>
                     </ResponsiveContainer>
@@ -444,7 +444,7 @@ const LLMUsageDashboard = () => {
                     <YAxis dataKey="label" type="category" tick={{ fontSize: 10, fill: '#8b949e' }} width={120} />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#161b22', border: '1px solid #2d333b', borderRadius: 8, fontSize: 12 }}
-                      formatter={(val: number, name: string) => [name === 'cost' ? fmtCost(val) : fmt(val), name === 'calls' ? 'Calls' : 'Cost'] as [string, string]}
+                      formatter={((val: number, name: string) => [name === 'cost' ? fmtCost(val) : fmt(val), name === 'calls' ? 'Calls' : 'Cost'] as [string, string]) as any}
                     />
                     <Bar dataKey="calls" fill="#3b82f6" radius={[0, 4, 4, 0]} />
                   </BarChart>

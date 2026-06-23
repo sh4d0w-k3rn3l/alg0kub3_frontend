@@ -201,7 +201,7 @@ const BackupRestore = () => {
                       <p className="text-sm font-medium text-[#c9d1d9]">{backup.folder}</p>
                       <p className="text-xs text-[#8b949e] mt-0.5">
                         <Clock size={10} className="inline mr-1" />
-                        {formatDate(backup.created_at || backup.timestamp)}
+                        {formatDate((backup.created_at || backup.timestamp) ?? '')}
                       </p>
                     </div>
                   </button>

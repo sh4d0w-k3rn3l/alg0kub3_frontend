@@ -52,13 +52,13 @@ const RecommendedCourses: React.FC<RecommendedCoursesProps> = ({ excludeSlug = n
 
       <div className={`grid gap-3 ${recs.length > 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'}`}>
         {recs.map((course: Record<string, unknown>) => {
-          const Icon = COURSE_ICONS?.[course.slug] || BookOpen;
-          const color = COURSE_COLORS?.[course.slug] || colors.green;
+          const Icon = COURSE_ICONS?.[course.slug as string] || BookOpen;
+          const color = COURSE_COLORS?.[course.slug as string] || colors.green;
           return (
             <button
-              key={course.id}
-              data-testid={`rec-${course.slug}`}
-              onClick={() => router.push(`/course/${course.slug}`)}
+              key={course.id as string}
+              data-testid={`rec-${course.slug as string}`}
+              onClick={() => router.push(`/course/${course.slug as string}`)}
               className="flex items-center gap-3.5 p-3.5 rounded-xl text-left transition-all group border"
               style={{ borderColor: colors.borderLight, backgroundColor: 'transparent' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = color; e.currentTarget.style.backgroundColor = `${color}08`; }}
@@ -68,9 +68,9 @@ const RecommendedCourses: React.FC<RecommendedCoursesProps> = ({ excludeSlug = n
                 <Icon size={18} style={{ color }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate" style={{ color: colors.text }}>{course.title}</p>
+                <p className="text-sm font-semibold truncate" style={{ color: colors.text }}>{course.title as string}</p>
                 <p className="text-xs mt-0.5" style={{ color: colors.textMuted }}>
-                  {course.section_count || 0} sections &middot; {course.lesson_count || 0} lessons
+                  {(course.section_count as number) || 0} sections &middot; {(course.lesson_count as number) || 0} lessons
                 </p>
               </div>
               <ChevronRight size={14} className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color }} />

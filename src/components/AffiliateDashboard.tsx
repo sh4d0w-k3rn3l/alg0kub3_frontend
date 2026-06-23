@@ -7,12 +7,63 @@ import { api, ApiError } from '@/lib/api';
 import { showError, showSuccess } from '@/lib/toast';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft, Link2, Copy, Check, TrendingUp, Users, MousePointerClick,
-  DollarSign, Loader2, ExternalLink, Gift, Award, ChevronRight,
+  ArrowLeft, Link2, Copy, Check, Users, MousePointerClick,
+  DollarSign, Loader2, Gift, Award,
   BarChart3, Wallet, Clock, CheckCircle, XCircle, ArrowUpRight,
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import PageHeader from '@/components/PageHeader';
+
+interface AffiliateInfo {
+  affiliate_code: string;
+  status: string;
+}
+
+interface AffiliateSettings {
+  commission_rate: number;
+  cookie_days: number;
+  min_payout: number;
+}
+
+interface AffiliateStats {
+  clicks: number;
+  signups: number;
+  conversion_rate: number;
+  total_earned: number;
+  pending_earnings: number;
+}
+
+interface CommissionItem {
+  id: string;
+  status: string;
+  payment_amount: number;
+  commission_rate: number;
+  created_at: string;
+  amount: number;
+}
+
+interface PayoutItem {
+  id: string;
+  amount: number;
+  created_at: string;
+  status: string;
+}
+
+interface ChartPoint {
+  date: string;
+  clicks: number;
+  conversions: number;
+}
+
+interface AffiliateDashboardData {
+  is_affiliate: boolean;
+  affiliate: AffiliateInfo;
+  stats: AffiliateStats;
+  commissions: CommissionItem[];
+  payouts: PayoutItem[];
+  chart: ChartPoint[];
+  settings: AffiliateSettings;
+}
 
 const StatCard = ({ icon: Icon, label, value, sub, color }: { icon: React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>; label: string; value: React.ReactNode; sub?: string; color: string }) => (
   <div className="rounded-xl border border-[#2d333b] p-4" style={{ backgroundColor: '#161b22' }}>
@@ -33,7 +84,7 @@ const STATUS_STYLES: Record<string, { color: string; bg: string; icon: React.Com
 };
 
 const AffiliateDashboard = () => {
-  const [data, setData] = useState<Record<string, unknown> | null>(null);
+  const [data, setData] = useState<AffiliateDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState('');
@@ -43,7 +94,7 @@ const AffiliateDashboard = () => {
   const router = useRouter();
 
   const fetchDashboard = useCallback((signal?: AbortSignal) => {
-    api.get<Record<string, unknown>>('/affiliate/my-dashboard', { signal })
+    api.get<AffiliateDashboardData>('/affiliate/my-dashboard', { signal })
       .then(res => {
         if (signal?.aborted) return;
         setData(res.data);
@@ -70,7 +121,7 @@ const AffiliateDashboard = () => {
       });
       fetchDashboard();
     } catch (err) {
-      showError(err instanceof ApiError ? err.detail : (err as Error)?.message || 'Failed to apply');
+      showError(err instanceof ApiError ? err.detail : err instanceof Error ? err.message : 'Failed to apply');
     } finally {
       setApplying(false);
     }
@@ -90,7 +141,7 @@ const AffiliateDashboard = () => {
       showSuccess(res.data.message);
       fetchDashboard();
     } catch (err) {
-      showError(err instanceof ApiError ? err.detail : (err as Error)?.message || 'Payout request failed');
+      showError(err instanceof ApiError ? err.detail : err instanceof Error ? err.message : 'Payout request failed');
     } finally {
       setRequesting(false);
     }
@@ -245,7 +296,7 @@ const AffiliateDashboard = () => {
               <p className="text-sm text-[#484f58] text-center py-6">No commissions yet. Share your link to start earning!</p>
             ) : (
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {commissions.map((c: Record<string, unknown>) => {
+                {commissions.map((c: CommissionItem) => {
                   const st = STATUS_STYLES[c.status] || STATUS_STYLES.pending;
                   const StIcon = st.icon;
                   return (
@@ -271,7 +322,7 @@ const AffiliateDashboard = () => {
               <p className="text-sm text-[#484f58] text-center py-6">No payouts yet.</p>
             ) : (
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {payouts.map((p: Record<string, unknown>) => {
+                {payouts.map((p: PayoutItem) => {
                   const st = STATUS_STYLES[p.status] || STATUS_STYLES.pending;
                   return (
                     <div key={p.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[#2d333b]" style={{ backgroundColor: '#0d1117' }}>

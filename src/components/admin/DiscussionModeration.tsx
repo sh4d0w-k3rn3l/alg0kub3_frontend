@@ -109,22 +109,22 @@ const DiscussionModeration = () => {
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             <div className="border border-[#2d333b] rounded-xl p-4" style={{ backgroundColor: '#161b22' }}>
-              <div className="text-2xl font-bold text-white">{stats.total_comments}</div>
+              <div className="text-2xl font-bold text-white">{(stats.total_comments as number)}</div>
               <div className="text-xs text-[#8b949e]">Total Comments</div>
             </div>
             <div className="border border-[#2d333b] rounded-xl p-4" style={{ backgroundColor: '#161b22' }}>
-              <div className="text-2xl font-bold text-[#22c55e]">{stats.today_comments}</div>
+              <div className="text-2xl font-bold text-[#22c55e]">{(stats.today_comments as number)}</div>
               <div className="text-xs text-[#8b949e]">Today</div>
             </div>
             <div className="border border-[#2d333b] rounded-xl p-4 col-span-2 md:col-span-1" style={{ backgroundColor: '#161b22' }}>
               <div className="text-xs text-[#8b949e] mb-2 flex items-center gap-1"><BarChart3 size={12} /> Top Discussed</div>
-              {(stats.top_lessons || []).slice(0, 3).map((l: Record<string, unknown>, i: number) => (
+              {((stats.top_lessons as Record<string, unknown>[]) ?? []).slice(0, 3).map((l, i) => (
                 <div key={i} className="flex items-center justify-between text-xs py-0.5">
-                  <span className="text-[#c9d1d9] truncate max-w-[160px]">{l.lesson_slug}</span>
-                  <span className="text-[#22c55e] font-mono">{l.count}</span>
+                  <span className="text-[#c9d1d9] truncate max-w-[160px]">{(l.lesson_slug as string)}</span>
+                  <span className="text-[#22c55e] font-mono">{(l.count as number)}</span>
                 </div>
               ))}
-              {(!stats.top_lessons || stats.top_lessons.length === 0) && (
+              {!((stats.top_lessons as Record<string, unknown>[])?.length) && (
                 <p className="text-xs text-[#484f58]">No data</p>
               )}
             </div>
@@ -169,23 +169,23 @@ const DiscussionModeration = () => {
           ) : (
             <div className="divide-y divide-[#2d333b]">
               {comments.map(c => (
-                <div key={c.id} data-testid={`admin-comment-${c.id}`} className="p-4 hover:bg-[#1c2129] transition-colors">
+                <div key={(c.id as string)} data-testid={`admin-comment-${c.id as string}`} className="p-4 hover:bg-[#1c2129] transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="text-sm font-semibold text-[#c9d1d9]">{c.user_name}</span>
-                        <span className="text-xs text-[#484f58]">{timeAgo(c.created_at)}</span>
-                        {c.parent_id && (
+                        <span className="text-sm font-semibold text-[#c9d1d9]">{(c.user_name as string)}</span>
+                        <span className="text-xs text-[#484f58]">{timeAgo(c.created_at as string)}</span>
+                        {(c.parent_id as string) && (
                           <span className="text-xs px-1.5 py-0.5 rounded bg-[#3b82f620] text-[#3b82f6]">Reply</span>
                         )}
-                        <span className="text-xs text-[#484f58] truncate max-w-[180px]">on {c.lesson_slug}</span>
+                        <span className="text-xs text-[#484f58] truncate max-w-[180px]">on {(c.lesson_slug as string)}</span>
                       </div>
-                      <p className="text-sm text-[#8b949e] break-words line-clamp-2">{c.content}</p>
+                      <p className="text-sm text-[#8b949e] break-words line-clamp-2">{(c.content as string)}</p>
                     </div>
                     <button
-                      data-testid={`admin-delete-${c.id}`}
-                      onClick={() => handleDelete(c.id)}
-                      disabled={deleting === c.id}
+                      data-testid={`admin-delete-${c.id as string}`}
+                      onClick={() => handleDelete(c.id as string)}
+                      disabled={deleting === (c.id as string)}
                       className="flex-shrink-0 p-2 rounded-lg text-red-400 hover:bg-red-400/10 transition-colors disabled:opacity-40"
                     >
                       {deleting === c.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}

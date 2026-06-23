@@ -80,9 +80,9 @@ const UserDashboard = () => {
         if (ac.signal.aborted) return;
         setDashboard(dashRes.data);
         const rawCourses = 'courses' in coursesRes.data ? coursesRes.data.courses : (coursesRes.data as Record<string, unknown>[]) || [];
-        setAllCourses(rawCourses.filter((c: Record<string, unknown>) => (c.lesson_count ?? 0) > 0));
-        setContinueCourses(continueRes.data?.courses || []);
-        setBookmarks(bookmarksRes.data?.bookmarks || []);
+        setAllCourses(rawCourses.filter((c: Record<string, unknown>) => ((c.lesson_count as number) ?? 0) > 0) as unknown as Course[]);
+        setContinueCourses(continueRes.data?.courses as unknown as ContinueCourse[] || []);
+        setBookmarks(bookmarksRes.data?.bookmarks as unknown as BookmarkItem[] || []);
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
       }

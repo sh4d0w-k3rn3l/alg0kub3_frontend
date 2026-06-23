@@ -26,16 +26,26 @@ mermaid.initialize({ startOnLoad: false, theme: 'dark', themeVariables: {
 
 /* ── Type Definitions ── */
 interface StepData { id: string; status: string; title?: string; description?: string; tips?: Record<string, unknown>[]; [key: string]: unknown }
-interface SessionData { session_id?: string; steps?: StepData[]; experience_level?: string; answers?: Record<string, unknown>; final_evaluation?: Record<string, unknown>; timer_started_at?: string; examples?: Record<string, unknown>; guidelines?: Record<string, unknown>; passed?: boolean; problem_title?: string; difficulty?: string; [key: string]: unknown }
+interface StepGuidelines {
+  goal?: string;
+  duration?: string;
+  tips?: { icon: string; title: string; text: string }[];
+  fr_placeholder?: string;
+  nfr_placeholder?: string;
+  requirements?: string[];
+}
+interface SessionData { session_id?: string; steps?: StepData[]; experience_level?: string; answers?: Record<string, Record<string, unknown>>; final_evaluation?: Record<string, unknown>; timer_started_at?: string; examples?: Record<string, unknown>; guidelines?: Record<string, StepGuidelines>; passed?: boolean; problem_title?: string; difficulty?: string; [key: string]: unknown }
 interface Entity { name: string; description: string }
-interface AttrDef { name?: string; type?: string; visibility?: string; [key: string]: unknown }
-interface MethodDef { name?: string; return_type?: string; visibility?: string; params?: string; [key: string]: unknown }
+interface AttrDef { name: string; type?: string; access?: string; [key: string]: unknown }
+interface MethodDef { name: string; returnType?: string; access?: string; params?: string; visibility?: string; [key: string]: unknown }
 interface ClassDef { name: string; type: string; attributes?: AttrDef[]; methods?: MethodDef[]; [key: string]: unknown }
+interface PatternDef { name: string; reason: string }
 interface FileDef { name: string; content: string }
 interface AiMessage { role: string; text: string }
 interface UndoItem<T = unknown> { type: string; text: string; index: number; data?: T }
 interface FeedbackItem { type: string; text?: string; title?: string; description?: string; status?: string; [key: string]: unknown }
 interface FinalEvalData { overall_score?: number; passed?: boolean; summary?: string; did_well?: string[]; categories?: Record<string, { score?: number; feedback?: FeedbackItem[] }>; status?: string; [key: string]: unknown }
+interface FeedbackStepData { score?: number; did_well?: string[]; improve?: string[]; [key: string]: unknown }
 
 /* ── Mermaid UML Diagram Component ── */
 const ACCESS_SYMBOLS: Record<string, string> = { private: '-', public: '+', protected: '#' };
@@ -44,7 +54,8 @@ const REL_ARROWS: Record<string, string> = {
   aggregation: 'o--', association: '-->', dependency: '..>',
 };
 
-function buildMermaidSyntax(classes: ClassDef[], relationships: Record<string, unknown>[]) {
+interface MermaidRelation { from_class: string; to_class: string; relationship: string; }
+function buildMermaidSyntax(classes: ClassDef[], relationships: MermaidRelation[]) {
   const lines = ['classDiagram'];
   for (const cls of classes) {
     const safeName = cls.name.replace(/[^a-zA-Z0-9_]/g, '_');
@@ -53,11 +64,11 @@ function buildMermaidSyntax(classes: ClassDef[], relationships: Record<string, u
     if (hasMembers) {
       lines.push(`  class ${safeName} {`);
       for (const a of (cls.attributes || [])) {
-        const sym = ACCESS_SYMBOLS[a.access] || '-';
+        const sym = ACCESS_SYMBOLS[a.access || ''] || '-';
         lines.push(`    ${sym}${a.type || 'Object'} ${a.name}`);
       }
       for (const m of (cls.methods || [])) {
-        const sym = ACCESS_SYMBOLS[m.access] || '+';
+        const sym = ACCESS_SYMBOLS[m.access || ''] || '+';
         lines.push(`    ${sym}${m.name}(${m.params || ''}) ${m.returnType || 'void'}`);
       }
       lines.push('  }');
@@ -78,7 +89,7 @@ function buildMermaidSyntax(classes: ClassDef[], relationships: Record<string, u
   return lines.join('\n');
 }
 
-const MermaidDiagram = ({ classes, relationships }: { classes: ClassDef[]; relationships: Record<string, unknown>[] }) => {
+const MermaidDiagram = ({ classes, relationships }: { classes: ClassDef[]; relationships: MermaidRelation[] }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -284,7 +295,7 @@ const Sidebar = ({ session, activeStep, sidebarTab, setSidebarTab, aiQuestion, s
                 {guidelines.duration && (
                   <div className="flex items-center gap-2 mb-4 text-xs text-[#8b949e]"><Clock size={12} /> Duration: ~{guidelines.duration}</div>
                 )}
-                {guidelines.tips?.map((tip: Record<string, unknown>, i: number) => {
+                {guidelines.tips?.map((tip, i) => {
                   const Icon = STEP_ICONS[tip.icon] || Target;
                   return (
                     <div key={i} className="flex gap-2.5 mb-3">
@@ -336,10 +347,10 @@ const Sidebar = ({ session, activeStep, sidebarTab, setSidebarTab, aiQuestion, s
 /* ────────── Step 1: Requirements Gathering ────────── */
 const RequirementsStep = ({ session, onSave }: { session: SessionData; onSave: (data: Record<string, unknown>) => void }) => {
   const guidelines = session?.guidelines?.requirements;
-  const examples = session?.examples || {};
-  const saved = session?.answers?.requirements || {};
-  const [frs, setFrs] = useState<string[]>(saved.functional || []);
-  const [nfrs, setNfrs] = useState<string[]>(saved.non_functional || []);
+  const examples = session?.examples as Record<string, unknown> || {};
+  const saved = session?.answers?.requirements as Record<string, unknown> || {};
+  const [frs, setFrs] = useState<string[]>(saved.functional as string[] || []);
+  const [nfrs, setNfrs] = useState<string[]>(saved.non_functional as string[] || []);
   const [frInput, setFrInput] = useState('');
   const [nfrInput, setNfrInput] = useState('');
   const [frError, setFrError] = useState('');
@@ -408,10 +419,10 @@ const RequirementsStep = ({ session, onSave }: { session: SessionData; onSave: (
               </div>
             ))}
           </div>
-          {examples.fr_examples && (
+          {(examples.fr_examples as string[] | undefined) && (
             <div className="border-t border-[#2d333b] pt-3">
               <p className="text-xs text-[#484f58] italic mb-1.5">Examples:</p>
-              {examples.fr_examples.map((ex: string, i: number) => <p key={i} className="text-xs text-[#484f58] italic mb-0.5">• {ex}</p>)}
+              {(examples.fr_examples as string[]).map((ex: string, i: number) => <p key={i} className="text-xs text-[#484f58] italic mb-0.5">• {ex}</p>)}
             </div>
           )}
         </div>
@@ -445,10 +456,10 @@ const RequirementsStep = ({ session, onSave }: { session: SessionData; onSave: (
               </div>
             ))}
           </div>
-          {examples.nfr_examples && (
+          {(examples.nfr_examples as string[] | undefined) && (
             <div className="border-t border-[#2d333b] pt-3">
               <p className="text-xs text-[#484f58] italic mb-1.5">Examples:</p>
-              {examples.nfr_examples.map((ex: string, i: number) => <p key={i} className="text-xs text-[#484f58] italic mb-0.5">• {ex}</p>)}
+              {(examples.nfr_examples as string[]).map((ex: string, i: number) => <p key={i} className="text-xs text-[#484f58] italic mb-0.5">• {ex}</p>)}
             </div>
           )}
         </div>
@@ -459,9 +470,9 @@ const RequirementsStep = ({ session, onSave }: { session: SessionData; onSave: (
   );
 };
 const EntitiesStep = ({ session, onSave }: { session: SessionData; onSave: (data: Record<string, unknown>) => void }) => {
-  const examples = session?.examples || {};
-  const saved = session?.answers?.entities || {};
-  const [entities, setEntities] = useState<Entity[]>(saved.entities || []);
+  const examples = session?.examples as Record<string, unknown> || {};
+  const saved = (session?.answers?.entities || {}) as Record<string, unknown>;
+  const [entities, setEntities] = useState<Entity[]>(saved.entities as Entity[] || []);
   const [nameInput, setNameInput] = useState('');
   const [descInput, setDescInput] = useState('');
 
@@ -478,10 +489,10 @@ const EntitiesStep = ({ session, onSave }: { session: SessionData; onSave: (data
     const next = entities.filter((_, idx) => idx !== i);
     setEntities(next);
     onSave({ entities: next });
-    setUndoItem({ text: removed.name, index: i, data: removed });
+    setUndoItem({ type: 'entity', text: removed.name, index: i, data: removed });
   };
   const [undoItem, setUndoItem] = useState<UndoItem<Entity> | null>(null);
-  const handleUndo = () => { if (!undoItem) return; const n = [...entities]; n.splice(undoItem.index, 0, undoItem.data); setEntities(n); onSave({ entities: n }); setUndoItem(null); };
+  const handleUndo = () => { if (!undoItem || !undoItem.data) return; const n = [...entities]; n.splice(undoItem.index, 0, undoItem.data); setEntities(n); onSave({ entities: n }); setUndoItem(null); };
   const moveEntity = (i: number, d: number) => { const j = i + d; if (j < 0 || j >= entities.length) return; const n = [...entities]; [n[i], n[j]] = [n[j], n[i]]; setEntities(n); onSave({ entities: n }); };
 
   return (
@@ -520,11 +531,11 @@ const EntitiesStep = ({ session, onSave }: { session: SessionData; onSave: (data
             </div>
           ))}
         </div>
-        {examples.entity_examples && (
+        {(examples.entity_examples as Entity[] | undefined) && (
           <div className="rounded-lg border border-[#a855f7]/20 p-3" style={{ backgroundColor: '#a855f705' }}>
             <p className="text-xs text-[#484f58] italic mb-1.5">Examples for this system:</p>
-            {(examples.entity_examples as Entity[] || []).map((ex: Entity, i: number) => (
-              <p key={i} className="text-xs text-[#484f58] italic mb-0.5">• <span className="font-semibold text-[#8b949e]">{ex.name}</span> - {ex.desc}</p>
+            {(examples.entity_examples as Entity[]).map((ex: Entity, i: number) => (
+              <p key={i} className="text-xs text-[#484f58] italic mb-0.5">• <span className="font-semibold text-[#8b949e]">{ex.name}</span> - {ex.description}</p>
             ))}
           </div>
         )}
@@ -639,11 +650,11 @@ const ClassCard = ({ cls, idx, expanded, onToggle, onRemove, onAddAttr, onRemove
 };
 
 const ClassDesignStep = ({ session, onSave }: { session: SessionData; onSave: (data: Record<string, unknown>) => void }) => {
-  const saved = session?.answers?.['class-design'] || {};
+  const saved = (session?.answers?.['class-design'] || {}) as Record<string, unknown>;
   const [activeTab, setActiveTab] = useState('classes');
-  const [classes, setClasses] = useState<ClassDef[]>(saved.classes || []);
-  const [relationships, setRelationships] = useState<Record<string, unknown>[]>(saved.relationships || []);
-  const [patterns, setPatterns] = useState<Record<string, unknown>[]>(saved.patterns || []);
+  const [classes, setClasses] = useState<ClassDef[]>(saved.classes as ClassDef[] || []);
+  const [relationships, setRelationships] = useState<MermaidRelation[]>(saved.relationships as MermaidRelation[] || []);
+  const [patterns, setPatterns] = useState<PatternDef[]>(saved.patterns as PatternDef[] || []);
 
   const [classType, setClassType] = useState('class');
   const [className, setClassName] = useState('');
@@ -685,7 +696,7 @@ const ClassDesignStep = ({ session, onSave }: { session: SessionData; onSave: (d
     'Visitor': 'Separates algorithms from the objects they operate on',
   };
 
-  const doSave = useCallback((c: ClassDef[], r: Record<string, unknown>[], p: Record<string, unknown>[]) => {
+  const doSave = useCallback((c: ClassDef[], r: MermaidRelation[], p: PatternDef[]) => {
     onSave({ classes: c, relationships: r, patterns: p });
   }, [onSave]);
 
@@ -708,26 +719,26 @@ const ClassDesignStep = ({ session, onSave }: { session: SessionData; onSave: (d
 
   const addAttribute = (classIdx: number, access: string, name: string, type: string) => {
     if (!name.trim()) return;
-    const next = classes.map((c, i) => i === classIdx ? { ...c, attributes: [...c.attributes, { access, name: name.trim(), type: type.trim() || 'String' }] } : c);
+    const next = classes.map((c, i) => i === classIdx ? { ...c, attributes: [...(c.attributes || []), { access, name: name.trim(), type: type.trim() || 'String' }] } : c);
     setClasses(next);
     doSave(next, relationships, patterns);
   };
 
   const removeAttribute = (classIdx: number, attrIdx: number) => {
-    const next = classes.map((c, i) => i === classIdx ? { ...c, attributes: c.attributes.filter((_: AttrDef, ai: number) => ai !== attrIdx) } : c);
+    const next = classes.map((c, i) => i === classIdx ? { ...c, attributes: (c.attributes || []).filter((_: AttrDef, ai: number) => ai !== attrIdx) } : c);
     setClasses(next);
     doSave(next, relationships, patterns);
   };
 
   const addMethod = (classIdx: number, access: string, name: string, params: string, returnType: string) => {
     if (!name.trim()) return;
-    const next = classes.map((c, i) => i === classIdx ? { ...c, methods: [...c.methods, { access, name: name.trim(), params: params.trim(), returnType: returnType.trim() || 'void' }] } : c);
+    const next = classes.map((c, i) => i === classIdx ? { ...c, methods: [...(c.methods || []), { access, name: name.trim(), params: params.trim(), returnType: returnType.trim() || 'void' }] } : c);
     setClasses(next);
     doSave(next, relationships, patterns);
   };
 
   const removeMethod = (classIdx: number, methodIdx: number) => {
-    const next = classes.map((c, i) => i === classIdx ? { ...c, methods: c.methods.filter((_: MethodDef, mi: number) => mi !== methodIdx) } : c);
+    const next = classes.map((c, i) => i === classIdx ? { ...c, methods: (c.methods || []).filter((_: MethodDef, mi: number) => mi !== methodIdx) } : c);
     setClasses(next);
     doSave(next, relationships, patterns);
   };
@@ -969,10 +980,10 @@ const LANG_EXTENSIONS: Record<string, string> = {
 };
 
 const ImplementationStep = ({ session, onSave, onEvaluate, evaluating }: { session: SessionData; onSave: (data: Record<string, unknown>) => void; onEvaluate: () => void; evaluating: boolean }) => {
-  const saved = session?.answers?.implementation || {};
-  const [language, setLanguage] = useState(saved.language || 'java');
-  const [files, setFiles] = useState<FileDef[]>(saved.files || [{ name: STARTER_TEMPLATES['java'].filename, content: STARTER_TEMPLATES['java'].code }]);
-  const [folders, setFolders] = useState<string[]>(saved.folders || []);
+  const saved = (session?.answers?.implementation || {}) as Record<string, unknown>;
+  const [language, setLanguage] = useState(saved.language as string || 'java');
+  const [files, setFiles] = useState<FileDef[]>(saved.files as FileDef[] || [{ name: STARTER_TEMPLATES['java'].filename, content: STARTER_TEMPLATES['java'].code }]);
+  const [folders, setFolders] = useState<string[]>(saved.folders as string[] || []);
   const [activeFileIdx, setActiveFileIdx] = useState(0);
   const [output, setOutput] = useState('');
   const [showOutput, setShowOutput] = useState(true);
@@ -1289,7 +1300,7 @@ const ImplementationStep = ({ session, onSave, onEvaluate, evaluating }: { sessi
 /* ────────── Feedback Panel ────────── */
 const FeedbackPanel = ({ step }: { step: StepData }) => {
   if (!step.feedback) return null;
-  const fb = step.feedback;
+  const fb = step.feedback as FeedbackStepData;
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       className="mt-4 rounded-xl border border-[#2d333b] p-4" style={{ backgroundColor: '#161b22' }}>
@@ -1300,13 +1311,13 @@ const FeedbackPanel = ({ step }: { step: StepData }) => {
           <p className="text-[11px] text-[#8b949e]">{step.status === 'passed' ? 'Great work! Proceeding to next step.' : 'Review the feedback and try again.'}</p>
         </div>
       </div>
-      {fb.did_well?.length > 0 && (
+      {fb.did_well && fb.did_well.length > 0 && (
         <div className="mb-3">
           <p className="text-[10px] font-bold text-[#22c55e] uppercase tracking-wider mb-1.5">What you did well</p>
           {fb.did_well.map((d: string, i: number) => <p key={i} className="text-xs text-[#c9d1d9] mb-1 flex items-start gap-2"><CheckCircle size={10} className="text-[#22c55e] mt-0.5 shrink-0" /> {d}</p>)}
         </div>
       )}
-      {fb.improve?.length > 0 && (
+      {fb.improve && fb.improve.length > 0 && (
         <div>
           <p className="text-[10px] font-bold text-[#f59e0b] uppercase tracking-wider mb-1.5">How to improve</p>
           {fb.improve.map((im: string, i: number) => <p key={i} className="text-xs text-[#c9d1d9] mb-1 flex items-start gap-2"><AlertCircle size={10} className="text-[#f59e0b] mt-0.5 shrink-0" /> {im}</p>)}
@@ -1337,8 +1348,9 @@ const CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string
 const FEEDBACK_ICON_COLORS: Record<string, string> = { positive: '#22c55e', issue: '#f97316', suggestion: '#38bdf8' };
 
 const FinalEvalReport = ({ eval: ev, onReEvaluate, reEvalLoading }: { eval: FinalEvalData; onReEvaluate: () => void; reEvalLoading: boolean }) => {
-  const scoreColor = ev.overall_score >= 6 ? '#22c55e' : ev.overall_score >= 4 ? '#f59e0b' : '#ef4444';
-  const status = ev.status || (ev.overall_score >= 8 ? 'Excellent' : ev.overall_score >= 6 ? 'Good' : ev.overall_score >= 4 ? 'Fair' : 'Needs work');
+  const score = ev.overall_score ?? 0;
+  const scoreColor = score >= 6 ? '#22c55e' : score >= 4 ? '#f59e0b' : '#ef4444';
+  const status = ev.status || (score >= 8 ? 'Excellent' : score >= 6 ? 'Good' : score >= 4 ? 'Fair' : 'Needs work');
   const categories = ev.categories || {};
 
   return (
@@ -1347,7 +1359,7 @@ const FinalEvalReport = ({ eval: ev, onReEvaluate, reEvalLoading }: { eval: Fina
         <div className="flex items-center gap-2">
           <AlertCircle size={16} style={{ color: scoreColor }} />
           <span className="text-base font-bold" style={{ color: scoreColor }}>
-            {ev.overall_score}/10 - {status}
+            {score}/10 - {status}
           </span>
         </div>
         <span className="text-sm text-[#8b949e]">Passing: 6+</span>
@@ -1493,7 +1505,7 @@ const LLDPractice = () => {
     if (session) {
       try {
         await api.post(`/lld/session/${session.session_id}/experience-level`, { level });
-        setSession((prev: SessionData | null) => ({ ...prev, experience_level: level }));
+        setSession((prev: SessionData | null) => (prev ? { ...prev, experience_level: level } : prev));
       } catch {}
     }
   };
@@ -1502,7 +1514,7 @@ const LLDPractice = () => {
     if (!session) return;
     try {
       await api.post(`/lld/session/${session.session_id}/save/${stepId}`, { data });
-      setSession((prev: SessionData | null) => ({ ...prev, answers: { ...prev.answers, [stepId]: data } }));
+      setSession((prev: SessionData | null) => (prev ? { ...prev, answers: { ...prev.answers, [stepId]: data } } : prev));
     } catch {}
   }, [session]);
 
@@ -1511,7 +1523,7 @@ const LLDPractice = () => {
     setEvaluating(true);
     try {
       const res = await api.post<SessionData>(`/lld/session/${session.session_id}/evaluate/${stepId}`, {});
-      setSession((prev: SessionData | null) => ({ ...prev, steps: res.data.steps }));
+      setSession((prev: SessionData | null) => (prev ? { ...prev, steps: res.data.steps } : prev));
       if (res.data.passed) {
         const steps = res.data.steps || [];
         const idx = steps.findIndex((s: StepData) => s.id === stepId);
@@ -1526,7 +1538,7 @@ const LLDPractice = () => {
     if (!session) return;
     try {
       const res = await api.post<SessionData>(`/lld/session/${session.session_id}/skip/${stepId}`, {});
-      setSession((prev: SessionData | null) => ({ ...prev, steps: res.data.steps }));
+      setSession((prev: SessionData | null) => (prev ? { ...prev, steps: res.data.steps } : prev));
       const stepsList = res.data.steps || [];
       const idx = stepsList.findIndex((s: StepData) => s.id === stepId);
       if (idx >= 0 && idx + 1 < stepsList.length) setActiveStep(stepsList[idx + 1].id);
@@ -1589,7 +1601,7 @@ const LLDPractice = () => {
   const renderStepContent = (step: StepData) => {
     if (step.status === 'locked') {
       const idx = steps.findIndex((s: StepData) => s.id === step.id);
-      return <LockedOverlay prevTitle={idx > 0 ? steps[idx - 1].title : ''} />;
+      return <LockedOverlay prevTitle={idx > 0 ? (steps[idx - 1].title || '') : ''} />;
     }
     switch (step.id) {
       case 'requirements': return <RequirementsStep session={session} onSave={(data) => handleSave('requirements', data)} />;
@@ -1610,7 +1622,7 @@ const LLDPractice = () => {
         </button>
         <div className="h-4 w-px bg-[#2d333b]" />
         <h2 data-testid="lld-practice-title" className="text-sm font-bold text-white">{session.problem_title}</h2>
-        <span className="text-xs font-medium px-2 py-0.5 rounded" style={{ color: DIFF_COLORS[session.difficulty], backgroundColor: `${DIFF_COLORS[session.difficulty]}15` }}>{session.difficulty}</span>
+        <span className="text-xs font-medium px-2 py-0.5 rounded" style={{ color: DIFF_COLORS[session.difficulty || ''], backgroundColor: `${DIFF_COLORS[session.difficulty || '']}15` }}>{session.difficulty}</span>
         {session.experience_level && (
           <span className="text-[10px] px-2 py-0.5 rounded border border-[#2d333b] text-[#8b949e]">
             {EXPERIENCE_LEVELS.find((l: { key: string; label: string; years: string; color: string }) => l.key === session.experience_level)?.label || session.experience_level}
@@ -1678,9 +1690,9 @@ const LLDPractice = () => {
                   {step.status !== 'locked' && (
                     <div className="flex flex-col items-center gap-2 mt-6 mb-8">
                       {step.id === 'requirements' && (() => {
-                        const reqs = session?.answers?.requirements || {};
-                        const frCount = (reqs.functional || []).length;
-                        const nfrCount = (reqs.non_functional || []).length;
+                        const reqs = (session?.answers?.requirements || {}) as Record<string, unknown>;
+                        const frCount = ((reqs.functional as string[]) || []).length;
+                        const nfrCount = ((reqs.non_functional as string[]) || []).length;
                         const isValid = frCount >= 3 && nfrCount >= 2;
                         return !isValid ? (
                           <p className="text-xs text-[#f59e0b] mb-1">Add at least 3 use cases and 2 constraints to evaluate</p>
@@ -1688,10 +1700,10 @@ const LLDPractice = () => {
                       })()}
                       <div className="flex items-center gap-3">
                       <button data-testid={`lld-evaluate-${step.id}`} onClick={() => handleEvaluate(step.id)}
-                        disabled={evaluating || (step.id === 'requirements' && ((session?.answers?.requirements?.functional || []).length < 3 || (session?.answers?.requirements?.non_functional || []).length < 2))}
+                        disabled={evaluating || (step.id === 'requirements' && (!session?.answers?.requirements || ((session.answers.requirements as Record<string, string[]>).functional || []).length < 3 || ((session.answers.requirements as Record<string, string[]>).non_functional || []).length < 2))}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-[#22c55e] hover:bg-[#16a34a] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors">
                         {evaluating ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-                        {evaluating ? 'Evaluating...' : `Evaluate ${step.title.split(' - ')[0]}`}
+                        {evaluating ? 'Evaluating...' : `Evaluate ${(step.title || '').split(' - ')[0]}`}
                       </button>
                       {step.status !== 'passed' && (
                         <button data-testid={`lld-skip-${step.id}`} onClick={() => handleSkip(step.id)}
@@ -1718,12 +1730,12 @@ const LLDPractice = () => {
                     <div key={s.id} className="rounded-lg border border-[#2d333b] p-3" style={{ backgroundColor: '#161b22' }}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-semibold text-[#c9d1d9]">{s.title}</span>
-                        {s.status === 'passed' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#22c55e]/10 text-[#22c55e] font-medium">{s.score}/10</span>}
+                        {s.status === 'passed' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#22c55e]/10 text-[#22c55e] font-medium">{String(s.score)}/10</span>}
                         {s.status === 'skipped' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f59e0b]/10 text-[#f59e0b] font-medium">Skipped</span>}
-                        {s.status === 'failed' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 font-medium">{s.score}/10</span>}
+                        {s.status === 'failed' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 font-medium">{String(s.score)}/10</span>}
                       </div>
                       <div className="w-full h-1.5 rounded-full bg-[#21262d] overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${(s.score || 0) * 10}%`, backgroundColor: s.status === 'passed' ? '#22c55e' : s.status === 'skipped' ? '#f59e0b' : '#ef4444' }} />
+                        <div className="h-full rounded-full" style={{ width: `${((s.score as number) || 0) * 10}%`, backgroundColor: s.status === 'passed' ? '#22c55e' : s.status === 'skipped' ? '#f59e0b' : '#ef4444' }} />
                       </div>
                     </div>
                   ))}

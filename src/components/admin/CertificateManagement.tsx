@@ -6,6 +6,7 @@ import { handleApiError, showError, showConfirm } from '@/lib/toast';
 import { ArrowLeft, Award, Search, Trash2, Loader2, ChevronLeft, ChevronRight, Users, BookOpen } from 'lucide-react';
 
 const CertificateManagement = () => {
+  const [total, setTotal] = useState<number>(0);
   const [certs, setCerts] = useState<Record<string, unknown>[]>([]);
   const [stats, setStats] = useState<Record<string, unknown>>({});
   const [page, setPage] = useState(1);
@@ -24,6 +25,7 @@ const CertificateManagement = () => {
         const res = await api.get<{ certificates: Record<string, unknown>[]; total: number; total_pages: number; stats: Record<string, unknown> }>(`/admin/certificates?${params}`, { signal: ac.signal });
         if (ac.signal.aborted) return;
         setCerts(res.data.certificates);
+        setTotal(res.data.total);
         setTotalPages(res.data.total_pages);
         setStats(res.data.stats);
       } catch (err) {
@@ -55,21 +57,21 @@ const CertificateManagement = () => {
           <button onClick={() => navigate.push('/admin/dashboard')} className="text-[#8b949e] hover:text-white transition-colors"><ArrowLeft size={20} /></button>
           <div>
             <h1 data-testid="certificate-management-title" className="text-2xl font-bold text-white">Certificate Management</h1>
-            <p className="text-sm text-[#8b949e]">{stats.total_issued || 0} certificates issued</p>
+            <p className="text-sm text-[#8b949e]">{(stats.total_issued as number) ?? 0} certificates issued</p>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
-            { icon: Award, label: 'Total Issued', value: stats.total_issued || 0, color: '#8b5cf6' },
-            { icon: Users, label: 'Unique Users', value: stats.unique_users || 0, color: '#3b82f6' },
-            { icon: BookOpen, label: 'Unique Courses', value: stats.unique_courses || 0, color: '#22c55e' },
+            { icon: Award, label: 'Total Issued', value: (stats.total_issued as number) ?? 0, color: '#8b5cf6' },
+            { icon: Users, label: 'Unique Users', value: (stats.unique_users as number) ?? 0, color: '#3b82f6' },
+            { icon: BookOpen, label: 'Unique Courses', value: (stats.unique_courses as number) ?? 0, color: '#22c55e' },
           ].map(s => (
             <div key={s.label} className="border border-[#2d333b] rounded-xl p-4" style={{ backgroundColor: '#161b22' }}>
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${s.color}18` }}>
-                  <s.icon size={18} style={{ color: s.color }} />
+                  <s.icon size={18} style={{ color: s.color } as React.CSSProperties} />
                 </div>
                 <div>
                   <p className="text-xl font-bold text-white">{s.value}</p>
@@ -110,18 +112,18 @@ const CertificateManagement = () => {
               </thead>
               <tbody>
                 {certs.map(c => (
-                  <tr key={c.verification_id} data-testid={`cert-row-${c.verification_id}`} className="border-b border-[#2d333b]/50 hover:bg-[#1c2128]">
-                    <td className="px-4 py-3 text-xs font-mono text-[#8b5cf6]">{c.verification_id}</td>
+                  <tr key={(c.verification_id as string)} data-testid={`cert-row-${(c.verification_id as string)}`} className="border-b border-[#2d333b]/50 hover:bg-[#1c2128]">
+                    <td className="px-4 py-3 text-xs font-mono text-[#8b5cf6]">{(c.verification_id as string)}</td>
                     <td className="px-4 py-3">
-                      <p className="text-sm text-[#c9d1d9]">{c.user_name}</p>
-                      <p className="text-xs text-[#484f58]">{c.user_email}</p>
+                      <p className="text-sm text-[#c9d1d9]">{(c.user_name as string)}</p>
+                      <p className="text-xs text-[#484f58]">{(c.user_email as string)}</p>
                     </td>
-                    <td className="px-4 py-3 text-sm text-[#c9d1d9]">{c.course_title}</td>
-                    <td className="px-4 py-3 text-xs text-[#8b949e]">{c.issue_date || new Date(c.issued_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-sm text-[#c9d1d9]">{(c.course_title as string)}</td>
+                    <td className="px-4 py-3 text-xs text-[#8b949e]">{(c.issue_date as string) || new Date((c.issued_at as string)).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
                       <button
-                        data-testid={`revoke-cert-${c.verification_id}`}
-                        onClick={() => revoke(c.verification_id)}
+                        data-testid={`revoke-cert-${(c.verification_id as string)}`}
+                        onClick={() => revoke(c.verification_id as string)}
                         className="text-[#ef4444] hover:text-[#dc2626] transition-colors p-1"
                         title="Revoke"
                       >

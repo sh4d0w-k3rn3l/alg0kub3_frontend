@@ -34,7 +34,7 @@ const AffiliateAdmin = () => {
       setAffiliates(affRes.data.affiliates);
       setPayouts(payRes.data.payouts);
       setPromoCodes(promoRes.data.promo_codes);
-      setSettings(ovRes.data.settings);
+      setSettings((ovRes.data.settings ?? {}) as Record<string, unknown>);
     } catch (err: unknown) {
       if ((err as DOMException)?.name === 'AbortError') return;
       handleApiError(err);
@@ -93,7 +93,7 @@ const AffiliateAdmin = () => {
     );
   }
 
-  const st = overview?.stats || {};
+  const st = (overview?.stats ?? {}) as Record<string, unknown>;
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
@@ -133,10 +133,10 @@ const AffiliateAdmin = () => {
           <div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
               {[
-                { icon: Users, label: 'Total Affiliates', value: st.total_affiliates, color: '#3b82f6' },
-                { icon: MousePointerClick, label: 'Total Clicks', value: st.total_clicks?.toLocaleString(), color: '#a855f7' },
-                { icon: TrendingUp, label: 'Conversions', value: `${st.total_conversions} (${st.conversion_rate}%)`, color: '#22c55e' },
-                { icon: DollarSign, label: 'Total Commissions', value: `$${st.total_commissions}`, color: '#f59e0b' },
+                { icon: Users, label: 'Total Affiliates', value: (st.total_affiliates as number) ?? 0, color: '#3b82f6' },
+                { icon: MousePointerClick, label: 'Total Clicks', value: ((st.total_clicks as number) ?? 0).toLocaleString(), color: '#a855f7' },
+                { icon: TrendingUp, label: 'Conversions', value: `${(st.total_conversions as number) ?? 0} (${(st.conversion_rate as number) ?? 0}%)`, color: '#22c55e' },
+                { icon: DollarSign, label: 'Total Commissions', value: `$${(st.total_commissions as number) ?? 0}`, color: '#f59e0b' },
               ].map((s, i) => (
                 <div key={i} className="rounded-xl border border-[#2d333b] p-4" style={{ backgroundColor: '#161b22' }}>
                   <div className="flex items-center gap-2 mb-2"><s.icon size={14} style={{ color: s.color }} /><span className="text-xs text-[#8b949e]">{s.label}</span></div>
@@ -146,11 +146,11 @@ const AffiliateAdmin = () => {
             </div>
 
             {/* Fraud Flags */}
-            {overview?.fraud_flags?.length > 0 && (
+            {(((overview?.fraud_flags ?? []) as unknown[]).length) > 0 && (
               <div className="rounded-xl border border-red-500/20 p-4 mb-6" style={{ backgroundColor: 'rgba(239,68,68,0.04)' }}>
                 <h3 className="text-sm font-semibold text-red-400 mb-3 flex items-center gap-2"><AlertTriangle size={14} /> Suspicious Activity</h3>
-                {overview.fraud_flags.map((f: Record<string, unknown>, i: number) => (
-                  <div key={i} className="text-xs text-[#8b949e] mb-1">IP hash {f.ip_hash}... — {f.clicks} clicks across codes: {f.codes.join(', ')}</div>
+                {(overview?.fraud_flags as Record<string, unknown>[] | undefined)?.map((f, i: number) => (
+                  <div key={i} className="text-xs text-[#8b949e] mb-1">IP hash {(f.ip_hash as string)}... — {(f.clicks as number)} clicks across codes: {(f.codes as string[]).join(', ')}</div>
                 ))}
               </div>
             )}
@@ -159,20 +159,20 @@ const AffiliateAdmin = () => {
             <div className="rounded-xl border border-[#2d333b] p-5" style={{ backgroundColor: '#161b22' }}>
               <h3 className="text-sm font-semibold text-white mb-4">Top Affiliates</h3>
               <div className="space-y-2">
-                {(overview?.top_affiliates || []).map((a: Record<string, unknown>, i: number) => (
-                  <div key={a.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[#2d333b]" style={{ backgroundColor: '#0d1117' }}>
+                {((overview?.top_affiliates ?? []) as Record<string, unknown>[]).map((a, i) => (
+                  <div key={(a.id as string)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[#2d333b]" style={{ backgroundColor: '#0d1117' }}>
                     <span className="text-sm font-bold text-[#484f58] w-6 text-center">{i + 1}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#c9d1d9] truncate">{a.name}</p>
-                      <p className="text-[10px] text-[#484f58]">{a.affiliate_code}</p>
+                      <p className="text-sm font-medium text-[#c9d1d9] truncate">{(a.name as string)}</p>
+                      <p className="text-[10px] text-[#484f58]">{(a.affiliate_code as string)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-[#22c55e]">${a.total_earned}</p>
-                      <p className="text-[10px] text-[#484f58]">{a.total_conversions} conv</p>
+                      <p className="text-sm font-bold text-[#22c55e]">${(a.total_earned as number) ?? 0}</p>
+                      <p className="text-[10px] text-[#484f58]">{(a.total_conversions as number) ?? 0} conv</p>
                     </div>
                   </div>
                 ))}
-                {(!overview?.top_affiliates || overview.top_affiliates.length === 0) && (
+                {!((overview?.top_affiliates ?? []) as Record<string, unknown>[]).length && (
                   <p className="text-sm text-[#484f58] text-center py-4">No affiliates yet</p>
                 )}
               </div>
@@ -198,34 +198,37 @@ const AffiliateAdmin = () => {
                 </thead>
                 <tbody>
                   {affiliates.map(a => (
-                    <tr key={a.id} data-testid={`affiliate-row-${a.id}`} className="border-b border-[#21262d] hover:bg-[#0d1117]">
+                    <tr key={(a.id as string)} data-testid={`affiliate-row-${(a.id as string)}`} className="border-b border-[#21262d] hover:bg-[#0d1117]">
                       <td className="px-4 py-3">
-                        <p className="text-[#c9d1d9] font-medium">{a.name}</p>
-                        <p className="text-[10px] text-[#484f58] font-mono">{a.affiliate_code}</p>
+                        <p className="text-[#c9d1d9] font-medium">{(a.name as string)}</p>
+                        <p className="text-[10px] text-[#484f58] font-mono">{(a.affiliate_code as string)}</p>
                       </td>
                       <td className="text-center px-3 py-3">
                         <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
-                          a.status === 'active' ? 'bg-[#22c55e]/10 text-[#22c55e]' :
-                          a.status === 'pending' ? 'bg-[#f59e0b]/10 text-[#f59e0b]' :
+                          (a.status as string) === 'active' ? 'bg-[#22c55e]/10 text-[#22c55e]' :
+                          (a.status as string) === 'pending' ? 'bg-[#f59e0b]/10 text-[#f59e0b]' :
                           'bg-red-500/10 text-red-400'
-                        }`}>{a.status}</span>
+                        }`}>{(a.status as string)}</span>
                       </td>
                       <td className="text-center px-3 py-3">
-                        <button onClick={() => setCustomRate(a.id, a.commission_rate)} className="text-xs text-[#3b82f6] hover:underline">{a.commission_rate}%</button>
+                        <button onClick={() => setCustomRate(a.id as string, String(a.commission_rate as number))} className="text-xs text-[#3b82f6] hover:underline">{(a.commission_rate as number)}%</button>
                       </td>
-                      <td className="text-center px-3 py-3 text-[#8b949e]">{a.total_clicks}</td>
-                      <td className="text-center px-3 py-3 text-[#8b949e]">{a.total_conversions}</td>
-                      <td className="text-center px-3 py-3 text-[#22c55e] font-medium">${a.total_earned}</td>
+                      <td className="text-center px-3 py-3 text-[#8b949e]">{(a.total_clicks as number) ?? 0}</td>
+                      <td className="text-center px-3 py-3 text-[#8b949e]">{(a.total_conversions as number) ?? 0}</td>
+                      <td className="text-center px-3 py-3 text-[#22c55e] font-medium">${(a.total_earned as number) ?? 0}</td>
                       <td className="text-center px-3 py-3">
                         <div className="flex items-center justify-center gap-1">
-                          {a.status === 'pending' && (
-                            <button onClick={() => updateStatus(a.id, 'active')} className="text-[#22c55e] hover:bg-[#22c55e]/10 p-1 rounded"><Check size={14} /></button>
+                          {(a.status as string) === 'pending' && (
+                            <button onClick={() => updateStatus(a.id as string, 'active')} className="text-[#22c55e] hover:bg-[#22c55e]/10 p-1 rounded"><Check size={14} /></button>
                           )}
-                          {a.status === 'active' && (
-                            <button onClick={() => updateStatus(a.id, 'suspended')} className="text-red-400 hover:bg-red-400/10 p-1 rounded"><X size={14} /></button>
+                          {(a.status as string) !== 'active' && (
+                            <button onClick={() => updateStatus(a.id as string, 'active')} className="text-[#22c55e] hover:bg-[#22c55e]/10 p-1 rounded"><Check size={14} /></button>
                           )}
-                          {a.status === 'suspended' && (
-                            <button onClick={() => updateStatus(a.id, 'active')} className="text-[#22c55e] hover:bg-[#22c55e]/10 p-1 rounded"><Check size={14} /></button>
+                          {(a.status as string) !== 'suspended' && (
+                            <button onClick={() => updateStatus(a.id as string, 'suspended')} className="text-[#da3633] hover:bg-[#da3633]/10 p-1 rounded"><X size={14} /></button>
+                          )}
+                          {(a.status as string) === 'suspended' && (
+                            <button onClick={() => updateStatus(a.id as string, 'active')} className="text-[#22c55e] hover:bg-[#22c55e]/10 p-1 rounded"><Check size={14} /></button>
                           )}
                         </div>
                       </td>
@@ -253,31 +256,31 @@ const AffiliateAdmin = () => {
                 </thead>
                 <tbody>
                   {payouts.map(p => (
-                    <tr key={p.id} data-testid={`payout-row-${p.id}`} className="border-b border-[#21262d]">
+                    <tr key={(p.id as string)} data-testid={`payout-row-${(p.id as string)}`} className="border-b border-[#21262d]">
                       <td className="px-4 py-3">
-                        <p className="text-[#c9d1d9]">{p.affiliate_name}</p>
-                        <p className="text-[10px] text-[#484f58]">{p.affiliate_email}</p>
+                        <p className="text-[#c9d1d9]">{(p.affiliate_name as string)}</p>
+                        <p className="text-[10px] text-[#484f58]">{(p.affiliate_email as string)}</p>
                       </td>
-                      <td className="text-center px-3 py-3 text-[#22c55e] font-bold">${p.amount}</td>
+                      <td className="text-center px-3 py-3 text-[#22c55e] font-bold">${(p.amount as number) ?? 0}</td>
                       <td className="text-center px-3 py-3">
                         <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
-                          p.status === 'requested' ? 'bg-[#f59e0b]/10 text-[#f59e0b]' :
-                          p.status === 'approved' ? 'bg-[#3b82f6]/10 text-[#3b82f6]' :
-                          p.status === 'paid' ? 'bg-[#22c55e]/10 text-[#22c55e]' :
+                          (p.status as string) === 'requested' ? 'bg-[#f59e0b]/10 text-[#f59e0b]' :
+                          (p.status as string) === 'approved' ? 'bg-[#3b82f6]/10 text-[#3b82f6]' :
+                          (p.status as string) === 'paid' ? 'bg-[#22c55e]/10 text-[#22c55e]' :
                           'bg-red-500/10 text-red-400'
-                        }`}>{p.status}</span>
+                        }`}>{(p.status as string)}</span>
                       </td>
-                      <td className="text-center px-3 py-3 text-[#8b949e] text-xs">{new Date(p.created_at).toLocaleDateString()}</td>
+                      <td className="text-center px-3 py-3 text-[#8b949e] text-xs">{new Date((p.created_at as string)).toLocaleDateString()}</td>
                       <td className="text-center px-3 py-3">
-                        {p.status === 'requested' && (
+                        {(p.status as string) === 'requested' && (
                           <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => processPayout(p.id, 'approve')} className="text-[#3b82f6] hover:bg-[#3b82f6]/10 px-2 py-1 rounded text-xs">Approve</button>
-                            <button onClick={() => processPayout(p.id, 'mark_paid')} className="text-[#22c55e] hover:bg-[#22c55e]/10 px-2 py-1 rounded text-xs">Mark Paid</button>
-                            <button onClick={() => processPayout(p.id, 'reject')} className="text-red-400 hover:bg-red-400/10 px-2 py-1 rounded text-xs">Reject</button>
+                            <button onClick={() => processPayout(p.id as string, 'approve')} className="text-[#3b82f6] hover:bg-[#3b82f6]/10 px-2 py-1 rounded text-xs">Approve</button>
+                            <button onClick={() => processPayout(p.id as string, 'mark_paid')} className="text-[#22c55e] hover:bg-[#22c55e]/10 px-2 py-1 rounded text-xs">Mark Paid</button>
+                            <button onClick={() => processPayout(p.id as string, 'reject')} className="text-red-400 hover:bg-red-400/10 px-2 py-1 rounded text-xs">Reject</button>
                           </div>
                         )}
-                        {p.status === 'approved' && (
-                          <button onClick={() => processPayout(p.id, 'mark_paid')} className="text-[#22c55e] hover:bg-[#22c55e]/10 px-2 py-1 rounded text-xs">Mark Paid</button>
+                        {(p.status as string) === 'approved' && (
+                          <button onClick={() => processPayout(p.id as string, 'mark_paid')} className="text-[#22c55e] hover:bg-[#22c55e]/10 px-2 py-1 rounded text-xs">Mark Paid</button>
                         )}
                       </td>
                     </tr>
@@ -317,11 +320,11 @@ const AffiliateAdmin = () => {
                 </tr></thead>
                 <tbody>
                   {promoCodes.map(p => (
-                    <tr key={p.id} className="border-b border-[#21262d]">
-                      <td className="px-4 py-3 font-mono text-[#c9d1d9]">{p.code}</td>
-                      <td className="text-center px-3 py-3 text-[#8b949e] text-xs">{p.affiliate_id}</td>
-                      <td className="text-center px-3 py-3 text-[#22c55e]">{p.discount_percent}%</td>
-                      <td className="text-center px-3 py-3 text-[#8b949e]">{p.uses}/{p.max_uses || '∞'}</td>
+                    <tr key={(p.id as string)} className="border-b border-[#21262d]">
+                      <td className="px-4 py-3 font-mono text-[#c9d1d9]">{(p.code as string)}</td>
+                      <td className="text-center px-3 py-3 text-[#8b949e] text-xs">{(p.affiliate_id as string)}</td>
+                      <td className="text-center px-3 py-3 text-[#22c55e]">{(p.discount_percent as number)}%</td>
+                      <td className="text-center px-3 py-3 text-[#8b949e]">{(p.uses as number)}/{(p.max_uses as number) || '∞'}</td>
                     </tr>
                   ))}
                   {promoCodes.length === 0 && (
@@ -345,7 +348,7 @@ const AffiliateAdmin = () => {
               ].map(f => (
                 <div key={f.key}>
                   <label className="text-xs text-[#8b949e] block mb-1">{f.label}</label>
-                  <input type={f.type} value={settings[f.key] || ''} onChange={e => setSettings((s: Record<string, unknown>) => ({ ...s, [f.key]: parseFloat(e.target.value) }))}
+                  <input type={f.type} value={String(settings[f.key] ?? '')} onChange={e => setSettings((s: Record<string, unknown>) => ({ ...s, [f.key]: parseFloat(e.target.value) }))}
                     className="w-full bg-[#0d1117] border border-[#2d333b] rounded-lg px-3 py-2 text-sm text-[#c9d1d9] outline-none focus:border-[#22c55e]" />
                 </div>
               ))}

@@ -206,7 +206,7 @@ const StepDefine = ({ form, setForm, onNext, generating, categories }: any) => {
               onChange={handleCategoryChange}
               className="w-full bg-[#0d1117] border border-[#2d333b] rounded-lg px-4 py-3 text-[#c9d1d9] text-sm outline-none focus:border-[#22c55e]"
             >
-              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              {categories.map((c: string) => <option key={c} value={c}>{c}</option>)}
               {!categories.includes(form.category) && form.category && (
                 <option value="__custom__">{form.category}</option>
               )}
@@ -528,13 +528,13 @@ const StepGenerate = ({ courseId, onDone }: any) => {
       )}
 
       {/* Failed lessons */}
-      {status.failed_lessons?.length > 0 && (
+      {(status.failed_lessons?.length ?? 0) > 0 && (
         <div className="border border-red-400/20 rounded-lg p-4 mb-4" style={{ backgroundColor: '#161b2240' }}>
           <div className="flex items-center gap-2 mb-2">
             <AlertCircle size={14} className="text-red-400" />
-            <span className="text-red-400 text-xs font-medium">{status.failed_lessons.length} lesson(s) failed</span>
+            <span className="text-red-400 text-xs font-medium">{(status.failed_lessons?.length ?? 0)} lesson(s) failed</span>
           </div>
-          {status.failed_lessons.map((fl: { title: string }, i: number) => (
+          {status.failed_lessons?.map((fl: { title: string }, i: number) => (
             <p key={i} className="text-[#8b949e] text-xs ml-5">{fl.title}</p>
           ))}
         </div>
@@ -628,18 +628,18 @@ const AICourseCreator = () => {
 
   const startGeneration = async () => {
     setError('');
-    const slug = (outline.title || form.topic).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const slug = ((outline?.title || form.topic) as string).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     setCourseSlug(slug);
     try {
       const res = await api.post<{ course_id: string }>('/ai/generate-course', {
-        topic: outline.title || form.topic,
+        topic: outline?.title || form.topic,
         slug,
-        description: outline.description || '',
+        description: outline?.description || '',
         audience: form.audience,
         content_style: form.content_style,
         category: form.category,
         language: form.language,
-        sections: outline.sections,
+        sections: outline?.sections || [],
       });
       setCourseId(res.data.course_id);
       setStep(2);

@@ -6,6 +6,16 @@ import { handleApiError } from '@/lib/toast';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { ArrowLeft, Brain, Target, TrendingUp, AlertTriangle, Loader2 } from 'lucide-react';
 
+interface QuizAnalyticsData {
+  total_quizzes: number;
+  total_attempts: number;
+  pass_rate: number;
+  avg_score: number;
+  attempts_trend: { date: string; total: number; passed: number }[];
+  hardest_quizzes: { quiz_title: string; section_title: string; avg_score: number; attempts: number }[];
+  popular_quizzes: { quiz_title: string; attempts: number; avg_score: number }[];
+}
+
 const QuizAnalytics = () => {
   const [data, setData] = useState<QuizAnalyticsData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);

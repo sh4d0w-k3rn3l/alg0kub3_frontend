@@ -97,7 +97,7 @@ const CodeExecutionSettings = () => {
   };
 
   const toggleLang = (id: string) => {
-    const current = cfg.languages || [];
+    const current = (cfg?.languages as string[]) || [];
     const next = current.includes(id) ? current.filter((x: string) => x !== id) : [...current, id];
     save({ languages: next });
   };
@@ -140,7 +140,7 @@ const CodeExecutionSettings = () => {
         <div style={label}>Execution Provider</div>
         <div style={{ display: 'grid', gap: 10 }}>
           {PROVIDERS.map(p => {
-            const active = cfg.provider === p.id;
+            const active = (cfg?.provider as string) === p.id;
             return (
               <button
                 key={p.id}
@@ -168,7 +168,7 @@ const CodeExecutionSettings = () => {
       </div>
 
       {/* Judge0 config */}
-      {cfg.provider === 'judge0' && (
+      {(cfg?.provider as string) === 'judge0' && (
         <div style={{ ...card, marginTop: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <Key size={18} color="#22c55e" />
@@ -180,9 +180,9 @@ const CodeExecutionSettings = () => {
             <input
               data-testid="judge0-url"
               style={input}
-              value={cfg.judge0_api_url || ''}
+              value={(cfg?.judge0_api_url as string) ?? ''}
               onChange={(e) => setCfg({ ...cfg, judge0_api_url: e.target.value })}
-              onBlur={() => save({ judge0_api_url: cfg.judge0_api_url })}
+              onBlur={() => save({ judge0_api_url: cfg?.judge0_api_url })}
               placeholder="https://judge0-ce.p.rapidapi.com"
             />
           </div>
@@ -192,15 +192,15 @@ const CodeExecutionSettings = () => {
             <input
               data-testid="judge0-host"
               style={input}
-              value={cfg.judge0_host || ''}
-              onChange={(e) => setCfg({ ...cfg, judge0_host: e.target.value })}
-              onBlur={() => save({ judge0_host: cfg.judge0_host })}
+              value={(cfg?.judge0_host as string) ?? ''}
+              onChange={(e) => setCfg({ ...(cfg ?? {}), judge0_host: e.target.value } as Record<string, unknown>)}
+              onBlur={() => save({ judge0_host: cfg?.judge0_host })}
               placeholder="judge0-ce.p.rapidapi.com"
             />
           </div>
 
           <div style={{ marginBottom: 8 }}>
-            <div style={label}>API Key {cfg.judge0_api_key_configured && <span style={{ color: '#22c55e', textTransform: 'none', letterSpacing: 0 }}>· stored: {cfg.judge0_api_key_masked}</span>}</div>
+            <div style={label}>API Key {(cfg?.judge0_api_key_configured as boolean) ? <span style={{ color: '#22c55e', textTransform: 'none', letterSpacing: 0 }}>· stored: {(cfg?.judge0_api_key_masked as string)}</span> : null}</div>
             <div style={{ display: 'flex', gap: 10 }}>
               <input
                 data-testid="judge0-key"
@@ -208,7 +208,7 @@ const CodeExecutionSettings = () => {
                 type={showKey ? 'text' : 'password'}
                 value={keyInput}
                 onChange={(e) => setKeyInput(e.target.value)}
-                placeholder={cfg.judge0_api_key_configured ? 'Enter new key to replace existing' : 'Paste your RapidAPI key'}
+                placeholder={(cfg?.judge0_api_key_configured as boolean) ? 'Enter new key to replace existing' : 'Paste your RapidAPI key'}
                 autoComplete="off"
               />
               <button
@@ -227,7 +227,7 @@ const CodeExecutionSettings = () => {
                 <Save size={16} /> Save key
               </button>
             </div>
-            {cfg.judge0_api_key_configured && (
+            {(cfg?.judge0_api_key_configured as boolean) ? (
               <button
                 data-testid="judge0-key-clear"
                 onClick={clearKey}
@@ -235,7 +235,7 @@ const CodeExecutionSettings = () => {
               >
                 <Trash2 size={14} /> Clear stored key
               </button>
-            )}
+            ) : null}
             <div style={{ fontSize: 12, color: '#8b949e', marginTop: 10, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
               <AlertTriangle size={12} style={{ marginTop: 2, flexShrink: 0 }} />
               <span>
@@ -246,7 +246,7 @@ const CodeExecutionSettings = () => {
         </div>
       )}
 
-      {cfg.provider === 'piston' && (
+      {(cfg?.provider as string) === 'piston' && (
         <div style={{ ...card, marginTop: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <Server size={18} color="#22c55e" />
@@ -256,9 +256,9 @@ const CodeExecutionSettings = () => {
           <input
             data-testid="piston-url"
             style={input}
-            value={cfg.piston_api_url || ''}
-            onChange={(e) => setCfg({ ...cfg, piston_api_url: e.target.value })}
-            onBlur={() => save({ piston_api_url: cfg.piston_api_url })}
+            value={(cfg?.piston_api_url as string) ?? ''}
+            onChange={(e) => setCfg({ ...(cfg ?? {}), piston_api_url: e.target.value } as Record<string, unknown>)}
+            onBlur={() => save({ piston_api_url: cfg?.piston_api_url })}
             placeholder="https://emkc.org/api/v2/piston"
           />
           <div style={{ fontSize: 12, color: '#8b949e', marginTop: 10 }}>
@@ -272,7 +272,7 @@ const CodeExecutionSettings = () => {
         <div style={label}>Enabled languages</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {LANGS.map(l => {
-            const active = (cfg.languages || []).includes(l.id);
+            const active = ((cfg?.languages as string[]) || []).includes(l.id);
             return (
               <button
                 key={l.id}
@@ -297,7 +297,7 @@ const CodeExecutionSettings = () => {
       <div style={{ ...card, marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
-            Playground is {cfg.enabled ? <span style={{ color: '#22c55e' }}>ENABLED</span> : <span style={{ color: '#ef4444' }}>DISABLED</span>}
+            Playground is {(cfg?.enabled as boolean) ? <span style={{ color: '#22c55e' }}>ENABLED</span> : <span style={{ color: '#ef4444' }}>DISABLED</span>}
           </div>
           <div style={{ fontSize: 13, color: '#8b949e' }}>
             When disabled, DSA lessons hide the Try-it-Yourself sandbox entirely.
@@ -306,10 +306,10 @@ const CodeExecutionSettings = () => {
         <div style={{ display: 'flex', gap: 10 }}>
           <button
             data-testid="toggle-enabled"
-            onClick={() => save({ enabled: !cfg.enabled })}
-            style={{ ...btn, background: cfg.enabled ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)', color: cfg.enabled ? '#ef4444' : '#22c55e' }}
+            onClick={() => save({ enabled: !(cfg?.enabled as boolean) })}
+            style={{ ...btn, background: (cfg?.enabled as boolean) ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)', color: (cfg?.enabled as boolean) ? '#ef4444' : '#22c55e' }}
           >
-            {cfg.enabled ? 'Disable' : 'Enable'}
+            {(cfg?.enabled as boolean) ? 'Disable' : 'Enable'}
           </button>
           <button
             data-testid="test-provider"
@@ -329,17 +329,17 @@ const CodeExecutionSettings = () => {
           style={{
             ...card,
             marginTop: 16,
-            background: testResult.ok ? 'rgba(34,197,94,0.05)' : 'rgba(239,68,68,0.05)',
-            borderColor: testResult.ok ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)',
+            background: (testResult.ok as boolean) ? 'rgba(34,197,94,0.05)' : 'rgba(239,68,68,0.05)',
+            borderColor: (testResult.ok as boolean) ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)',
             display: 'flex', alignItems: 'center', gap: 10,
           }}
         >
-          {testResult.ok ? <CheckCircle2 color="#22c55e" size={20} /> : <XCircle color="#ef4444" size={20} />}
+          {(testResult.ok as boolean) ? <CheckCircle2 color="#22c55e" size={20} /> : <XCircle color="#ef4444" size={20} />}
           <div>
-            <div style={{ fontWeight: 600, color: testResult.ok ? '#22c55e' : '#ef4444' }}>
-              {testResult.ok ? 'Connection OK' : 'Connection failed'}
+            <div style={{ fontWeight: 600, color: (testResult.ok as boolean) ? '#22c55e' : '#ef4444' }}>
+              {(testResult.ok as boolean) ? 'Connection OK' : 'Connection failed'}
             </div>
-            <div style={{ fontSize: 13, color: '#a1a1aa', marginTop: 2 }}>{testResult.message}</div>
+            <div style={{ fontSize: 13, color: '#a1a1aa', marginTop: 2 }}>{(testResult.message as string)}</div>
           </div>
         </div>
       )}

@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 
 interface QuizQuestion { type: string; question: string; options: string[]; correct_answer: number; expected_keywords: string[]; code_snippet: string; explanation: string; difficulty: string; points: number; }
+type QuizData = { id: string; title: string; description: string; passing_score: number; questions: QuizQuestion[]; }; // eslint-disable-line @typescript-eslint/no-unused-vars
+interface QuizMap { [sectionId: string]: QuizData; }
 
 const TYPE_OPTIONS = [
   { value: 'mcq', label: 'Multiple Choice', icon: HelpCircle },
@@ -82,7 +84,7 @@ const QuizManager = () => {
           // No quiz for this section (ignore 404)
         }
       }
-      setQuizzes(quizMap);
+      setQuizzes(quizMap as Record<string, { id: string; title: string; description: string; passing_score: number; questions: QuizQuestion[] }>);
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       handleApiError(err);
@@ -105,8 +107,8 @@ const QuizManager = () => {
   const handleGenerateQuiz = async (sectionId: string) => {
     setGenerating(prev => ({ ...prev, [sectionId]: true }));
     try {
-      const res = await api.post<Record<string, unknown>>(`/quizzes/generate/${sectionId}`, {});
-      setQuizzes(prev => ({ ...prev, [sectionId]: res.data }));
+      const res = await api.post<QuizData>(`/quizzes/generate/${sectionId}`, {});
+      setQuizzes(prev => ({ ...prev, [sectionId]: res.data as QuizData }));
     } catch (err) {
       showError(err instanceof ApiError ? err.detail : 'Generation failed');
     } finally {
@@ -118,7 +120,7 @@ const QuizManager = () => {
     if (!(await showConfirm('Delete this quiz?'))) return;
     try {
       await api.delete(`/quizzes/${quizId}`);
-      setQuizzes(prev => { const n: Record<string, unknown> = { ...prev }; delete n[sectionId]; return n; });
+      setQuizzes(prev => { const n = { ...prev }; delete n[sectionId]; return n; });
     } catch (err) { showError('Delete failed'); handleApiError(err); }
   };
 
@@ -176,7 +178,7 @@ const QuizManager = () => {
           headers: { 'Content-Type': 'application/json' },
         });
       }
-      setQuizzes(prev => ({ ...prev, [editingSectionId]: res.data }));
+      setQuizzes(prev => ({ ...prev, [editingSectionId]: res.data as QuizData }));
       setEditingQuiz(null);
       setEditingSectionId(null);
     } catch (err) {
@@ -185,7 +187,8 @@ const QuizManager = () => {
   };
 
   const updateQuestion = (idx: number, field: string, value: string | number | string[]) => {
-    setEditingQuiz((prev: NonNullable<typeof editingQuiz>) => {
+    setEditingQuiz((prev) => {
+      if (!prev) return null;
       const qs = [...prev.questions];
       qs[idx] = { ...qs[idx], [field]: value };
       if (field === 'type') {
@@ -198,7 +201,8 @@ const QuizManager = () => {
   };
 
   const updateOption = (qIdx: number, optIdx: number, value: string) => {
-    setEditingQuiz((prev: NonNullable<typeof editingQuiz>) => {
+    setEditingQuiz((prev) => {
+      if (!prev) return null;
       const qs = [...prev.questions];
       const opts = [...(qs[qIdx].options || [])];
       opts[optIdx] = value;
@@ -208,11 +212,17 @@ const QuizManager = () => {
   };
 
   const addQuestion = (type: string = 'mcq') => {
-    setEditingQuiz((prev: NonNullable<typeof editingQuiz>) => ({ ...prev, questions: [...prev.questions, emptyQuestion(type)] }));
+    setEditingQuiz((prev) => {
+      if (!prev) return null;
+      return { ...prev, questions: [...prev.questions, emptyQuestion(type)] };
+    });
   };
 
   const removeQuestion = (idx: number) => {
-    setEditingQuiz((prev: NonNullable<typeof editingQuiz>) => ({ ...prev, questions: prev.questions.filter((_, i: number) => i !== idx) }));
+    setEditingQuiz((prev) => {
+      if (!prev) return null;
+      return { ...prev, questions: prev.questions.filter((_, i: number) => i !== idx) };
+    });
   };
 
   if (loading) return <div className="min-h-screen bg-[#0d1117] flex items-center justify-center"><Loader2 className="animate-spin text-[#22c55e]" size={32} /></div>;
@@ -234,11 +244,11 @@ const QuizManager = () => {
 
           {/* Quiz metadata */}
           <div className="border border-[#2d333b] rounded-lg p-4 mb-6 space-y-3" style={{ backgroundColor: '#161b22' }}>
-            <input value={editingQuiz.title} onChange={e => setEditingQuiz((prev) => ({ ...prev, title: e.target.value }))} placeholder="Quiz Title" className="w-full bg-[#0d1117] border border-[#2d333b] rounded px-3 py-2 text-sm text-white outline-none focus:border-[#22c55e]" />
-            <input value={editingQuiz.description} onChange={e => setEditingQuiz((prev) => ({ ...prev, description: e.target.value }))} placeholder="Description" className="w-full bg-[#0d1117] border border-[#2d333b] rounded px-3 py-2 text-sm text-white outline-none focus:border-[#22c55e]" />
+            <input value={editingQuiz.title} onChange={e => setEditingQuiz((prev) => { if (!prev) return null; return { ...prev, title: e.target.value }; })} placeholder="Quiz Title" className="w-full bg-[#0d1117] border border-[#2d333b] rounded px-3 py-2 text-sm text-white outline-none focus:border-[#22c55e]" />
+            <input value={editingQuiz.description} onChange={e => setEditingQuiz((prev) => { if (!prev) return null; return { ...prev, description: e.target.value }; })} placeholder="Description" className="w-full bg-[#0d1117] border border-[#2d333b] rounded px-3 py-2 text-sm text-white outline-none focus:border-[#22c55e]" />
             <div className="flex items-center gap-2">
               <label className="text-xs text-[#8b949e]">Passing Score:</label>
-              <input type="number" min={0} max={100} value={editingQuiz.passing_score} onChange={e => setEditingQuiz((prev) => ({ ...prev, passing_score: parseInt(e.target.value) || 0 }))} className="w-20 bg-[#0d1117] border border-[#2d333b] rounded px-2 py-1 text-sm text-white outline-none" />
+              <input type="number" min={0} max={100} value={editingQuiz.passing_score} onChange={e => setEditingQuiz((prev) => { if (!prev) return null; return { ...prev, passing_score: parseInt(e.target.value) || 0 }; })} className="w-20 bg-[#0d1117] border border-[#2d333b] rounded px-2 py-1 text-sm text-white outline-none" />
               <span className="text-xs text-[#8b949e]">%</span>
             </div>
           </div>
@@ -349,7 +359,7 @@ const QuizManager = () => {
                       <div>
                         <div className="text-xs text-[#8b949e] mb-2">
                           <strong>{quiz.title}</strong> — {quiz.questions?.length} questions, pass: {quiz.passing_score}%
-                          {quiz.generated && <span className="ml-2 text-[#f59e0b]">(AI Generated)</span>}
+                          {!!(quiz as Record<string, unknown>).generated && <span className="ml-2 text-[#f59e0b]">(AI Generated)</span>}
                         </div>
                         <div className="flex gap-2">
                           <button data-testid={`edit-quiz-${section.id}`} onClick={() => startEdit(section.id)} className="text-xs px-3 py-1.5 rounded border border-[#2d333b] text-[#8b949e] hover:text-white transition-colors flex items-center gap-1">

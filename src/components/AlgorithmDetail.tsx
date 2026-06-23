@@ -74,20 +74,21 @@ const AlgorithmDetail = () => {
     const SINGLE_VALUE_ALGORITHMS = ['counting-bits'];
     const isSingleValueAlgorithm = SINGLE_VALUE_ALGORITHMS.includes(algorithmId);
 
-    let initialInput: unknown;
+    let initialInput: number[] | Record<string, unknown> = [];
     if (isCustomMode && customInput) {
       if (isStringAlgorithm) {
         if (customInput.includes('=')) {
           const parts = customInput.split(',').map(p => p.trim());
-          initialInput = {};
+          const obj: Record<string, unknown> = {};
           parts.forEach(part => {
             const [key, value] = part.split('=').map(s => s.trim());
             if (key === 'strs') {
-              initialInput[key] = value.replace(/[\[\]"']/g, '').split(';').map(s => s.trim());
+              obj[key] = value.replace(/[\[\]"']/g, '').split(';').map(s => s.trim());
             } else {
-              initialInput[key] = value;
+              obj[key] = value;
             }
           });
+          initialInput = obj;
         } else {
           initialInput = { s: customInput };
         }
@@ -124,7 +125,7 @@ const AlgorithmDetail = () => {
       const n = (initialInput as Record<string, number>).n || 5;
       setCurrentArray(new Array(n + 1).fill(0));
     }
-    const steps = generateAnimationSteps(algorithmId, (isStringAlgorithm || isSingleValueAlgorithm) ? initialInput : [...(initialInput as unknown[])], algorithm?.category);
+    const steps = generateAnimationSteps(algorithmId, (isStringAlgorithm || isSingleValueAlgorithm) ? initialInput : [...(initialInput as unknown[])]);
     setAnimationSteps(steps);
     setCurrentStep(0);
     setHighlightedIndices([]);
@@ -428,7 +429,7 @@ const AlgorithmDetail = () => {
           />
         </div>
 
-        {(algorithmInfo as Record<string, unknown>)[algorithmId] && (
+        {Boolean((algorithmInfo as Record<string, unknown>)[algorithmId]) && (
           <InfoPanels algorithmId={algorithmId} algorithm={algorithm} />
         )}
       </main>

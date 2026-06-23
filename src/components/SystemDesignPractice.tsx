@@ -21,14 +21,14 @@ interface SessionData { session_id?: string; steps?: StepData[]; experience_leve
 interface FeedbackData { status?: string; categories?: Record<string, unknown>[]; did_well?: string[]; improve?: string[]; score?: number; [key: string]: unknown }
 interface FinalEvalData { overall_score?: number; passed?: boolean; summary?: string; did_well?: string[]; categories?: Record<string, { score?: number; feedback?: Record<string, unknown>[] }>; status?: string; [key: string]: unknown }
 
-const STEP_ICONS: Record<string, React.ComponentType<{ size?: number }>> = { target: Target, gauge: Gauge, ruler: Ruler, route: Route, shield: Shield, layers: Layers, arrows: ArrowRight, table: Table2, key: Key, zap: Zap, refresh: RefreshCw, database: Database, 'bar-chart': BarChart2 };
+const STEP_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = { target: Target, gauge: Gauge, ruler: Ruler, route: Route, shield: Shield, layers: Layers, arrows: ArrowRight, table: Table2, key: Key, zap: Zap, refresh: RefreshCw, database: Database, 'bar-chart': BarChart2 };
 
 const METHOD_COLORS: Record<string, string> = { GET: '#3b82f6', POST: '#a855f7', PUT: '#f59e0b', DELETE: '#ef4444', PATCH: '#22c55e' };
 
 /* ---------- Left Sidebar ---------- */
 const Sidebar = ({ session, activeStep, sidebarTab, setSidebarTab, aiQuestion, setAiQuestion, aiAnswer, aiLoading, onAskAi }: { session: SessionData; activeStep: string; sidebarTab: string; setSidebarTab: (tab: string) => void; aiQuestion: string; setAiQuestion: (q: string) => void; aiAnswer: string; aiLoading: boolean; onAskAi: () => void }) => {
   const step = session?.steps?.find((s: StepData) => s.id === activeStep);
-  const guidelines = session?.guidelines?.[activeStep];
+  const guidelines = session?.guidelines?.[activeStep] as Record<string, unknown> | undefined;
 
   return (
     <div className="w-72 shrink-0 border-r border-[#2d333b] flex flex-col h-full overflow-hidden" style={{ backgroundColor: '#0d1117' }}>
@@ -52,22 +52,22 @@ const Sidebar = ({ session, activeStep, sidebarTab, setSidebarTab, aiQuestion, s
 
             {guidelines && (
               <>
-                <p className="text-xs text-[#c9d1d9] mb-3 leading-relaxed">{guidelines.goal}</p>
+                <p className="text-xs text-[#c9d1d9] mb-3 leading-relaxed">{guidelines?.goal as string}</p>
                 {guidelines.duration && (
                   <div className="flex items-center gap-2 mb-4 text-xs text-[#8b949e]">
-                    <Clock size={12} /> Duration: ~{guidelines.duration}
+                    <Clock size={12} /> Duration: ~{guidelines.duration as string}
                   </div>
                 )}
-                {guidelines.tips?.map((tip: Record<string, unknown>, i: number) => {
-                  const Icon = STEP_ICONS[tip.icon] || Target;
+                {(guidelines.tips as Record<string, unknown>[])?.map((tip: Record<string, unknown>, i: number) => {
+                  const Icon = STEP_ICONS[tip.icon as string] || Target;
                   return (
                     <div key={i} className="flex gap-2.5 mb-3">
                       <div className="w-6 h-6 rounded-full bg-[#161b22] border border-[#2d333b] flex items-center justify-center shrink-0 mt-0.5">
                         <Icon size={10} className="text-[#8b949e]" />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-[#c9d1d9]">{tip.title}</p>
-                        <p className="text-[11px] text-[#8b949e] leading-relaxed mt-0.5">{tip.text}</p>
+                        <p className="text-xs font-semibold text-[#c9d1d9]">{tip.title as string}</p>
+                        <p className="text-[11px] text-[#8b949e] leading-relaxed mt-0.5">{tip.text as string}</p>
                       </div>
                     </div>
                   );
@@ -104,10 +104,10 @@ const Sidebar = ({ session, activeStep, sidebarTab, setSidebarTab, aiQuestion, s
 
 /* ---------- Requirements Step ---------- */
 const RequirementsStep = ({ session, onSave }: { session: SessionData; onSave: (data: Record<string, unknown>) => void }) => {
-  const guidelines = session?.guidelines?.requirements;
-  const saved = session?.answers?.requirements || {};
-  const [frs, setFrs] = useState<string[]>(saved.functional || []);
-  const [nfrs, setNfrs] = useState<string[]>(saved.non_functional || []);
+  const guidelines = (session?.guidelines?.requirements || {}) as Record<string, unknown>;
+  const saved = (session?.answers?.requirements || {}) as Record<string, unknown>;
+  const [frs, setFrs] = useState<string[]>(saved.functional as string[] || []);
+  const [nfrs, setNfrs] = useState<string[]>(saved.non_functional as string[] || []);
   const [frInput, setFrInput] = useState('');
   const [nfrInput, setNfrInput] = useState('');
 
@@ -127,7 +127,7 @@ const RequirementsStep = ({ session, onSave }: { session: SessionData; onSave: (
         <div className="flex gap-2 mb-3">
           <input data-testid="fr-input" value={frInput} onChange={e => setFrInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addFr()}
-            placeholder={guidelines?.fr_placeholder || "What should the system do?"}
+            placeholder={((guidelines?.fr_placeholder) as string) || "What should the system do?"}
             className="flex-1 bg-[#0d1117] border border-[#2d333b] rounded-lg px-3 py-2 text-sm text-[#c9d1d9] outline-none focus:border-[#22c55e] placeholder-[#484f58]" />
           <button data-testid="fr-add" onClick={addFr} className="p-2 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white transition-colors"><Plus size={14} /></button>
         </div>
@@ -140,9 +140,9 @@ const RequirementsStep = ({ session, onSave }: { session: SessionData; onSave: (
             </div>
           ))}
         </div>
-        {frs.length === 0 && guidelines?.example_frs && (
+        {frs.length === 0 && guidelines?.example_frs ? (
           <p className="text-[11px] text-[#484f58] mt-2 italic">Hint: Think about creating, reading, redirecting URLs...</p>
-        )}
+        ) : null}
       </div>
 
       {/* Non-Functional */}
@@ -154,7 +154,7 @@ const RequirementsStep = ({ session, onSave }: { session: SessionData; onSave: (
         <div className="flex gap-2 mb-3">
           <input data-testid="nfr-input" value={nfrInput} onChange={e => setNfrInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addNfr()}
-            placeholder={guidelines?.nfr_placeholder || "Scalability, availability, latency..."}
+            placeholder={((guidelines?.nfr_placeholder) as string) || "Scalability, availability, latency..."}
             className="flex-1 bg-[#0d1117] border border-[#2d333b] rounded-lg px-3 py-2 text-sm text-[#c9d1d9] outline-none focus:border-[#22c55e] placeholder-[#484f58]" />
           <button data-testid="nfr-add" onClick={addNfr} className="p-2 rounded-lg bg-[#3b82f6] hover:bg-[#2563eb] text-white transition-colors"><Plus size={14} /></button>
         </div>
@@ -174,9 +174,9 @@ const RequirementsStep = ({ session, onSave }: { session: SessionData; onSave: (
 
 /* ---------- API Design Step ---------- */
 const ApiDesignStep = ({ session, onSave }: { session: SessionData; onSave: (data: Record<string, unknown>) => void }) => {
-  const guidelines = session?.guidelines?.['api-design'];
-  const saved = session?.answers?.['api-design'] || {};
-  const [endpoints, setEndpoints] = useState<Record<string, unknown>[]>(saved.endpoints || []);
+  const guidelines = (session?.guidelines?.['api-design'] || {}) as Record<string, unknown>;
+  const saved = (session?.answers?.['api-design'] || {}) as Record<string, unknown>;
+  const [endpoints, setEndpoints] = useState<Record<string, unknown>[]>(saved.endpoints as Record<string, unknown>[] || []);
   const [method, setMethod] = useState('GET');
   const [path, setPath] = useState('');
   const [desc, setDesc] = useState('');
@@ -226,27 +226,27 @@ const ApiDesignStep = ({ session, onSave }: { session: SessionData; onSave: (dat
         <div className="space-y-1.5 mb-4">
           {endpoints.map((ep, i) => (
             <div key={i} data-testid={`endpoint-${i}`} className="flex items-center gap-2 group px-3 py-2 rounded-lg border border-[#2d333b]" style={{ backgroundColor: '#0d1117' }}>
-              <span className="text-xs font-bold shrink-0 w-14" style={{ color: METHOD_COLORS[ep.method] }}>{ep.method}</span>
-              <code className="text-sm text-[#c9d1d9] font-mono flex-1">{ep.path}</code>
-              {ep.description && <span className="text-xs text-[#484f58]">{ep.description}</span>}
+              <span className="text-xs font-bold shrink-0 w-14" style={{ color: METHOD_COLORS[ep.method as string] }}>{ep.method as string}</span>
+              <code className="text-sm text-[#c9d1d9] font-mono flex-1">{ep.path as string}</code>
+              {ep.description ? <span className="text-xs text-[#484f58]">{ep.description as string}</span> : null}
               <button onClick={() => removeEndpoint(i)} className="opacity-0 group-hover:opacity-100 text-[#484f58] hover:text-red-400"><X size={12} /></button>
             </div>
           ))}
         </div>
 
         {/* Example endpoints */}
-        {endpoints.length === 0 && guidelines?.example_endpoints && (
+        {endpoints.length === 0 && guidelines?.example_endpoints ? (
           <div className="mt-3">
             <p className="text-xs text-[#484f58] mb-2 italic">Example endpoints:</p>
-            {guidelines.example_endpoints.map((ep: Record<string, unknown>, i: number) => (
+            {(guidelines.example_endpoints as Record<string, unknown>[]).map((ep: Record<string, unknown>, i: number) => (
               <div key={i} className="flex items-center gap-2 text-xs mb-1">
-                <span className="font-bold" style={{ color: METHOD_COLORS[ep.method] }}>{ep.method}</span>
-                <code className="text-[#8b949e] font-mono">{ep.path}</code>
-                <span className="text-[#484f58]">&rarr; {ep.description}</span>
+                <span className="font-bold" style={{ color: METHOD_COLORS[ep.method as string] }}>{ep.method as string}</span>
+                <code className="text-[#8b949e] font-mono">{ep.path as string}</code>
+                <span className="text-[#484f58]">&rarr; {ep.description as string}</span>
               </div>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
       <p className="text-xs text-[#484f58] text-center">Add at least 3 API endpoints</p>
     </div>
@@ -255,8 +255,8 @@ const ApiDesignStep = ({ session, onSave }: { session: SessionData; onSave: (dat
 
 /* ---------- Generic Text Step ---------- */
 const TextStep = ({ stepId, session, onSave, placeholder }: { stepId: string; session: SessionData; onSave: (data: Record<string, unknown>) => void; placeholder?: string }) => {
-  const saved = session?.answers?.[stepId] || {};
-  const [content, setContent] = useState(saved.content || '');
+  const saved = (session?.answers?.[stepId] || {}) as Record<string, unknown>;
+  const [content, setContent] = useState(saved.content as string || '');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleChange = (val: string) => {
@@ -284,39 +284,40 @@ const SEVERITY_STYLES: Record<string, Record<string, string>> = {
 
 const FeedbackPanel = ({ step }: { step: StepData }) => {
   if (!step?.feedback) return null;
-  const { score, feedback } = step;
+  const feedback = step.feedback as Record<string, unknown> || {};
+  const score = step.score as number || 0;
   const passed = step.status === 'passed';
-  const hasCategories = feedback.categories && feedback.categories.length > 0;
+  const hasCategories = (feedback.categories as Record<string, unknown>[]) && (feedback.categories as Record<string, unknown>[]).length > 0;
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
       <div className="flex items-center gap-3 mb-3">
         {passed ? <CheckCircle size={16} className="text-[#22c55e]" /> : <AlertCircle size={16} className="text-[#f59e0b]" />}
-        <span className="text-sm font-semibold text-white">{score || feedback.score}/10 - {(score || feedback.score) >= 7 ? 'Great job!' : (score || feedback.score) >= 5 ? 'Good effort!' : 'Needs improvement'}</span>
+        <span className="text-sm font-semibold text-white">{score || feedback.score as number}/10 - {((score || feedback.score) as number) >= 7 ? 'Great job!' : ((score || feedback.score) as number) >= 5 ? 'Good effort!' : 'Needs improvement'}</span>
       </div>
 
       {/* Overall summary for database evaluations */}
-      {feedback.overall_summary && (
-        <p className="text-xs text-[#8b949e] leading-relaxed mb-4 px-1">{feedback.overall_summary}</p>
-      )}
+      {(feedback as Record<string, unknown>).overall_summary ? (
+        <p className="text-xs text-[#8b949e] leading-relaxed mb-4 px-1">{(feedback as Record<string, unknown>).overall_summary as string}</p>
+      ) : null}
 
       {/* Category cards for database evaluations */}
       {hasCategories && (
         <div className="space-y-2 mb-4" data-testid="db-feedback-categories">
-          {feedback.categories.map((cat: Record<string, unknown>, ci: number) => {
-            const sev = SEVERITY_STYLES[cat.severity] || SEVERITY_STYLES.warning;
+          {(feedback.categories as Record<string, unknown>[]).map((cat: Record<string, unknown>, ci: number) => {
+            const sev = SEVERITY_STYLES[cat.severity as string] || SEVERITY_STYLES.warning;
             return (
               <div key={ci} data-testid={`db-feedback-cat-${ci}`}
                 className="rounded-lg border p-3"
                 style={{ backgroundColor: sev.bg, borderColor: sev.border }}>
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-xs font-bold" style={{ color: sev.color }}>{cat.name}</span>
+                  <span className="text-xs font-bold" style={{ color: sev.color }}>{cat.name as string}</span>
                   <span className="text-[9px] font-medium px-1.5 py-0.5 rounded" style={{ color: sev.color, backgroundColor: `${sev.color}15` }}>
                     {sev.label}
                   </span>
                 </div>
                 <ul className="space-y-1">
-                  {(cat.findings || []).map((f: string, fi: number) => (
+                  {((cat.findings as string[]) || []).map((f: string, fi: number) => (
                     <li key={fi} className="flex gap-2 text-xs text-[#c9d1d9] leading-relaxed">
                       {cat.severity === 'good' ? <CheckCircle size={10} className="shrink-0 mt-0.5" style={{ color: sev.color }} /> :
                        cat.severity === 'critical' ? <XCircle size={10} className="shrink-0 mt-0.5" style={{ color: sev.color }} /> :
@@ -332,11 +333,11 @@ const FeedbackPanel = ({ step }: { step: StepData }) => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {feedback.did_well?.length > 0 && (
+        {(feedback.did_well as string[])?.length > 0 && (
           <div className="rounded-xl border border-[#22c55e]/20 p-4" style={{ backgroundColor: 'rgba(34,197,94,0.04)' }}>
             <h5 className="text-xs font-bold text-[#22c55e] mb-2">What you did well</h5>
             <ul className="space-y-1.5">
-              {feedback.did_well.map((p: string, i: number) => (
+              {(feedback.did_well as string[]).map((p: string, i: number) => (
                 <li key={i} className="flex gap-2 text-xs text-[#c9d1d9] leading-relaxed">
                   <CheckCircle size={10} className="text-[#22c55e] shrink-0 mt-0.5" />
                   {p}
@@ -345,11 +346,11 @@ const FeedbackPanel = ({ step }: { step: StepData }) => {
             </ul>
           </div>
         )}
-        {feedback.improve?.length > 0 && (
+        {(feedback.improve as string[])?.length > 0 && (
           <div className="rounded-xl border border-[#f59e0b]/20 p-4" style={{ backgroundColor: 'rgba(245,158,11,0.04)' }}>
             <h5 className="text-xs font-bold text-[#f59e0b] mb-2">What you can improve</h5>
             <ul className="space-y-1.5">
-              {feedback.improve.map((p: string, i: number) => (
+              {(feedback.improve as string[]).map((p: string, i: number) => (
                 <li key={i} className="flex gap-2 text-xs text-[#c9d1d9] leading-relaxed">
                   <AlertCircle size={10} className="text-[#f59e0b] shrink-0 mt-0.5" />
                   {p}
@@ -447,14 +448,15 @@ const SystemDesignPractice = () => {
     setEvaluating(true);
     try {
       const res = await api.post<SessionData>(`/system-design/session/${session.session_id}/evaluate/${stepId}`, {});
-      setSession(prev => ({ ...prev, steps: res.data.steps }));
+      setSession(prev => (prev ? { ...prev, steps: res.data.steps } : prev));
       // Auto-advance to next step if passed (only on first evaluation)
       if (res.data.passed) {
-        const idx = res.data.steps.findIndex((s: StepData) => s.id === stepId);
-        const evalHist = res.data.steps[idx]?.eval_history || [];
+        const stepsArr = res.data.steps || [];
+        const idx = stepsArr.findIndex((s: StepData) => s.id === stepId);
+        const evalHist = (stepsArr[idx]?.eval_history as unknown[]) || [];
         if (evalHist.length <= 1) {
-          if (idx >= 0 && idx + 1 < res.data.steps.length) {
-            setActiveStep(res.data.steps[idx + 1].id);
+          if (idx >= 0 && idx + 1 < stepsArr.length) {
+            setActiveStep(stepsArr[idx + 1].id);
           } else {
             // Last step passed — go to final evaluation
             setActiveStep('final');
@@ -472,11 +474,12 @@ const SystemDesignPractice = () => {
     if (!session) return;
     try {
       const res = await api.post<SessionData>(`/system-design/session/${session.session_id}/skip/${stepId}`, {});
-      setSession(prev => ({ ...prev, steps: res.data.steps }));
+      setSession(prev => (prev ? { ...prev, steps: res.data.steps } : prev));
       // Auto-advance to next step or final view
-      const idx = res.data.steps.findIndex((s: StepData) => s.id === stepId);
-      if (idx >= 0 && idx + 1 < res.data.steps.length) {
-        setActiveStep(res.data.steps[idx + 1].id);
+      const stepsArr = res.data.steps || [];
+      const idx = stepsArr.findIndex((s: StepData) => s.id === stepId);
+      if (idx >= 0 && idx + 1 < stepsArr.length) {
+        setActiveStep(stepsArr[idx + 1].id);
       } else {
         // Last step — go to final evaluation
         setActiveStep('final');
@@ -540,7 +543,7 @@ const SystemDesignPractice = () => {
   const renderStepContent = (step: StepData) => {
     if (step.status === 'locked') {
       const idx = steps.findIndex((s: StepData) => s.id === step.id);
-      const prevTitle = idx > 0 ? steps[idx - 1].title : '';
+      const prevTitle = idx > 0 ? (steps[idx - 1].title || '') : '';
       return <LockedOverlay prevTitle={prevTitle} />;
     }
 
@@ -554,7 +557,7 @@ const SystemDesignPractice = () => {
         case 'database':
         return <DatabaseDesignStep session={session} onSave={(data: Record<string, unknown>) => handleSave('database', data)} />;
       default:
-        return <TextStep stepId={step.id} session={session} onSave={(data: Record<string, unknown>) => handleSave(step.id, data)} placeholder={`Describe your ${step.title.toLowerCase()} here. Include components, data flow, and design decisions...`} />;
+        return <TextStep stepId={step.id} session={session} onSave={(data: Record<string, unknown>) => handleSave(step.id, data)} placeholder={`Describe your ${(step.title || '').toLowerCase()} here. Include components, data flow, and design decisions...`} />;
     }
   };
 
@@ -567,7 +570,7 @@ const SystemDesignPractice = () => {
         </button>
         <div className="h-4 w-px bg-[#2d333b]" />
         <h2 data-testid="practice-title" className="text-sm font-bold text-white">{session.problem_title}</h2>
-        <span className="text-xs font-medium px-2 py-0.5 rounded" style={{ color: DIFF_COLORS[session.difficulty], backgroundColor: `${DIFF_COLORS[session.difficulty]}15` }}>
+        <span className="text-xs font-medium px-2 py-0.5 rounded" style={{ color: DIFF_COLORS[session.difficulty || ''], backgroundColor: `${DIFF_COLORS[session.difficulty || '']}15` }}>
           {session.difficulty}
         </span>
 
@@ -655,7 +658,7 @@ const SystemDesignPractice = () => {
 
                   {/* Feedback */}
                   <FeedbackPanel step={step} />
-                  <EvalHistory history={step.eval_history} />
+                  <EvalHistory history={step.eval_history as any[]} />
 
                   {/* Action Buttons */}
                   {step.status !== 'locked' && (
@@ -663,7 +666,7 @@ const SystemDesignPractice = () => {
                       <button data-testid={`evaluate-${step.id}`} onClick={() => handleEvaluate(step.id)} disabled={evaluating}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-[#22c55e] hover:bg-[#16a34a] disabled:opacity-50 text-white transition-colors">
                         {evaluating ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-                        {evaluating ? 'Evaluating...' : `Evaluate ${step.title.split(' - ')[0]}`}
+                        {evaluating ? 'Evaluating...' : `Evaluate ${(step.title || '').split(' - ')[0]}`}
                       </button>
                       {step.status !== 'passed' && (
                         <button data-testid={`skip-${step.id}`} onClick={() => handleSkip(step.id)}
@@ -722,12 +725,12 @@ const SystemDesignPractice = () => {
                     {/* Grade & Score */}
                     <div className="flex items-center gap-5 rounded-xl border border-[#2d333b] p-5" style={{ backgroundColor: '#161b22' }}>
                       <div className="w-20 h-20 rounded-2xl flex flex-col items-center justify-center"
-                        style={{ backgroundColor: finalEval.overall_score >= 7 ? '#22c55e15' : finalEval.overall_score >= 5 ? '#f59e0b15' : '#ef444415',
-                          border: `2px solid ${finalEval.overall_score >= 7 ? '#22c55e' : finalEval.overall_score >= 5 ? '#f59e0b' : '#ef4444'}` }}>
-                        <span className="text-2xl font-black" style={{ color: finalEval.overall_score >= 7 ? '#22c55e' : finalEval.overall_score >= 5 ? '#f59e0b' : '#ef4444' }}>
-                          {finalEval.grade}
+                        style={{ backgroundColor: (finalEval.overall_score as number) >= 7 ? '#22c55e15' : (finalEval.overall_score as number) >= 5 ? '#f59e0b15' : '#ef444415',
+                          border: `2px solid ${(finalEval.overall_score as number) >= 7 ? '#22c55e' : (finalEval.overall_score as number) >= 5 ? '#f59e0b' : '#ef4444'}` }}>
+                        <span className="text-2xl font-black" style={{ color: (finalEval.overall_score as number) >= 7 ? '#22c55e' : (finalEval.overall_score as number) >= 5 ? '#f59e0b' : '#ef4444' }}>
+                          {finalEval.grade as string}
                         </span>
-                        <span className="text-[10px] font-medium text-[#8b949e]">{finalEval.overall_score}/10</span>
+                        <span className="text-[10px] font-medium text-[#8b949e]">{finalEval.overall_score as number}/10</span>
                       </div>
                       <div className="flex-1">
                         <h4 className="text-sm font-bold text-white mb-1">Overall Assessment</h4>
@@ -736,27 +739,30 @@ const SystemDesignPractice = () => {
                     </div>
 
                     {/* Section Grades */}
-                    {finalEval.section_grades && (
+                    {finalEval.section_grades ? (
                       <div className="rounded-xl border border-[#2d333b] p-4" style={{ backgroundColor: '#161b22' }}>
                         <h4 className="text-xs font-bold text-[#8b949e] uppercase tracking-wider mb-3">Section Breakdown</h4>
                         <div className="space-y-2.5">
-                          {Object.entries(finalEval.section_grades as Record<string, unknown>).map(([key, val]) => (
-                            <div key={key} className="flex items-center gap-3">
-                              <span className="text-xs text-[#c9d1d9] w-36 capitalize">{key.replace(/_/g, ' ')}</span>
-                              <div className="flex-1 h-2 rounded-full bg-[#21262d] overflow-hidden">
-                                <div className="h-full rounded-full" style={{
-                                  width: `${(val.score || 0) * 10}%`,
-                                  backgroundColor: val.score >= 7 ? '#22c55e' : val.score >= 5 ? '#f59e0b' : '#ef4444',
-                                }} />
+                          {Object.entries(finalEval.section_grades as Record<string, unknown>).map(([key, val]) => {
+                            const v = val as Record<string, unknown>;
+                            return (
+                              <div key={key} className="flex items-center gap-3">
+                                <span className="text-xs text-[#c9d1d9] w-36 capitalize">{key.replace(/_/g, ' ')}</span>
+                                <div className="flex-1 h-2 rounded-full bg-[#21262d] overflow-hidden">
+                                  <div className="h-full rounded-full" style={{
+                                    width: `${((v.score as number) || 0) * 10}%`,
+                                    backgroundColor: (v.score as number) >= 7 ? '#22c55e' : (v.score as number) >= 5 ? '#f59e0b' : '#ef4444',
+                                  }} />
+                                </div>
+                                <span className="text-xs font-bold w-8 text-right" style={{ color: (v.score as number) >= 7 ? '#22c55e' : (v.score as number) >= 5 ? '#f59e0b' : '#ef4444' }}>
+                                  {v.score as number}
+                                </span>
                               </div>
-                              <span className="text-xs font-bold w-8 text-right" style={{ color: val.score >= 7 ? '#22c55e' : val.score >= 5 ? '#f59e0b' : '#ef4444' }}>
-                                {val.score}
-                              </span>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Strengths & Weaknesses */}
                     <div className="grid grid-cols-2 gap-4">
@@ -766,7 +772,7 @@ const SystemDesignPractice = () => {
                           <h4 className="text-xs font-bold text-[#22c55e] uppercase tracking-wider">Strengths</h4>
                         </div>
                         <ul className="space-y-2">
-                          {(finalEval.strengths || []).map((s: string, i: number) => (
+                          {(finalEval.strengths as string[] || []).map((s: string, i: number) => (
                             <li key={i} className="text-sm text-[#c9d1d9] flex items-start gap-2">
                               <Star size={10} className="text-[#22c55e] mt-1 shrink-0" />
                               {s}
@@ -780,7 +786,7 @@ const SystemDesignPractice = () => {
                           <h4 className="text-xs font-bold text-[#f59e0b] uppercase tracking-wider">Areas to Improve</h4>
                         </div>
                         <ul className="space-y-2">
-                          {(finalEval.weaknesses || []).map((w: string, i: number) => (
+                          {(finalEval.weaknesses as string[] || []).map((w: string, i: number) => (
                             <li key={i} className="text-sm text-[#c9d1d9] flex items-start gap-2">
                               <AlertCircle size={10} className="text-[#f59e0b] mt-1 shrink-0" />
                               {w}
@@ -791,14 +797,14 @@ const SystemDesignPractice = () => {
                     </div>
 
                     {/* Missing Pieces */}
-                    {finalEval.missing_pieces?.length > 0 && (
+                    {(finalEval.missing_pieces as string[])?.length > 0 && (
                       <div className="rounded-xl border border-[#2d333b] p-4" style={{ backgroundColor: '#161b22' }}>
                         <div className="flex items-center gap-2 mb-3">
                           <Lightbulb size={14} className="text-[#3b82f6]" />
                           <h4 className="text-xs font-bold text-[#3b82f6] uppercase tracking-wider">Missing Pieces</h4>
                         </div>
                         <ul className="space-y-2">
-                          {finalEval.missing_pieces.map((m: string, i: number) => (
+                          {(finalEval.missing_pieces as string[]).map((m: string, i: number) => (
                             <li key={i} className="text-sm text-[#c9d1d9] flex items-start gap-2">
                               <Lightbulb size={10} className="text-[#3b82f6] mt-1 shrink-0" />
                               {m}
@@ -809,14 +815,14 @@ const SystemDesignPractice = () => {
                     )}
 
                     {/* Interview Tips */}
-                    {finalEval.interview_tips?.length > 0 && (
+                    {(finalEval.interview_tips as string[])?.length > 0 && (
                       <div className="rounded-xl border border-[#a855f7]/30 p-4" style={{ backgroundColor: '#a855f710' }}>
                         <div className="flex items-center gap-2 mb-3">
                           <Award size={14} className="text-[#a855f7]" />
                           <h4 className="text-xs font-bold text-[#a855f7] uppercase tracking-wider">Interview Tips</h4>
                         </div>
                         <ul className="space-y-2">
-                          {finalEval.interview_tips.map((t: string, i: number) => (
+                          {(finalEval.interview_tips as string[]).map((t: string, i: number) => (
                             <li key={i} className="text-sm text-[#c9d1d9]">{i + 1}. {t}</li>
                           ))}
                         </ul>

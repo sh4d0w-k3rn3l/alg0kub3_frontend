@@ -20,7 +20,7 @@ const ACTION_ICONS = {
 };
 
 const AuditLogs = () => {
-  const [items, setItems] = useState<AuditEntry[]>([]);
+  const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -34,7 +34,7 @@ const AuditLogs = () => {
     try {
       const params = new URLSearchParams({ page: String(page), limit: '25' });
       if (actionFilter) params.append('action', actionFilter);
-      const res = await api.get<AuditResponse>(`/admin/audit-logs?${params}`, { signal });
+      const res = await api.get<{ items: Record<string, unknown>[]; total: number; total_pages: number; action_types: string[] }>(`/admin/audit-logs?${params}`, { signal });
       if (signal?.aborted) return;
       setItems(res.data.items);
       setTotal(res.data.total);
@@ -96,23 +96,23 @@ const AuditLogs = () => {
               </thead>
               <tbody>
                 {items.map((item, i) => {
-                  const cfg = (ACTION_ICONS as Record<string, { icon: React.ComponentType<{size?: number}>; color: string }>)[item.action] || { icon: Shield, color: '#8b949e' };
+                  const cfg = (ACTION_ICONS as Record<string, { icon: React.ComponentType<{size?: number; style?: React.CSSProperties}>; color: string }>)[item.action as string] || { icon: Shield, color: '#8b949e' };
                   const Icon = cfg.icon;
                   return (
                     <tr key={i} className="border-b border-[#2d333b]/50 hover:bg-[#1c2128]">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <Icon size={14} style={{ color: cfg.color }} />
-                          <span className="text-sm text-[#c9d1d9]">{item.action?.replace(/_/g, ' ')}</span>
+                          <Icon size={14} style={{ color: cfg.color } as React.CSSProperties} />
+                          <span className="text-sm text-[#c9d1d9]">{(item.action as string)?.replace(/_/g, ' ')}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-xs font-mono text-[#8b949e]">{item.target || '-'}</td>
-                      <td className="px-4 py-3 text-xs text-[#8b949e]">{item.admin || '-'}</td>
+                      <td className="px-4 py-3 text-xs font-mono text-[#8b949e]">{(item.target as string) || '-'}</td>
+                      <td className="px-4 py-3 text-xs text-[#8b949e]">{(item.admin as string) || '-'}</td>
                       <td className="px-4 py-3 text-xs text-[#484f58] max-w-[200px] truncate">
-                        {item.details ? JSON.stringify(item.details).slice(0, 60) : '-'}
+                        {item.details ? JSON.stringify(item.details as Record<string, unknown>).slice(0, 60) : '-'}
                       </td>
                       <td className="px-4 py-3 text-xs text-[#484f58]">
-                        {item.timestamp ? new Date(item.timestamp).toLocaleString() : '-'}
+                        {(item.timestamp as string) ? new Date((item.timestamp as string)).toLocaleString() : '-'}
                       </td>
                     </tr>
                   );

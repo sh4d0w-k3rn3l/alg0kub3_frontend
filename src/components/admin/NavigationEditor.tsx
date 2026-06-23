@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { showConfirm } from '@/lib/toast';
 import { invalidateNavCache } from '@/config/navigation';
 import type { NavLink, FooterSection, SocialLink } from '@/types';
@@ -44,23 +44,23 @@ const Row = ({ item, idx, total, fields, onChange, onRemove, onMove }: { item: N
           f.type === 'checkbox' ? (
             <label key={f.key} className="flex items-center gap-1.5 text-[11px] text-[#8b949e] cursor-pointer self-center">
               <input
-                type="checkbox" checked={!!item[f.key]}
+                type="checkbox" checked={!!item[f.key as keyof NavLink]}
                 onChange={e => update(f.key, e.target.checked)}
                 className="w-3 h-3 rounded bg-[#0d1117] border border-[#2d333b]"
               />
               {f.label}
             </label>
           ) : f.type === 'select' ? (
-            <select key={f.key} value={item[f.key] || ''} onChange={e => update(f.key, e.target.value)}
+            <select key={f.key} value={(item[f.key as keyof NavLink] as string) || ''} onChange={e => update(f.key as keyof NavLink, e.target.value)}
               className="bg-[#161b22] border border-[#2d333b] rounded px-2 py-1.5 text-xs text-white focus:border-[#22c55e] outline-none">
-              {f.options.map((o: { value: string; label: string }) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {(f.options ?? []).map((o: { value: string; label: string }) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           ) : (
             <input key={f.key}
               type={f.type || 'text'}
               placeholder={f.placeholder}
-              value={item[f.key] || ''}
-              onChange={e => update(f.key, e.target.value)}
+              value={(item[f.key as keyof NavLink] as string) || ''}
+              onChange={e => update(f.key as keyof NavLink, e.target.value)}
               className="bg-[#161b22] border border-[#2d333b] rounded px-2 py-1.5 text-xs text-white focus:border-[#22c55e] outline-none placeholder:text-[#484f58]"
             />
           )
@@ -142,7 +142,7 @@ const HeaderEditor = ({ cfg, setCfg }: { cfg: NavigationConfigType; setCfg: (cfg
     <ListBuilder
       title="Primary Nav Links"
       subtitle="Shown inline between Practice and More. Keep to 3-5 for best fit."
-      items={cfg.primary_links || []}
+      items={(cfg?.primary_links as unknown as NavLink[]) ?? []}
       setItems={(items) => setCfg({ ...cfg, primary_links: items })}
       fields={[
         { key: 'label', placeholder: 'Label', size: '1fr' },
@@ -156,7 +156,7 @@ const HeaderEditor = ({ cfg, setCfg }: { cfg: NavigationConfigType; setCfg: (cfg
     <ListBuilder
       title="Practice Dropdown"
       subtitle="Items in the Practice dropdown menu."
-      items={cfg.practice_items || []}
+      items={(cfg?.practice_items as unknown as NavLink[]) ?? []}
       setItems={(items) => setCfg({ ...cfg, practice_items: items })}
       fields={[
         { key: 'label', placeholder: 'Label',       size: '1fr' },
@@ -172,7 +172,7 @@ const HeaderEditor = ({ cfg, setCfg }: { cfg: NavigationConfigType; setCfg: (cfg
     <ListBuilder
       title="More Dropdown — Explore Items"
       subtitle="Secondary nav shown inside the More dropdown. What's New items are managed via Announcements."
-      items={cfg.more_items || []}
+      items={(cfg?.more_items as unknown as NavLink[]) ?? []}
       setItems={(items) => setCfg({ ...cfg, more_items: items })}
       fields={[
         { key: 'label', placeholder: 'Label',       size: '1fr' },
@@ -252,19 +252,19 @@ const SectionEditor = ({ section, onChange, onRemove, idx, total, onMove }: { se
 const FooterEditor = ({ cfg, setCfg }: { cfg: NavigationConfigType; setCfg: (cfg: NavigationConfigType) => void; }) => {
   const update = (k: string, v: unknown) => setCfg({ ...cfg, [k]: v });
   const moveSection = (from: number, to: number) => {
-    if (to < 0 || to >= cfg.sections.length) return;
-    const copy = [...cfg.sections];
+    if (to < 0 || to >= (cfg?.sections as unknown[])?.length) return;
+    const copy = [...(cfg?.sections as unknown[] ?? [])];
     const [r] = copy.splice(from, 1);
     copy.splice(to, 0, r);
-    copy.forEach((s, i) => { s.order = i; });
+    (copy as Record<string, unknown>[]).forEach((s, i) => { s.order = i as unknown as number; });
     update('sections', copy);
   };
   const updateSection = (idx: number, next: FooterSection) => {
-    const copy = [...cfg.sections]; copy[idx] = next; update('sections', copy);
+    const copy = [...(cfg?.sections as unknown as Record<string, unknown>[] ?? [])]; copy[idx] = next as unknown as Record<string, unknown>; update('sections', copy);
   };
-  const removeSection = (idx: number) => update('sections', cfg.sections.filter((_: FooterSection, i: number) => i !== idx));
-  const addSection = () => update('sections', [...cfg.sections, {
-    id: uid('sec'), title: 'New Section', visible: true, order: cfg.sections.length, dynamic_courses: false, links: [],
+  const removeSection = (idx: number) => update('sections', (cfg?.sections as unknown as Record<string, unknown>[] ?? []).filter((_: Record<string, unknown>, i: number) => i !== idx));
+  const addSection = () => update('sections', [...(cfg?.sections as unknown as Record<string, unknown>[] ?? []), {
+    id: uid('sec'), title: 'New Section', visible: true, order: ((cfg?.sections as unknown as Record<string, unknown>[])?.length ?? 0), dynamic_courses: false, links: [],
   }]);
 
   return (
@@ -274,13 +274,13 @@ const FooterEditor = ({ cfg, setCfg }: { cfg: NavigationConfigType; setCfg: (cfg
         <h3 className="text-white text-sm font-semibold">Brand</h3>
         <div>
           <label className="text-[11px] text-[#8b949e] mb-1 block">Tagline</label>
-          <input value={cfg.tagline || ''} onChange={e => update('tagline', e.target.value)}
+          <input value={(cfg?.tagline as string) ?? ''} onChange={e => update('tagline', e.target.value)}
             className="w-full bg-[#0d1117] border border-[#2d333b] rounded px-3 py-1.5 text-sm text-white focus:border-[#22c55e] outline-none"
             data-testid="footer-tagline" />
         </div>
         <div>
           <label className="text-[11px] text-[#8b949e] mb-1 block">Copyright <span className="text-[#484f58]">(use {'{year}'} for the current year)</span></label>
-          <input value={cfg.copyright || ''} onChange={e => update('copyright', e.target.value)}
+          <input value={(cfg?.copyright as string) ?? ''} onChange={e => update('copyright', e.target.value)}
             className="w-full bg-[#0d1117] border border-[#2d333b] rounded px-3 py-1.5 text-sm text-white focus:border-[#22c55e] outline-none"
             data-testid="footer-copyright" />
         </div>
@@ -294,9 +294,9 @@ const FooterEditor = ({ cfg, setCfg }: { cfg: NavigationConfigType; setCfg: (cfg
           data-testid="footer-add-section"><Plus size={12} /> Add Section</button>
       </div>
       <div className="space-y-3">
-        {(cfg.sections || []).map((sec: FooterSection, idx: number) => (
+        {((cfg?.sections as unknown as Record<string, unknown>[]) ?? []).map((sec, idx) => (
           <SectionEditor
-            key={sec.id} section={sec} idx={idx} total={cfg.sections.length}
+            key={(sec.id as string)} section={sec as unknown as FooterSection} idx={idx} total={((cfg?.sections as unknown as Record<string, unknown>[]) ?? []).length}
             onChange={(n) => updateSection(idx, n)}
             onRemove={() => removeSection(idx)}
             onMove={moveSection}
@@ -308,7 +308,7 @@ const FooterEditor = ({ cfg, setCfg }: { cfg: NavigationConfigType; setCfg: (cfg
       <ListBuilder
         title="Legal Links (Bottom Bar)"
         subtitle="Small text links shown in the copyright row."
-        items={cfg.legal_links || []}
+        items={(cfg?.legal_links as unknown as NavLink[]) ?? []}
         setItems={(items) => update('legal_links', items)}
         fields={[
           { key: 'label', placeholder: 'Label', size: '1fr' },
@@ -322,7 +322,7 @@ const FooterEditor = ({ cfg, setCfg }: { cfg: NavigationConfigType; setCfg: (cfg
       <ListBuilder
         title="Social Links"
         subtitle="Icons shown in the copyright row. Use full URLs (https:// or mailto:)."
-        items={cfg.social_links || []}
+        items={(cfg?.social_links as unknown as NavLink[]) ?? []}
         setItems={(items) => update('social_links', items)}
         fields={[
           { key: 'icon', type: 'select', size: '0.8fr', options: [
@@ -336,7 +336,7 @@ const FooterEditor = ({ cfg, setCfg }: { cfg: NavigationConfigType; setCfg: (cfg
           { key: 'url',        placeholder: 'https://… or mailto:…', size: '2fr' },
           { key: 'aria_label', placeholder: 'Accessible label',       size: '1fr' },
         ]}
-        makeEmpty={() => ({ id: uid('so'), icon: 'ExternalLink', url: '', aria_label: '' })}
+        makeEmpty={() => ({ id: uid('so'), icon: 'ExternalLink', url: '', aria_label: '' } as unknown as NavLink)}
         testId="footer-social-links"
       />
     </div>

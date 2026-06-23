@@ -18,21 +18,26 @@ const ScoreBadge = ({ score }: { score: number }) => {
   );
 };
 
+interface SEOPageItem { title: string; slug: string; url: string; category: string; seo_score: number; has_custom_seo: boolean; }
+interface SEOStats { total: number; avg_score: number; good: number; needs_work: number; }
+interface SEOSitemapData { total: number; urls: { type: string; url: string; title: string }[]; }
+interface SEOMetaData { meta_title: string; meta_description: string; og_title: string; keywords: string[]; }
+
 const SEOManagement = () => {
-  const [pages, setPages] = useState<Record<string, unknown>[]>([]);
-  const [stats, setStats] = useState<Record<string, unknown>>({});
-  const [sitemap, setSitemap] = useState<Record<string, unknown> | null>(null);
+  const [pages, setPages] = useState<SEOPageItem[]>([]);
+  const [stats, setStats] = useState<SEOStats>({ total: 0, avg_score: 0, good: 0, needs_work: 0 });
+  const [sitemap, setSitemap] = useState<SEOSitemapData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
   const [editSlug, setEditSlug] = useState<string | null>(null);
-  const [editData, setEditData] = useState<Record<string, unknown>>({});
+  const [editData, setEditData] = useState<SEOMetaData>({ meta_title: '', meta_description: '', og_title: '', keywords: [] });
   const [saving, setSaving] = useState<boolean>(false);
   const [tab, setTab] = useState('pages');
   const navigate = useRouter();
 
   useEffect(() => {
     const ac = new AbortController();
-    api.get<Record<string, unknown>>('/admin/seo/pages', { signal: ac.signal })
+    api.get<{ pages: SEOPageItem[]; stats: SEOStats }>('/admin/seo/pages', { signal: ac.signal })
       .then(res => {
         if (!ac.signal.aborted) {
           setPages(res.data.pages);
@@ -46,7 +51,7 @@ const SEOManagement = () => {
 
   const loadSitemap = async () => {
     try {
-      const res = await api.get<Record<string, unknown>>('/admin/seo/sitemap');
+      const res = await api.get<SEOSitemapData>('/admin/seo/sitemap');
       setSitemap(res.data);
     } catch (err) {
       handleApiError(err);
@@ -55,7 +60,7 @@ const SEOManagement = () => {
 
   const openEditor = async (slug: string) => {
     try {
-      const res = await api.get<Record<string, unknown>>(`/admin/seo/meta/${slug}`);
+      const res = await api.get<SEOMetaData>(`/admin/seo/meta/${slug}`);
       setEditData(res.data);
       setEditSlug(slug);
     } catch (err) {
@@ -68,7 +73,7 @@ const SEOManagement = () => {
     try {
       await api.put(`/admin/seo/meta/${editSlug}`, editData);
       setEditSlug(null);
-      const res = await api.get<Record<string, unknown>>('/admin/seo/pages');
+      const res = await api.get<{ pages: SEOPageItem[]; stats: SEOStats }>('/admin/seo/pages');
       setPages(res.data.pages);
       setStats(res.data.stats);
     } catch (err) {
@@ -79,7 +84,7 @@ const SEOManagement = () => {
   };
 
   const filtered = pages.filter(p =>
-    !search || p.title.toLowerCase().includes(search.toLowerCase()) || p.slug.toLowerCase().includes(search.toLowerCase())
+    !search || (p.title || '').toLowerCase().includes(search.toLowerCase()) || (p.slug || '').toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) return <div className="flex items-center justify-center py-32"><Loader2 size={28} className="text-[#22c55e] animate-spin" /></div>;
@@ -200,7 +205,7 @@ const SEOManagement = () => {
           <div className="border border-[#2d333b] rounded-xl p-5" style={{ backgroundColor: '#161b22' }}>
             <p className="text-sm text-[#8b949e] mb-4">{sitemap?.total || 0} public URLs</p>
             <div className="max-h-[500px] overflow-y-auto space-y-1">
-              {(sitemap?.urls as unknown[] || []).map((u: Record<string, unknown>, i: number) => (
+              {(sitemap?.urls || []).map((u: { type: string; url: string; title: string }, i: number) => (
                 <div key={i} className="flex items-center gap-3 py-1.5">
                   <span className={`text-xs px-1.5 py-0.5 rounded ${
                     u.type === 'course' ? 'bg-[#3b82f620] text-[#3b82f6]' :

@@ -46,7 +46,7 @@ interface CodeBlockProps {
   title?: string;
 }
 
-const CodeBlock: FC<CodeBlockProps> = ({ code = '', language = 'Python', runnable = false, syntaxTheme: propTheme, onSyntaxThemeChange }) => {
+const CodeBlock: React.FC<CodeBlockProps> = ({ code = '', language = 'Python', runnable = false, syntaxTheme: propTheme, onSyntaxThemeChange }) => {
   const { colors } = useTheme();
   const { setPreferredLang } = useLanguagePref();
   const [copied, setCopied] = useState(false);

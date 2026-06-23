@@ -144,10 +144,10 @@ const FullCourseMarkdownImport = () => {
             </div>
             <h2 className="text-white text-xl font-bold mb-2">Course Imported!</h2>
             <p className="text-[#8b949e] mb-6">
-              Created <span className="text-[#3b82f6] font-medium">{result.sections_created} sections</span> and <span className="text-[#22c55e] font-medium">{result.lessons_created} lessons</span> with content
+              Created <span className="text-[#3b82f6] font-medium">{(result.sections_created as number)} sections</span> and <span className="text-[#22c55e] font-medium">{(result.lessons_created as number)} lessons</span> with content
             </p>
             <div className="flex items-center justify-center gap-3">
-              <button onClick={() => navigate.push(`/admin/courses/${result.course.id}`)} className="flex items-center gap-2 bg-[#22c55e] hover:bg-[#16a34a] text-white font-medium px-5 py-2.5 rounded-lg text-sm">
+              <button onClick={() => navigate.push(`/admin/courses/${((result.course as Record<string, unknown>)?.id as string)}`)} className="flex items-center gap-2 bg-[#22c55e] hover:bg-[#16a34a] text-white font-medium px-5 py-2.5 rounded-lg text-sm">
                 Open Course <ChevronRight size={14} />
               </button>
               <button onClick={() => navigate.push('/admin')} className="text-[#8b949e] hover:text-white px-4 py-2.5 text-sm">Back to Dashboard</button>

@@ -13,8 +13,8 @@ interface AlgorithmData {
   description: string;
   category: string;
   difficulty: string;
-  timeComplexity: string;
-  spaceComplexity: string;
+  timeComplexity?: string;
+  spaceComplexity?: string;
 }
 
 interface AnimationStep {
@@ -169,7 +169,7 @@ const ComparisonView = () => {
     const newCurrentSteps: Record<string, number> = {};
 
     selectedAlgorithms.forEach(algoId => {
-      const steps = generateAnimationSteps(algoId, [...inputArray], selectedCategory);
+      const steps = generateAnimationSteps(algoId, [...inputArray]);
       newAnimationData[algoId] = steps;
       newCurrentSteps[algoId] = 0;
     });
@@ -382,6 +382,7 @@ const ComparisonView = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {selectedAlgorithms.map((algoId) => {
               const algo = algorithms.find(a => a.id === algoId);
+              if (!algo) return null;
               const steps = animationData[algoId] || [];
               const currentStep = currentSteps[algoId] || 0;
               const isComplete = currentStep >= steps.length - 1 && steps.length > 0;

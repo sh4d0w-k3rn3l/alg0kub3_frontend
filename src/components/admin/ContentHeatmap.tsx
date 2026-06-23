@@ -61,7 +61,7 @@ const ContentHeatmap = () => {
 
   if (loading) return <div className="flex items-center justify-center py-32"><Loader2 size={28} className="text-[#22c55e] animate-spin" /></div>;
 
-  const maxGlobal = Math.max(...(data?.courses || []).map((c: Record<string, unknown>) => c.avg_completions as number), 1);
+  const maxGlobal = Math.max(...((data?.courses ?? []) as Record<string, unknown>[]).map((c) => (c.avg_completions as number ?? 0)), 1);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#0d1117' }}>
@@ -70,7 +70,7 @@ const ContentHeatmap = () => {
           <button onClick={() => navigate.push('/admin/dashboard')} className="text-[#8b949e] hover:text-white transition-colors"><ArrowLeft size={20} /></button>
           <div>
             <h1 data-testid="content-heatmap-title" className="text-2xl font-bold text-white">Content Performance Heatmap</h1>
-            <p className="text-sm text-[#8b949e]">{data?.total_courses || 0} courses analyzed</p>
+            <p className="text-sm text-[#8b949e]">{(data?.total_courses as number) ?? 0} courses analyzed</p>
           </div>
         </div>
 
@@ -90,25 +90,25 @@ const ContentHeatmap = () => {
 
         {/* Course Grid */}
         <div className="space-y-3">
-          {(data?.courses || []).map((course: Record<string, unknown>) => {
-            const isExpanded = expandedCourse === course.course_slug;
+          {((data?.courses ?? []) as Record<string, unknown>[]).map((course) => {
+            const isExpanded = expandedCourse === (course.course_slug as string);
             return (
-              <div key={course.course_id} className="border border-[#2d333b] rounded-xl overflow-hidden" style={{ backgroundColor: '#161b22' }}>
+              <div key={(course.course_id as string)} className="border border-[#2d333b] rounded-xl overflow-hidden" style={{ backgroundColor: '#161b22' }}>
                 <button
-                  onClick={() => loadDetail(course.course_slug)}
+                  onClick={() => loadDetail(course.course_slug as string)}
                   className="w-full flex items-center gap-4 px-5 py-4 hover:bg-[#1c2128] transition-colors text-left"
                 >
                   {isExpanded ? <ChevronDown size={16} className="text-[#22c55e]" /> : <ChevronRight size={16} className="text-[#484f58]" />}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#c9d1d9] font-medium truncate">{course.course_title}</p>
-                    <p className="text-xs text-[#484f58]">{course.total_lessons} lessons &middot; {course.sections.length} sections</p>
+                    <p className="text-sm text-[#c9d1d9] font-medium truncate">{(course.course_title as string)}</p>
+                    <p className="text-xs text-[#484f58]">{(course.total_lessons as number)} lessons &middot; {((course.sections as Record<string, unknown>[])?.length ?? 0)} sections</p>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="text-sm font-mono text-[#c9d1d9]">{course.total_completions}</p>
+                      <p className="text-sm font-mono text-[#c9d1d9]">{(course.total_completions as number)}</p>
                       <p className="text-xs text-[#484f58]">completions</p>
                     </div>
-                    <HeatCell value={Math.round(course.avg_completions)} maxVal={maxGlobal} />
+                    <HeatCell value={Math.round((course.avg_completions as number) ?? 0)} maxVal={maxGlobal} />
                   </div>
                 </button>
 
@@ -120,34 +120,34 @@ const ContentHeatmap = () => {
                     ) : detail ? (
                       <>
                         {/* Drop-off alerts */}
-                        {detail.drop_off_points?.length > 0 && (
+                        {((detail?.drop_off_points as unknown[])?.length ?? 0) > 0 && (
                           <div className="mb-4 p-3 rounded-lg bg-[#ef4444]/10 border border-[#ef4444]/20">
                             <div className="flex items-center gap-2 mb-2">
                               <AlertTriangle size={14} className="text-[#ef4444]" />
                               <span className="text-xs font-medium text-[#ef4444]">Drop-off Points Detected</span>
                             </div>
-                            {detail.drop_off_points.map((dp: Record<string, unknown>, i: number) => (
+                            {(detail.drop_off_points as Record<string, unknown>[]).map((dp, i) => (
                               <p key={i} className="text-xs text-[#ef4444]/80 ml-5">
-                                {dp.drop_percent}% drop: &ldquo;{dp.from_lesson}&rdquo; → &ldquo;{dp.to_lesson}&rdquo; ({dp.section})
+                                {(dp.drop_percent as number)}% drop: &ldquo;{(dp.from_lesson as string)}&rdquo; → &ldquo;{(dp.to_lesson as string)}&rdquo; ({(dp.section as string)})
                               </p>
                             ))}
                           </div>
                         )}
 
                         {/* Section heatmaps */}
-                        {detail.sections?.map((sec: Record<string, unknown>) => (
-                          <div key={sec.section_id} className="mb-4">
+                        {(detail.sections as Record<string, unknown>[])?.map((sec) => (
+                          <div key={(sec.section_id as string)} className="mb-4">
                             <div className="flex items-center justify-between mb-2">
-                              <p className="text-xs font-medium text-[#8b949e]">{sec.section_title}</p>
-                              <span className="text-xs text-[#484f58]">Avg: {sec.avg_completion_rate}%</span>
+                              <p className="text-xs font-medium text-[#8b949e]">{(sec.section_title as string)}</p>
+                              <span className="text-xs text-[#484f58]">Avg: {(sec.avg_completion_rate as number)}%</span>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
-                              {sec.lessons.map((les: Record<string, unknown>) => (
-                                <div key={les.lesson_id} className="group relative">
-                                  <HeatCell value={les.completions} maxVal={detail.max_completions || 1} />
+                              {(sec.lessons as Record<string, unknown>[])?.map((les) => (
+                                <div key={(les.lesson_id as string)} className="group relative">
+                                  <HeatCell value={(les.completions as number)} maxVal={(detail.max_completions as number) || 1} />
                                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-10">
                                     <div className="bg-[#0d1117] border border-[#2d333b] rounded px-2 py-1 text-[10px] text-[#c9d1d9] whitespace-nowrap shadow-lg">
-                                      {les.lesson_title}<br />{les.completions} ({les.completion_rate}%)
+                                      {(les.lesson_title as string)}<br />{(les.completions as number)} ({(les.completion_rate as number)}%)
                                     </div>
                                   </div>
                                 </div>
@@ -163,7 +163,7 @@ const ContentHeatmap = () => {
             );
           })}
 
-          {(!data?.courses || data.courses.length === 0) && (
+          {!((data?.courses ?? []) as Record<string, unknown>[]).length && (
             <div className="text-center py-16">
               <Flame size={24} className="text-[#484f58] mx-auto mb-3" />
               <p className="text-sm text-[#8b949e]">No heatmap data available</p>

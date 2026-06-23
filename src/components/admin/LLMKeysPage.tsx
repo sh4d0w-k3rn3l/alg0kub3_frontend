@@ -265,7 +265,7 @@ const LLMKeysPage = () => {
               <button
                 data-testid="test-connection-btn"
                 onClick={() => handleTest(form.provider, form.api_key)}
-                disabled={!form.api_key.trim() || testing}
+                disabled={!form.api_key.trim() || !!testing}
                 className="flex items-center gap-2 border border-[#f59e0b40] text-[#f59e0b] hover:bg-[#f59e0b10] px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40"
               >
                 {testing ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}

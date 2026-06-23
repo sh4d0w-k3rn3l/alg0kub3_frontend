@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, type ApiError } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { showError, handleApiError } from '@/lib/toast';
 import {
   ArrowLeft, Search, ChevronLeft, ChevronRight, Loader2,

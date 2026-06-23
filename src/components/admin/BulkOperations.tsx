@@ -140,17 +140,17 @@ api.get<{ courses: Record<string, unknown>[] }>('/courses', { signal: ac.signal 
           {result && (
             <div className={`px-5 py-2 text-sm flex items-center gap-2 ${result.success ? 'text-[#22c55e] bg-[#22c55e]/10' : 'text-[#ef4444] bg-[#ef4444]/10'}`}>
               {result.success ? <CheckCircle size={14} /> : <Trash2 size={14} />}
-              {result.message}
+              {String((result.message as string) ?? '')}
             </div>
           )}
 
           <div className="max-h-[500px] overflow-y-auto">
             {courses.map(c => (
               <div
-                key={c.id}
-                onClick={() => toggleSelect(c.id)}
+                key={(c.id as string)}
+                onClick={() => toggleSelect(c.id as string)}
                 className={`flex items-center gap-4 px-5 py-3 cursor-pointer border-b border-[#2d333b]/30 transition-colors ${
-                  selected.has(c.id) ? 'bg-[#22c55e]/5' : 'hover:bg-[#1c2128]'
+                  selected.has(c.id as string) ? 'bg-[#22c55e]/5' : 'hover:bg-[#1c2128]'
                 }`}
               >
                 <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
@@ -160,11 +160,11 @@ api.get<{ courses: Record<string, unknown>[] }>('/courses', { signal: ac.signal 
                 </div>
                 <BookOpen size={14} className="text-[#8b949e]" />
                 <div className="flex-1">
-                  <p className="text-sm text-[#c9d1d9]">{c.title}</p>
-                  <p className="text-xs text-[#484f58]">{c.category} &middot; {c.slug}</p>
+                  <p className="text-sm text-[#c9d1d9]">{(c.title as string)}</p>
+                  <p className="text-xs text-[#484f58]">{(c.category as string)} &middot; {(c.slug as string)}</p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${c.is_published !== false ? 'bg-[#22c55e20] text-[#22c55e]' : 'bg-[#8b949e20] text-[#8b949e]'}`}>
-                  {c.is_published !== false ? 'Published' : 'Draft'}
+                <span className={`text-xs px-2 py-0.5 rounded-full ${(c.is_published as boolean) !== false ? 'bg-[#22c55e20] text-[#22c55e]' : 'bg-[#8b949e20] text-[#8b949e]'}`}>
+                  {(c.is_published as boolean) !== false ? 'Published' : 'Draft'}
                 </span>
               </div>
             ))}

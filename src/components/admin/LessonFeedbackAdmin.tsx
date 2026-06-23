@@ -57,7 +57,7 @@ const LessonFeedbackAdmin = () => {
   useEffect(() => {
     const ac = new AbortController();
     api.get<Record<string, unknown>>('/courses', { signal: ac.signal, cache: 'no-store' })
-      .then(r => { if (!ac.signal.aborted) setCourses(r.data?.courses || r.data || []); })
+      .then(r => { if (!ac.signal.aborted) setCourses(((r.data?.courses as Record<string, unknown>[]) ?? []) as never[]); })
       .catch(() => {});
     return () => ac.abort();
   }, []);

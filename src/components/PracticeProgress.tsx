@@ -26,7 +26,7 @@ const StatCard = ({ icon: Icon, label, value, sub, color, testId }: { icon: Reac
 );
 
 const SectionCard = ({ type, title, icon: Icon, color, data, router: nav }: { type: string; title: string; icon: React.ComponentType<{ size?: number; className?: string }>; color: string; data: Record<string, unknown>; router: ReturnType<typeof useRouter> }) => {
-  const pct = data.attempted > 0 ? Math.round((data.completed / data.attempted) * 100) : 0;
+  const pct = (data.attempted as number) > 0 ? Math.round(((data.completed as number) / (data.attempted as number)) * 100) : 0;
   const path = type === 'lld' ? '/practice/lld' : '/system-design';
   return (
     <div data-testid={`progress-section-${type}`} className="rounded-xl border border-[#2d333b] overflow-hidden" style={{ backgroundColor: '#161b22' }}>
@@ -36,7 +36,7 @@ const SectionCard = ({ type, title, icon: Icon, color, data, router: nav }: { ty
         </div>
         <div className="flex-1">
           <h3 className="text-sm font-bold text-white">{title}</h3>
-          <p className="text-[11px] text-[#484f58]">{data.attempted} attempted, {data.completed} completed</p>
+          <p className="text-[11px] text-[#484f58]">{data.attempted as number} attempted, {data.completed as number} completed</p>
         </div>
         <button onClick={() => nav.push(path)} className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors hover:bg-[#21262d]" style={{ color }}>
           Practice <ArrowRight size={12} />
@@ -50,21 +50,21 @@ const SectionCard = ({ type, title, icon: Icon, color, data, router: nav }: { ty
           </div>
           <div>
             <p className="text-[10px] text-[#484f58] uppercase tracking-wider mb-1">Avg Score</p>
-            <p className="text-lg font-bold" style={{ color: data.avg_score >= 6 ? '#22c55e' : data.avg_score >= 4 ? '#f59e0b' : '#ef4444' }}>
-              {data.avg_score || '—'}<span className="text-xs text-[#484f58]">/10</span>
+            <p className="text-lg font-bold" style={{ color: (data.avg_score as number) >= 6 ? '#22c55e' : (data.avg_score as number) >= 4 ? '#f59e0b' : '#ef4444' }}>
+              {(data.avg_score as number | undefined) || '—'}<span className="text-xs text-[#484f58]">/10</span>
             </p>
           </div>
           <div>
             <p className="text-[10px] text-[#484f58] uppercase tracking-wider mb-1">Time</p>
-            <p className="text-lg font-bold text-white">{data.total_time_min}<span className="text-xs text-[#484f58]"> min</span></p>
+            <p className="text-lg font-bold text-white">{data.total_time_min as number}<span className="text-xs text-[#484f58]"> min</span></p>
           </div>
         </div>
         <div className="w-full h-2 rounded-full bg-[#21262d] overflow-hidden">
           <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
         </div>
-        {data.by_difficulty && Object.keys(data.by_difficulty).length > 0 && (
+        {(data.by_difficulty as Record<string, number> | undefined) && Object.keys(data.by_difficulty as Record<string, number>).length > 0 && (
           <div className="flex gap-3 mt-4">
-            {Object.entries(data.by_difficulty as Record<string, unknown>).map(([diff, counts]) => (
+            {Object.entries(data.by_difficulty as Record<string, { completed: number; attempted: number }>).map(([diff, counts]) => (
               <div key={diff} className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: DIFF_COLORS[diff] }} />
                 <span className="text-[10px] text-[#8b949e]">{diff}: {counts.completed}/{counts.attempted}</span>
@@ -163,22 +163,22 @@ const RecentActivity = ({ items, router }: { items: Record<string, unknown>[]; r
         </div>
       )}
       {items.map((item, i) => {
-        const path = item.type === 'lld' ? `/practice/lld/${item.slug}` : `/system-design/${item.slug}`;
-        const typeLabel = item.type === 'lld' ? 'LLD' : 'System Design';
-        const typeColor = item.type === 'lld' ? '#a855f7' : '#3b82f6';
-        const statusIcon = item.status === 'completed' ? <CheckCircle size={12} className="text-[#22c55e]" /> :
-          item.status === 'in_progress' ? <Clock size={12} className="text-[#f59e0b]" /> :
+        const path = (item.type as string) === 'lld' ? `/practice/lld/${item.slug as string}` : `/system-design/${item.slug as string}`;
+        const typeLabel = (item.type as string) === 'lld' ? 'LLD' : 'System Design';
+        const typeColor = (item.type as string) === 'lld' ? '#a855f7' : '#3b82f6';
+        const statusIcon = (item.status as string) === 'completed' ? <CheckCircle size={12} className="text-[#22c55e]" /> :
+          (item.status as string) === 'in_progress' ? <Clock size={12} className="text-[#f59e0b]" /> :
           <AlertCircle size={12} className="text-[#484f58]" />;
-        const timeAgo = _timeAgo(item.updated_at);
+        const timeAgo = _timeAgo(item.updated_at as string);
         return (
           <button key={i} data-testid={`progress-activity-${i}`} onClick={() => router.push(path)}
             className="w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-[#21262d] transition-colors">
             {statusIcon}
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-[#c9d1d9] truncate">{item.title}</p>
+              <p className="text-sm text-[#c9d1d9] truncate">{item.title as string}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ color: typeColor, backgroundColor: `${typeColor}15` }}>{typeLabel}</span>
-                <span className="text-[10px]" style={{ color: DIFF_COLORS[item.difficulty] }}>{item.difficulty}</span>
+                <span className="text-[10px]" style={{ color: DIFF_COLORS[item.difficulty as string] }}>{item.difficulty as string}</span>
               </div>
             </div>
             <span className="text-[10px] text-[#484f58] shrink-0">{timeAgo}</span>
@@ -240,7 +240,14 @@ export default function PracticeProgress() {
     );
   }
 
-  const { overview, lld, sd, streak, heatmap, recent_activity, score_distribution } = data;
+  const d = data as Record<string, unknown>;
+  const overview = d.overview as Record<string, unknown>;
+  const lld = d.lld as Record<string, unknown>;
+  const sd = d.sd as Record<string, unknown>;
+  const streak = d.streak as Record<string, unknown>;
+  const heatmap = d.heatmap as Record<string, unknown>;
+  const recent_activity = d.recent_activity as Record<string, unknown>[];
+  const score_distribution = d.score_distribution as Record<string, number>;
   const formatTime = (mins: number) => mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
 
   return (
@@ -260,17 +267,17 @@ export default function PracticeProgress() {
 
       <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard icon={Target} label="Problems Attempted" value={overview.total_attempted}
-            sub={`${overview.total_completed} completed`} color="#3b82f6" testId="progress-stat-attempted" />
-          <StatCard icon={Trophy} label="Average Score" value={`${overview.avg_score}/10`}
-            sub={overview.avg_score >= 6 ? 'Above passing' : 'Below passing (6+)'}
-            color={overview.avg_score >= 6 ? '#22c55e' : '#f59e0b'} testId="progress-stat-score" />
-          <StatCard icon={Clock} label="Total Time" value={formatTime(overview.total_time_min)}
+          <StatCard icon={Target} label="Problems Attempted" value={overview.total_attempted as number}
+            sub={`${overview.total_completed as number} completed`} color="#3b82f6" testId="progress-stat-attempted" />
+          <StatCard icon={Trophy} label="Average Score" value={`${overview.avg_score as number}/10`}
+            sub={(overview.avg_score as number) >= 6 ? 'Above passing' : 'Below passing (6+)'}
+            color={(overview.avg_score as number) >= 6 ? '#22c55e' : '#f59e0b'} testId="progress-stat-score" />
+          <StatCard icon={Clock} label="Total Time" value={formatTime(overview.total_time_min as number)}
             sub="across all sessions" color="#a855f7" testId="progress-stat-time" />
           <StatCard icon={Flame} label="Current Streak"
-            value={`${overview.current_streak} day${overview.current_streak !== 1 ? 's' : ''}`}
-            sub={`Longest: ${overview.longest_streak} day${overview.longest_streak !== 1 ? 's' : ''}`}
-            color={streak.active_today ? '#f97316' : '#484f58'} testId="progress-stat-streak" />
+            value={`${overview.current_streak as number} day${(overview.current_streak as number) !== 1 ? 's' : ''}`}
+            sub={`Longest: ${overview.longest_streak as number} day${(overview.longest_streak as number) !== 1 ? 's' : ''}`}
+            color={(streak.active_today as boolean) ? '#f97316' : '#484f58'} testId="progress-stat-streak" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -280,7 +287,7 @@ export default function PracticeProgress() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 space-y-4">
-            <HeatmapGrid heatmap={heatmap} />
+            <HeatmapGrid heatmap={heatmap as Record<string, number>} />
             <RecentActivity items={recent_activity} router={router} />
           </div>
           <div>

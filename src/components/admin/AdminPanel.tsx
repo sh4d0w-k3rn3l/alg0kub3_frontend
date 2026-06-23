@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { api, type ApiError } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { showError, showSuccess, handleApiError, showConfirm } from '@/lib/toast';
 import { useAuth } from '@/context/AuthContext';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -393,9 +393,9 @@ const CourseDashboard = () => {
                 <div className="text-sm text-[#c9d1d9] space-y-3 mb-5">
                   <p>This will hide the course from the public catalog. All published lessons will be cascaded to draft.</p>
                   <div className="border border-[#2d333b] rounded-lg p-3 space-y-1.5 text-xs" style={{ backgroundColor: '#0d1117' }}>
-                    <div className="flex justify-between"><span className="text-[#8b949e]">Lessons that will be hidden</span><span className="text-[#f59e0b] font-mono font-semibold">{statusModal.info.published_lessons}</span></div>
-                    <div className="flex justify-between"><span className="text-[#8b949e]">Total lessons in course</span><span className="text-[#c9d1d9] font-mono">{statusModal.info.total_lessons}</span></div>
-                    <div className="flex justify-between"><span className="text-[#8b949e]">Currently enrolled users</span><span className="text-[#c9d1d9] font-mono">{statusModal.info.enrolled_users}</span></div>
+                    <div className="flex justify-between"><span className="text-[#8b949e]">Lessons that will be hidden</span><span className="text-[#f59e0b] font-mono font-semibold">{(statusModal.info.published_lessons as number) ?? 0}</span></div>
+                    <div className="flex justify-between"><span className="text-[#8b949e]">Total lessons in course</span><span className="text-[#c9d1d9] font-mono">{(statusModal.info.total_lessons as number) ?? 0}</span></div>
+                    <div className="flex justify-between"><span className="text-[#8b949e]">Currently enrolled users</span><span className="text-[#c9d1d9] font-mono">{(statusModal.info.enrolled_users as number) ?? 0}</span></div>
                   </div>
                   <p className="text-[#8b949e] text-xs">Reversible — you can republish anytime and the same lessons will be restored.</p>
                 </div>
@@ -403,8 +403,8 @@ const CourseDashboard = () => {
                 <div className="text-sm text-[#c9d1d9] space-y-3 mb-5">
                   <p>This will make the course visible in the public catalog. All lessons that were unpublished as part of the cascade will be restored. Lessons that were manually drafted will stay drafted.</p>
                   <div className="border border-[#2d333b] rounded-lg p-3 space-y-1.5 text-xs" style={{ backgroundColor: '#0d1117' }}>
-                    <div className="flex justify-between"><span className="text-[#8b949e]">Total lessons in course</span><span className="text-[#c9d1d9] font-mono">{statusModal.info.total_lessons}</span></div>
-                    <div className="flex justify-between"><span className="text-[#8b949e]">Currently published</span><span className="text-[#c9d1d9] font-mono">{statusModal.info.published_lessons}</span></div>
+                    <div className="flex justify-between"><span className="text-[#8b949e]">Total lessons in course</span><span className="text-[#c9d1d9] font-mono">{(statusModal.info.total_lessons as number) ?? 0}</span></div>
+                    <div className="flex justify-between"><span className="text-[#8b949e]">Currently published</span><span className="text-[#c9d1d9] font-mono">{(statusModal.info.published_lessons as number) ?? 0}</span></div>
                   </div>
                 </div>
               )}
@@ -727,7 +727,7 @@ const CourseDetail = ({ courseId }: { courseId: string }) => {
                       <div className="flex items-center gap-2">
                         <button
                           data-testid={`access-toggle-${lesson.id}`}
-                          onClick={(e) => handleToggleAccess(e, lesson.id, lesson.access_type)}
+                          onClick={(e) => handleToggleAccess(e, lesson.id, lesson.access_type ?? 'public')}
                           className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium uppercase tracking-wide transition-colors"
                           style={{
                             backgroundColor: isFree ? '#22c55e15' : '#f59e0b15',
@@ -764,7 +764,7 @@ const CourseDetail = ({ courseId }: { courseId: string }) => {
 
 // ============ Bulk Lesson Creator ============
 interface SectionSummary { id: string; title: string; slug?: string; }
-interface BulkResult { lessons: { title: string; slug: string; content_preview?: string }[]; }
+interface BulkResult { created: number; lessons: { title: string; slug: string; content_preview?: string }[]; }
 
 const BulkLessonCreator = ({ courseId }: { courseId: string }) => {
   const navigate = useRouter();
@@ -795,7 +795,7 @@ const BulkLessonCreator = ({ courseId }: { courseId: string }) => {
     if (!titles.length || !selectedSection) return;
     setCreating(true);
     try {
-      const res = await api.post(`/lessons/bulk`, {
+      const res = await api.post<BulkResult>(`/lessons/bulk`, {
         section_id: selectedSection,
         lessons: titles.map((title, i) => ({ title, order: i })),
       });
@@ -847,7 +847,7 @@ const BulkLessonCreator = ({ courseId }: { courseId: string }) => {
 };
 
 // ============ Enhanced Lesson Editor with Block Editor ============
-interface LessonDetail { id: string; title: string; slug: string; content_blocks?: BlockItem[]; content?: string; section_id?: string; }
+interface LessonDetail { id: string; title: string; slug: string; content_blocks?: BlockItem[]; content?: string; section_id?: string; read_time?: number; status?: string; access_type?: string; source_pages?: { page: number; content_preview: string }[]; }
 interface BlockItem { id?: string; type: string; content?: unknown; tabs?: Record<string, unknown>[]; items?: (string | Record<string, unknown>)[]; rows?: string[][]; [key: string]: unknown; }
 
 const LessonEditor = ({ lessonId }: { lessonId: string }) => {
@@ -954,34 +954,34 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
     for (const block of blocksArray) {
       switch (block.type) {
         case 'paragraph':
-          md += `${block.text || ''}\n\n`;
+          md += `${(block.text as string) || ''}\n\n`;
           break;
         case 'heading':
         case 'subheading':
-          const level = block.level || 2;
-          md += `${'#'.repeat(level)} ${block.text || ''}\n\n`;
+          const level = (block.level as number) || 2;
+          md += `${'#'.repeat(level)} ${(block.text as string) || ''}\n\n`;
           break;
         case 'code':
-          md += `\`\`\`${block.language || 'python'}\n${block.code || ''}\n\`\`\`\n\n`;
+          md += `\`\`\`${(block.language as string) || 'python'}\n${(block.code as string) || ''}\n\`\`\`\n\n`;
           break;
         case 'codegroup':
-          (block.tabs || []).forEach((tab) => {
-            md += `**${tab.label}:**\n\`\`\`${tab.language || 'python'}\n${tab.code || ''}\n\`\`\`\n\n`;
+          ((block.tabs as Record<string, unknown>[]) || []).forEach((tab) => {
+            md += `**${(tab.label as string) || ''}:**\n\`\`\`${(tab.language as string) || 'python'}\n${(tab.code as string) || ''}\n\`\`\`\n\n`;
           });
           break;
         case 'callout':
-          const variant = (block.variant || 'note').charAt(0).toUpperCase() + (block.variant || 'note').slice(1);
-          md += `> **${variant}:** ${block.text || ''}\n\n`;
+          const variant = ((block.variant as string) || 'note').charAt(0).toUpperCase() + ((block.variant as string) || 'note').slice(1);
+          md += `> **${variant}:** ${(block.text as string) || ''}\n\n`;
           break;
         case 'list':
-          (block.items || []).forEach((item, i: number) => {
-            const prefix = block.ordered ? `${i + 1}.` : '-';
-            md += `${prefix} ${typeof item === 'string' ? item : item.text || ''}\n`;
+          ((block.items as (string | Record<string, unknown>)[]) || []).forEach((item, i: number) => {
+            const prefix = (block.ordered as boolean) ? `${i + 1}.` : '-';
+            md += `${prefix} ${typeof item === 'string' ? item : (item.text as string) || ''}\n`;
           });
           md += '\n';
           break;
         case 'blockquote':
-          md += `> ${block.text || ''}\n\n`;
+          md += `> ${(block.text as string) || ''}\n\n`;
           break;
         case 'divider':
           md += `---\n\n`;
@@ -991,19 +991,19 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
             const hdrs = block.headers as string[];
             md += `| ${hdrs.join(' | ')} |\n`;
             md += `| ${hdrs.map(() => '---').join(' | ')} |\n`;
-            (block.rows || []).forEach((row) => {
+            ((block.rows as string[][]) || []).forEach((row) => {
               md += `| ${row.join(' | ')} |\n`;
             });
             md += '\n';
           }
           break;
         case 'image':
-          md += `![${block.alt || ''}](${block.url || ''})\n`;
-          if (block.caption) md += `*${block.caption}*\n`;
+          md += `![${(block.alt as string) || ''}](${(block.url as string) || ''})\n`;
+          if (block.caption) md += `*${(block.caption as string)}*\n`;
           md += '\n';
           break;
         case 'youtube':
-          md += `[YouTube Video${block.title ? `: ${block.title}` : ''}](${block.url || ''})\n\n`;
+          md += `[YouTube Video${block.title ? `: ${(block.title as string)}` : ''}](${(block.url as string) || ''})\n\n`;
           break;
         case 'vimeo':
           md += `[Vimeo Video${block.title ? `: ${block.title}` : ''}](${block.url || ''})\n\n`;
@@ -1018,8 +1018,9 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
           md += `\`\`\`mermaid\n${block.code || ''}\n\`\`\`\n\n`;
           break;
         case 'accordion':
-          (block.items || []).forEach((item) => {
-            md += `<details>\n<summary>${item.title || ''}</summary>\n\n${item.text || ''}\n\n</details>\n\n`;
+          ((block.items as (string | Record<string, unknown>)[]) || []).forEach((item) => {
+            const obj = item as Record<string, unknown>;
+            md += `<details>\n<summary>${(obj.title as string) || ''}</summary>\n\n${(obj.text as string) || ''}\n\n</details>\n\n`;
           });
           break;
         case 'tabs':
@@ -1028,17 +1029,19 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
           });
           break;
         case 'steps':
-          (block.items || []).forEach((item, i: number) => {
-            md += `${i + 1}. **${item.title || ''}**\n   ${item.text || ''}\n\n`;
+          ((block.items as (string | Record<string, unknown>)[]) || []).forEach((item, i: number) => {
+            const obj = item as Record<string, unknown>;
+            md += `${i + 1}. **${(obj.title as string) || ''}**\n   ${(obj.text as string) || ''}\n\n`;
           });
           break;
         case 'card':
-          md += `### ${block.title || ''}\n${block.text || ''}\n`;
-          if (block.href) md += `[Learn more](${block.href})\n`;
+          md += `### ${(block.title as string) || ''}\n${(block.text as string) || ''}\n`;
+          if (block.href) md += `[Learn more](${(block.href as string)})\n`;
           md += '\n';
           break;
         default:
-          if (block.text) md += `${block.text}\n\n`;
+          const txt = block.text as string | undefined;
+          if (txt) md += `${txt}\n\n`;
       }
     }
     return md;
@@ -1048,10 +1051,10 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
   const handleExportJSON = () => {
     const cleanBlocks = blocks.map(({ id, ...rest }) => rest);
     const exportData = {
-      title: lesson.title,
-      slug: lesson.slug,
-      read_time: lesson.read_time,
-      status: lesson.status,
+      title: lesson?.title,
+      slug: lesson?.slug,
+      read_time: lesson?.read_time,
+      status: lesson?.status,
       content_blocks: cleanBlocks,
       exported_at: new Date().toISOString(),
     };
@@ -1059,19 +1062,19 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${lesson.slug || 'lesson'}.json`;
+    a.download = `${lesson?.slug || 'lesson'}.json`;
     a.click();
     URL.revokeObjectURL(url);
     setShowExport(false);
   };
 
   const handleExportMarkdown = () => {
-    const markdown = blocksToMarkdown(blocks, lesson.title);
+    const markdown = blocksToMarkdown(blocks, lesson?.title ?? '');
     const blob = new Blob([markdown], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${lesson.slug || 'lesson'}.md`;
+    a.download = `${lesson?.slug || 'lesson'}.md`;
     a.click();
     URL.revokeObjectURL(url);
     setShowExport(false);
@@ -1080,7 +1083,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
   const handleCopyJSON = () => {
     const cleanBlocks = blocks.map(({ id, ...rest }) => rest);
     const exportData = {
-      title: lesson.title,
+      title: lesson?.title,
       content_blocks: cleanBlocks,
     };
     navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
@@ -1088,7 +1091,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
   };
 
   const handleCopyMarkdown = () => {
-    const markdown = blocksToMarkdown(blocks, lesson.title);
+    const markdown = blocksToMarkdown(blocks, lesson?.title ?? '');
     navigator.clipboard.writeText(markdown);
     showSuccess('Markdown copied to clipboard!');
   };
@@ -1102,14 +1105,14 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
       const cleanBlocks = blocks.map(({ id, ...rest }) => rest);
       await api.put(`/lessons/${lessonId}`, {
         content_blocks: cleanBlocks,
-        title: lesson.title,
-        read_time: lesson.read_time,
-        status: lesson.status,
+        title: lesson?.title,
+        read_time: lesson?.read_time,
+        status: lesson?.status,
       });
       lastSavedRef.current = JSON.stringify({
         blocks: cleanBlocks,
-        title: lesson.title,
-        read_time: lesson.read_time,
+        title: lesson?.title,
+        read_time: lesson?.read_time,
       });
       setSaveStatus('saved');
       navigate.refresh();
@@ -1123,9 +1126,9 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
     if (!(await showConfirm('Generate AI content? This will replace existing content.'))) return;
     setGenerating(true);
     try {
-      const res = await api.post<{ success: boolean; lesson_title: string }>(`/lessons/${lessonId}/generate-content`, { difficulty, tone: 'educational' });
-      setLesson(res.data);
-      setBlocks(res.data.content_blocks || []);
+      const res = await api.post(`/lessons/${lessonId}/generate-content`, { difficulty, tone: 'educational' });
+      setLesson(res.data as unknown as LessonDetail);
+      setBlocks(((res.data as Record<string, unknown>).content_blocks as BlockItem[]) || []);
     } catch (err) { showError('Generation failed: ' + (err instanceof ApiError ? err.detail : (err as {message?: string}).message || '')); }
     finally { setGenerating(false); }
   };
@@ -1134,9 +1137,9 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
     setRegenFromPdf(true);
     setShowPdfPopover(false);
     try {
-      const res = await api.post<{ success: boolean }>(`/lessons/${lessonId}/regen-from-pdf`, { page_start: pstart, page_end: pend });
-      setLesson(res.data);
-      setBlocks(res.data.content_blocks || []);
+      const res = await api.post(`/lessons/${lessonId}/regen-from-pdf`, { page_start: pstart, page_end: pend });
+      setLesson(res.data as unknown as LessonDetail);
+      setBlocks(((res.data as Record<string, unknown>).content_blocks as BlockItem[]) || []);
       showSuccess('Content regenerated from PDF!');
     } catch (err) {
       showError('Regeneration failed: ' + (err instanceof ApiError ? err.detail : (err as {message?: string}).message || ''));
@@ -1242,7 +1245,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
   const handleStatusChange = async (newStatus: string) => {
     try {
       await api.put(`/lessons/${lessonId}/status`, { status: newStatus });
-      setLesson({ ...lesson, status: newStatus });
+      setLesson({ ...(lesson ?? {}), status: newStatus } as LessonDetail);
     } catch { showError('Error updating status'); }
   };
 
@@ -1271,9 +1274,9 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
           <div className="flex items-center gap-4">
             <button data-testid="lesson-back-button" onClick={() => navigate.back()} className="text-[#8b949e] hover:text-white p-2 hover:bg-[#2d333b] rounded-lg transition-colors"><ArrowLeft size={20} /></button>
             <div>
-              <input data-testid="lesson-title-input" value={lesson.title} onChange={(e) => setLesson({ ...lesson, title: e.target.value })} className="text-white text-2xl font-bold bg-transparent outline-none w-full focus:ring-1 focus:ring-[#22c55e] rounded px-1" placeholder="Lesson title..." />
+              <input data-testid="lesson-title-input" value={lesson?.title ?? ''} onChange={(e) => setLesson({ ...(lesson ?? {}), title: e.target.value } as LessonDetail)} className="text-white text-2xl font-bold bg-transparent outline-none w-full focus:ring-1 focus:ring-[#22c55e] rounded px-1" placeholder="Lesson title..." />
               <div className="flex items-center gap-3 mt-2">
-                <input value={lesson.read_time || ''} onChange={(e) => setLesson({ ...lesson, read_time: e.target.value })} className="text-[#484f58] text-sm bg-transparent outline-none border-b border-transparent hover:border-[#2d333b] focus:border-[#22c55e] transition-colors" placeholder="5 min read" />
+                <input value={lesson?.read_time ?? ''} onChange={(e) => setLesson({ ...(lesson ?? {}), read_time: Number(e.target.value) || 0 } as LessonDetail)} className="text-[#484f58] text-sm bg-transparent outline-none border-b border-transparent hover:border-[#2d333b] focus:border-[#22c55e] transition-colors" placeholder="5 min read" />
                 <span className="text-[#2d333b]">•</span>
                 <span className="text-[#484f58] text-xs">{blocks.length} blocks</span>
               </div>
@@ -1350,11 +1353,11 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
                   data-testid="regen-from-pdf-button"
                   onClick={() => setShowPdfPopover((v) => !v)}
                   disabled={regenFromPdf}
-                  title={`Regenerate from PDF pages ${lesson.source_pages[0]}–${lesson.source_pages[1]}`}
+                  title={`Regenerate from PDF pages ${lesson.source_pages[0]?.page}–${lesson.source_pages[1]?.page}`}
                   className="flex items-center gap-1.5 border border-[#ef4444]/30 text-[#ef4444] hover:bg-[#ef4444]/10 px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
                 >
                   {regenFromPdf ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
-                  {regenFromPdf ? 'Regenerating…' : `Regen from PDF (pp ${lesson.source_pages[0]}–${lesson.source_pages[1]})`}
+                  {regenFromPdf ? 'Regenerating…' : `Regen from PDF (pp ${lesson.source_pages[0]?.page}–${lesson.source_pages[1]?.page})`}
                 </button>
                 {showPdfPopover && !regenFromPdf && (
                   <div className="absolute right-0 top-full mt-1 w-80 bg-[#161b22] border border-[#2d333b] rounded-lg shadow-2xl p-3 z-20" data-testid="regen-pdf-popover">
@@ -1368,7 +1371,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
                         data-testid="regen-page-start"
                         ref={pdfStartRef}
                         type="number" min="1"
-                        defaultValue={lesson.source_pages[0]}
+                        defaultValue={lesson.source_pages[0]?.page}
                         className="w-16 bg-[#0d1117] border border-[#2d333b] rounded px-2 py-1 text-white text-xs focus:border-[#22c55e] outline-none"
                       />
                       <span className="text-[#8b949e] text-xs">–</span>
@@ -1376,7 +1379,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
                         data-testid="regen-page-end"
                         ref={pdfEndRef}
                         type="number" min="1"
-                        defaultValue={lesson.source_pages[1]}
+                        defaultValue={lesson.source_pages[1]?.page}
                         className="w-16 bg-[#0d1117] border border-[#2d333b] rounded px-2 py-1 text-white text-xs focus:border-[#22c55e] outline-none"
                       />
                     </div>
@@ -1385,8 +1388,8 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
                       <button
                         data-testid="regen-pdf-confirm"
                         onClick={() => {
-                          const pstart = parseInt(pdfStartRef.current?.value ?? '') || lesson.source_pages[0];
-                          const pend = parseInt(pdfEndRef.current?.value ?? '') || lesson.source_pages[1];
+                          const pstart = parseInt(pdfStartRef.current?.value ?? '') || (lesson.source_pages?.[0]?.page ?? 1);
+                          const pend = parseInt(pdfEndRef.current?.value ?? '') || (lesson.source_pages?.[1]?.page ?? 1);
                           handleRegenFromPdf(pstart, pend);
                         }}
                         className="flex items-center gap-1 bg-[#ef4444] hover:bg-[#dc2626] text-white text-xs font-medium px-2.5 py-1 rounded transition-colors"
@@ -1496,8 +1499,8 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
           {/* Block Editor */}
           <div className="border border-[#2d333b] rounded-2xl p-5 overflow-hidden" style={{ backgroundColor: '#161b22' }}>
             <BlockEditor
-              blocks={blocks}
-              onChange={setBlocks}
+              blocks={blocks as unknown as any[]}
+              onChange={(newBlocks: any[]) => setBlocks(newBlocks as unknown as BlockItem[])}
               onAiGenerate={handleGenerate}
               generating={generating}
               lessonId={lessonId}
@@ -1511,7 +1514,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
                 <Eye size={14} className="text-[#22c55e]" />
                 <span className="text-white text-sm font-medium">Live Preview</span>
               </div>
-              <EditorPreview blocks={blocks} title={lesson.title} readTime={lesson.read_time} />
+              <EditorPreview blocks={blocks as unknown as any[]} title={lesson?.title ?? ''} readTime={lesson?.read_time ? String(lesson.read_time) : undefined} />
             </div>
           )}
         </div>
@@ -1547,7 +1550,7 @@ const SectionEditor = ({ sectionId }: { sectionId: string }) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.put(`/sections/${sectionId}`, { title: section.title, icon: section.icon, order: section.order });
+      await api.put(`/sections/${sectionId}`, { title: section?.title, icon: section?.icon, order: section?.order });
       showSuccess('Section saved!');
       navigate.refresh();
     } catch (err) { handleApiError(err); }
@@ -1569,15 +1572,15 @@ const SectionEditor = ({ sectionId }: { sectionId: string }) => {
         <div className="border border-[#2d333b] rounded-lg p-6 space-y-4" style={{ backgroundColor: '#161b22' }}>
           <div>
             <label className="text-[#8b949e] text-sm block mb-1">Title</label>
-            <input value={section.title} onChange={(e) => setSection({ ...section, title: e.target.value })} className="w-full bg-[#0d1117] border border-[#2d333b] rounded-md px-3 py-2 text-[#c9d1d9] text-sm outline-none focus:border-[#22c55e]" />
+            <input value={section?.title ?? ''} onChange={(e) => setSection({ ...(section ?? {}), title: e.target.value } as SectionDetail)} className="w-full bg-[#0d1117] border border-[#2d333b] rounded-md px-3 py-2 text-[#c9d1d9] text-sm outline-none focus:border-[#22c55e]" />
           </div>
           <div>
             <label className="text-[#8b949e] text-sm block mb-1">Icon</label>
-            <input value={section.icon} onChange={(e) => setSection({ ...section, icon: e.target.value })} className="w-full bg-[#0d1117] border border-[#2d333b] rounded-md px-3 py-2 text-[#c9d1d9] text-sm outline-none focus:border-[#22c55e]" />
+            <input value={section?.icon ?? ''} onChange={(e) => setSection({ ...(section ?? {}), icon: e.target.value } as SectionDetail)} className="w-full bg-[#0d1117] border border-[#2d333b] rounded-md px-3 py-2 text-[#c9d1d9] text-sm outline-none focus:border-[#22c55e]" />
           </div>
           <div>
             <label className="text-[#8b949e] text-sm block mb-1">Order</label>
-            <input type="number" value={section.order} onChange={(e) => setSection({ ...section, order: parseInt(e.target.value) })} className="w-full bg-[#0d1117] border border-[#2d333b] rounded-md px-3 py-2 text-[#c9d1d9] text-sm outline-none focus:border-[#22c55e]" />
+            <input type="number" value={section?.order ?? ''} onChange={(e) => setSection({ ...(section ?? {}), order: parseInt(e.target.value) } as SectionDetail)} className="w-full bg-[#0d1117] border border-[#2d333b] rounded-md px-3 py-2 text-[#c9d1d9] text-sm outline-none focus:border-[#22c55e]" />
           </div>
         </div>
       </div>
@@ -1772,8 +1775,8 @@ const ICON_OPTIONS = [
 const DIFFICULTY_OPTIONS = ['Beginner', 'Intermediate', 'Advanced'];
 const DIFF_COLORS = { Beginner: '#22c55e', Intermediate: '#f59e0b', Advanced: '#ef4444' };
 
-interface PathCourse { course_slug: string; order: number; }
-interface PathItem { id: string; title: string; slug: string; description?: string; icon?: string; difficulty?: string; estimated_hours?: number; courses?: PathCourse[]; }
+interface PathCourse { course_slug: string; order: number; title?: string; }
+interface PathItem { id: string; title: string; slug: string; description?: string; icon?: string; difficulty?: string; estimated_hours?: number; courses?: PathCourse[]; course_count?: number; total_lessons?: number; }
 interface CourseBrief { id: string; slug: string; title: string; lesson_count: number; }
 
 const LearningPathManager = () => {
@@ -2152,7 +2155,7 @@ const LearningPathManager = () => {
             <p>No learning paths yet. Create one to group courses into guided tracks.</p>
           </div>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd as any}>
             <SortableContext items={paths.map(p => p.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-3">
                 {paths.map((path) => (
@@ -2254,9 +2257,9 @@ const CacheManager = () => {
             {/* Connection Status */}
             <div className="border border-[#2d333b] rounded-xl p-5" style={{ backgroundColor: '#161b22' }}>
               <div className="flex items-center gap-3 mb-4">
-                <div className={`w-3 h-3 rounded-full ${stats.connected ? 'bg-[#22c55e]' : 'bg-[#da3633]'}`} />
+                <div className={`w-3 h-3 rounded-full ${(stats.connected as boolean) ? 'bg-[#22c55e]' : 'bg-[#da3633]'}`} />
                 <span className="text-white font-medium" data-testid="cache-connection-status">
-                  Redis {stats.connected ? 'Connected' : 'Disconnected'}
+                  Redis {(stats.connected as boolean) ? 'Connected' : 'Disconnected'}
                 </span>
                 <span className="text-[#484f58] text-xs ml-auto">Auto-refreshes every 5s</span>
               </div>
@@ -2265,22 +2268,22 @@ const CacheManager = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-[#0d1117] border border-[#2d333b] rounded-lg p-4">
                   <div className="text-[#8b949e] text-xs uppercase tracking-wider mb-1">Hit Rate</div>
-                  <div className="text-2xl font-bold text-[#22c55e]" data-testid="cache-hit-rate">{stats.hit_rate_percent}%</div>
-                  <div className="text-[#484f58] text-xs mt-1">{stats.total_requests} total requests</div>
+                  <div className="text-2xl font-bold text-[#22c55e]" data-testid="cache-hit-rate">{(stats.hit_rate_percent as number) ?? 0}%</div>
+                  <div className="text-[#484f58] text-xs mt-1">{(stats.total_requests as number) ?? 0} total requests</div>
                 </div>
                 <div className="bg-[#0d1117] border border-[#2d333b] rounded-lg p-4">
                   <div className="text-[#8b949e] text-xs uppercase tracking-wider mb-1">Cached Keys</div>
-                  <div className="text-2xl font-bold text-[#f97316]" data-testid="cache-key-count">{stats.cached_keys || 0}</div>
+                  <div className="text-2xl font-bold text-[#f97316]" data-testid="cache-key-count">{(stats.cached_keys as number) ?? 0}</div>
                   <div className="text-[#484f58] text-xs mt-1">Active entries</div>
                 </div>
                 <div className="bg-[#0d1117] border border-[#2d333b] rounded-lg p-4">
                   <div className="text-[#8b949e] text-xs uppercase tracking-wider mb-1">Memory</div>
-                  <div className="text-2xl font-bold text-[#06b6d4]" data-testid="cache-memory">{stats.memory_used || 'N/A'}</div>
+                  <div className="text-2xl font-bold text-[#06b6d4]" data-testid="cache-memory">{(stats.memory_used as string) || 'N/A'}</div>
                   <div className="text-[#484f58] text-xs mt-1">Redis memory</div>
                 </div>
                 <div className="bg-[#0d1117] border border-[#2d333b] rounded-lg p-4">
                   <div className="text-[#8b949e] text-xs uppercase tracking-wider mb-1">Uptime</div>
-                  <div className="text-2xl font-bold text-[#a855f7]" data-testid="cache-uptime">{formatUptime(stats.uptime_seconds)}</div>
+                  <div className="text-2xl font-bold text-[#a855f7]" data-testid="cache-uptime">{formatUptime(stats.uptime_seconds as number)}</div>
                   <div className="text-[#484f58] text-xs mt-1">Since last restart</div>
                 </div>
               </div>
@@ -2293,29 +2296,29 @@ const CacheManager = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[#8b949e] text-sm">Cache Hits</span>
-                    <span className="text-[#22c55e] font-mono font-medium" data-testid="cache-hits">{stats.hits}</span>
+                    <span className="text-[#22c55e] font-mono font-medium" data-testid="cache-hits">{(stats.hits as number) ?? 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[#8b949e] text-sm">Cache Misses</span>
-                    <span className="text-[#f97316] font-mono font-medium" data-testid="cache-misses">{stats.misses}</span>
+                    <span className="text-[#f97316] font-mono font-medium" data-testid="cache-misses">{(stats.misses as number) ?? 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[#8b949e] text-sm">Cache Sets</span>
-                    <span className="text-[#06b6d4] font-mono font-medium" data-testid="cache-sets">{stats.sets}</span>
+                    <span className="text-[#06b6d4] font-mono font-medium" data-testid="cache-sets">{(stats.sets as number) ?? 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[#8b949e] text-sm">Cache Deletes</span>
-                    <span className="text-[#da3633] font-mono font-medium" data-testid="cache-deletes">{stats.deletes}</span>
+                    <span className="text-[#da3633] font-mono font-medium" data-testid="cache-deletes">{(stats.deletes as number) ?? 0}</span>
                   </div>
                 </div>
                 {/* Hit Rate Bar */}
                 <div className="mt-4 pt-4 border-t border-[#2d333b]">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[#8b949e] text-xs">Hit Rate</span>
-                    <span className="text-white text-xs font-medium">{stats.hit_rate_percent}%</span>
+                    <span className="text-white text-xs font-medium">{(stats.hit_rate_percent as number) ?? 0}%</span>
                   </div>
                   <div className="w-full h-2 bg-[#0d1117] rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${stats.hit_rate_percent}%`, backgroundColor: stats.hit_rate_percent > 70 ? '#22c55e' : stats.hit_rate_percent > 40 ? '#f97316' : '#da3633' }} />
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(stats.hit_rate_percent as number) ?? 0}%`, backgroundColor: (stats.hit_rate_percent as number) > 70 ? '#22c55e' : (stats.hit_rate_percent as number) > 40 ? '#f97316' : '#da3633' }} />
                   </div>
                 </div>
               </div>

@@ -156,13 +156,13 @@ const HomepageSettings = () => {
               <div className="flex items-center gap-2">
                 <button
                   data-testid="toggle-counter-enabled"
-                  onClick={() => uc('enabled', !counterConfig.enabled)}
+                  onClick={() => uc('enabled', !counterConfig?.enabled)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                    counterConfig.enabled ? 'bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/30' : 'bg-[#484f58]/10 text-[#8b949e] border-[#484f58]/30'
+                    counterConfig?.enabled ? 'bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/30' : 'bg-[#484f58]/10 text-[#8b949e] border-[#484f58]/30'
                   }`}
                 >
-                  {counterConfig.enabled ? <Eye size={13} /> : <EyeOff size={13} />}
-                  {counterConfig.enabled ? 'Visible' : 'Hidden'}
+                  {counterConfig?.enabled ? <Eye size={13} /> : <EyeOff size={13} />}
+                  {counterConfig?.enabled ? 'Visible' : 'Hidden'}
                 </button>
                 <button
                   data-testid="save-counter-btn"
@@ -181,11 +181,11 @@ const HomepageSettings = () => {
               <div className="flex items-center gap-3 p-3 rounded-xl border border-[#2d333b] bg-[#0d1117]">
                 <span className="text-[10px] text-[#484f58] uppercase tracking-wider font-semibold w-14 shrink-0">Preview</span>
                 <div className="flex-1 flex justify-center">
-                  {counterConfig.enabled ? (
+                  {counterConfig?.enabled ? (
                     <span data-testid="counter-preview" className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest"
                       style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)', fontFamily: "'JetBrains Mono', monospace" }}>
                       <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#22c55e', boxShadow: '0 0 6px rgba(34,197,94,0.5)' }} />
-                      <span style={{ color: '#22c55e' }}>{counterConfig.base_count}<span style={{ color: '#8b949e', marginLeft: 4 }}>{counterConfig.label}</span></span>
+                      <span style={{ color: '#22c55e' }}>{(counterConfig?.base_count as number)}<span style={{ color: '#8b949e', marginLeft: 4 }}>{(counterConfig?.label as string)}</span></span>
                     </span>
                   ) : <span className="text-sm text-[#484f58] italic">Hidden</span>}
                 </div>
@@ -193,19 +193,19 @@ const HomepageSettings = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Base Count" help="Starting number">
-                  <input data-testid="input-base-count" type="number" min={1} value={counterConfig.base_count}
+                  <input data-testid="input-base-count" type="number" min={1} value={(counterConfig?.base_count as number) ?? 0}
                     onChange={e => uc('base_count', Math.max(1, parseInt(e.target.value) || 1))} className="input-field" />
                 </Field>
                 <Field label="Min Count" help="Floor value">
-                  <input data-testid="input-min-count" type="number" min={1} value={counterConfig.min_count}
+                  <input data-testid="input-min-count" type="number" min={1} value={(counterConfig?.min_count as number) ?? 0}
                     onChange={e => uc('min_count', Math.max(1, parseInt(e.target.value) || 1))} className="input-field" />
                 </Field>
                 <Field label="Drift Range" help="Max change per cycle (1-20)">
-                  <input data-testid="input-drift-range" type="number" min={1} max={20} value={counterConfig.drift_range}
+                  <input data-testid="input-drift-range" type="number" min={1} max={20} value={(counterConfig?.drift_range as number) ?? 5}
                     onChange={e => uc('drift_range', Math.max(1, Math.min(20, parseInt(e.target.value) || 5)))} className="input-field" />
                 </Field>
                 <Field label="Label" help="Text after the number">
-                  <input data-testid="input-label" type="text" value={counterConfig.label}
+                  <input data-testid="input-label" type="text" value={(counterConfig?.label as string) ?? ''}
                     onChange={e => uc('label', e.target.value)} className="input-field" placeholder="learning now" />
                 </Field>
               </div>
@@ -225,13 +225,13 @@ const HomepageSettings = () => {
               <div className="flex items-center gap-2">
                 <button
                   data-testid="toggle-banner-enabled"
-                  onClick={() => ub('enabled', !bannerConfig.enabled)}
+                  onClick={() => ub('enabled', !bannerConfig?.enabled)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                    bannerConfig.enabled ? 'bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/30' : 'bg-[#484f58]/10 text-[#8b949e] border-[#484f58]/30'
+                    bannerConfig?.enabled ? 'bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/30' : 'bg-[#484f58]/10 text-[#8b949e] border-[#484f58]/30'
                   }`}
                 >
-                  {bannerConfig.enabled ? <Eye size={13} /> : <EyeOff size={13} />}
-                  {bannerConfig.enabled ? 'Live' : 'Off'}
+                  {bannerConfig?.enabled ? <Eye size={13} /> : <EyeOff size={13} />}
+                  {bannerConfig?.enabled ? 'Live' : 'Off'}
                 </button>
                 <button
                   data-testid="save-banner-btn"
@@ -252,16 +252,16 @@ const HomepageSettings = () => {
               {/* Preview */}
               <div className="rounded-xl border border-[#2d333b] bg-[#0d1117] overflow-hidden">
                 <div className="text-[10px] text-[#484f58] uppercase tracking-wider font-semibold px-3 pt-3">Preview</div>
-                {bannerConfig.enabled ? (
+                {bannerConfig?.enabled ? (
                   <div className="px-3 pb-3 pt-2">
                     <div className="flex items-center justify-center gap-3 flex-wrap py-2 px-4 rounded-lg"
-                      style={{ background: `linear-gradient(135deg, ${bannerConfig.accent_color}10, transparent, ${bannerConfig.accent_color}10)`, border: `1px solid ${bannerConfig.accent_color}20` }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: bannerConfig.accent_color, boxShadow: `0 0 6px ${bannerConfig.accent_color}50` }} />
-                      <Zap size={13} style={{ color: bannerConfig.accent_color }} />
-                      <span className="text-xs font-bold text-[#c9d1d9]">{bannerConfig.title}</span>
-                      {bannerConfig.subtitle && <span className="text-xs text-[#8b949e]">— {bannerConfig.subtitle}</span>}
-                      {bannerConfig.end_date && (
-                        <div className="flex items-center gap-1 text-[10px] font-bold" style={{ color: bannerConfig.accent_color, fontFamily: "'JetBrains Mono', monospace" }}>
+                      style={{ background: `linear-gradient(135deg, ${bannerConfig?.accent_color}10, transparent, ${bannerConfig?.accent_color}10)`, border: `1px solid ${bannerConfig?.accent_color}20` }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: bannerConfig?.accent_color as string, boxShadow: `0 0 6px ${bannerConfig?.accent_color}50` }} />
+                      <Zap size={13} style={{ color: bannerConfig?.accent_color as string }} />
+                      <span className="text-xs font-bold text-[#c9d1d9]">{bannerConfig?.title as string}</span>
+                      {bannerConfig?.subtitle as string && <span className="text-xs text-[#8b949e]">— {bannerConfig?.subtitle as string}</span>}
+                      {bannerConfig?.end_date as string && (
+                        <div className="flex items-center gap-1 text-[10px] font-bold" style={{ color: bannerConfig?.accent_color as string, fontFamily: "'JetBrains Mono', monospace" }}>
                           <span className="px-1 py-0.5 rounded bg-white/5 border border-white/5">00d</span>
                           <span>:</span>
                           <span className="px-1 py-0.5 rounded bg-white/5 border border-white/5">00h</span>
@@ -271,9 +271,9 @@ const HomepageSettings = () => {
                           <span className="px-1 py-0.5 rounded bg-white/5 border border-white/5">00s</span>
                         </div>
                       )}
-                      {bannerConfig.link_text && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: bannerConfig.accent_color }}>
-                          {bannerConfig.link_text} <ArrowRight size={10} />
+                      {bannerConfig?.link_text as string && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: bannerConfig?.accent_color as string }}>
+                          {bannerConfig?.link_text as string} <ArrowRight size={10} />
                         </span>
                       )}
                     </div>
@@ -286,15 +286,15 @@ const HomepageSettings = () => {
               {/* Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Title" help="Main headline text">
-                  <input data-testid="input-banner-title" type="text" value={bannerConfig.title}
+                  <input data-testid="input-banner-title" type="text" value={bannerConfig?.title as string}
                     onChange={e => ub('title', e.target.value)} className="input-field" />
                 </Field>
                 <Field label="Subtitle" help="Secondary text (optional)">
-                  <input data-testid="input-banner-subtitle" type="text" value={bannerConfig.subtitle}
+                  <input data-testid="input-banner-subtitle" type="text" value={bannerConfig?.subtitle as string}
                     onChange={e => ub('subtitle', e.target.value)} className="input-field" />
                 </Field>
                 <Field label="End Date/Time" help="Countdown target (leave blank for no timer)">
-                  <input data-testid="input-banner-enddate" type="datetime-local" value={bannerConfig.end_date ? bannerConfig.end_date.slice(0, 16) : ''}
+                  <input data-testid="input-banner-enddate" type="datetime-local" value={bannerConfig?.end_date ? (bannerConfig?.end_date as string).slice(0, 16) : ''}
                     onChange={e => ub('end_date', e.target.value ? new Date(e.target.value).toISOString() : '')}
                     className="input-field" />
                 </Field>
@@ -307,23 +307,23 @@ const HomepageSettings = () => {
                           className="w-6 h-6 rounded-md border-2 transition-all hover:scale-110"
                           style={{
                             backgroundColor: p.color,
-                            borderColor: bannerConfig.accent_color === p.color ? '#fff' : 'transparent',
-                            boxShadow: bannerConfig.accent_color === p.color ? `0 0 8px ${p.color}50` : 'none',
+                            borderColor: bannerConfig?.accent_color === p.color ? '#fff' : 'transparent',
+                            boxShadow: bannerConfig?.accent_color === p.color ? `0 0 8px ${p.color}50` : 'none',
                           }}
                           title={p.label}
                         />
                       ))}
                     </div>
-                    <input data-testid="input-banner-color" type="text" value={bannerConfig.accent_color}
+                    <input data-testid="input-banner-color" type="text" value={bannerConfig?.accent_color as string}
                       onChange={e => ub('accent_color', e.target.value)} className="input-field w-24 text-center" />
                   </div>
                 </Field>
                 <Field label="Link URL" help="Where the CTA navigates to">
-                  <input data-testid="input-banner-linkurl" type="text" value={bannerConfig.link_url}
+                  <input data-testid="input-banner-linkurl" type="text" value={bannerConfig?.link_url as string}
                     onChange={e => ub('link_url', e.target.value)} className="input-field" placeholder="/pricing" />
                 </Field>
                 <Field label="CTA Text" help="Button label (leave blank to hide)">
-                  <input data-testid="input-banner-linktext" type="text" value={bannerConfig.link_text}
+                  <input data-testid="input-banner-linktext" type="text" value={bannerConfig?.link_text as string}
                     onChange={e => ub('link_text', e.target.value)} className="input-field" placeholder="Claim Offer" />
                 </Field>
               </div>
@@ -344,13 +344,13 @@ const HomepageSettings = () => {
               <div className="flex items-center gap-2">
                 <button
                   data-testid="toggle-promo-enabled"
-                  onClick={() => up('enabled', !promoConfig.enabled)}
+                  onClick={() => up('enabled', !promoConfig?.enabled)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                    promoConfig.enabled ? 'bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/30' : 'bg-[#484f58]/10 text-[#8b949e] border-[#484f58]/30'
+                    promoConfig?.enabled ? 'bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/30' : 'bg-[#484f58]/10 text-[#8b949e] border-[#484f58]/30'
                   }`}
                 >
-                  {promoConfig.enabled ? <Eye size={13} /> : <EyeOff size={13} />}
-                  {promoConfig.enabled ? 'Active' : 'Inactive'}
+                  {promoConfig?.enabled ? <Eye size={13} /> : <EyeOff size={13} />}
+                  {promoConfig?.enabled ? 'Active' : 'Inactive'}
                 </button>
                 <button
                   data-testid="save-promo-btn"
@@ -366,34 +366,34 @@ const HomepageSettings = () => {
             <div className="p-5">
               <div className="space-y-4">
                 <Field label="Promo Label" help="Displayed on the countdown banner (e.g., 'Launch Special')">
-                  <input data-testid="input-promo-label" type="text" value={promoConfig.label}
+                  <input data-testid="input-promo-label" type="text" value={(promoConfig?.label as string) ?? ''}
                     onChange={e => up('label', e.target.value)} className="input-field" placeholder="Launch Special" />
                 </Field>
                 <Field label="Promo Price ($)" help="Discounted one-time price (regular: $199)">
-                  <input data-testid="input-promo-price" type="number" step="0.01" value={promoConfig.promo_price}
+                  <input data-testid="input-promo-price" type="number" step="0.01" value={(promoConfig?.promo_price as number) ?? 0}
                     onChange={e => up('promo_price', parseFloat(e.target.value) || 0)} className="input-field" placeholder="149" />
                 </Field>
                 <Field label="End Date" help="Countdown timer runs until this date. Leave blank for no countdown (promo still active).">
-                  <input data-testid="input-promo-enddate" type="datetime-local" value={promoConfig.end_date ? promoConfig.end_date.slice(0, 16) : ''}
+                  <input data-testid="input-promo-enddate" type="datetime-local" value={promoConfig?.end_date ? (promoConfig?.end_date as string).slice(0, 16) : ''}
                     onChange={e => up('end_date', e.target.value ? new Date(e.target.value).toISOString() : '')} className="input-field" />
                 </Field>
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="Social Proof Base" help="Base number shown as 'X people claimed today'">
-                    <input data-testid="input-social-proof-base" type="number" value={promoConfig.social_proof_base || 42}
+                    <input data-testid="input-social-proof-base" type="number" value={(promoConfig?.social_proof_base as number) ?? 42}
                       onChange={e => up('social_proof_base', parseInt(e.target.value) || 0)} className="input-field" placeholder="42" />
                   </Field>
                   <Field label="Drift Range" help="Counter randomly drifts +/- this amount">
-                    <input data-testid="input-social-proof-drift" type="number" value={promoConfig.social_proof_drift || 8}
+                    <input data-testid="input-social-proof-drift" type="number" value={(promoConfig?.social_proof_drift as number) ?? 8}
                       onChange={e => up('social_proof_drift', parseInt(e.target.value) || 0)} className="input-field" placeholder="8" />
                   </Field>
                 </div>
-                {promoConfig.enabled && (
+                {(promoConfig?.enabled as boolean) && (
                   <div className="rounded-lg p-3 border" style={{ backgroundColor: '#ef444410', borderColor: '#ef444430' }}>
                     <p className="text-xs text-[#ef4444] font-semibold">Preview</p>
                     <p className="text-sm text-[#c9d1d9] mt-1">
-                      &ldquo;{promoConfig.label}&rdquo; &mdash; <span className="line-through text-[#8b949e]">$199</span>{' '}
-                      <strong className="text-[#ef4444]">${promoConfig.promo_price}</strong> one-time
-                      {promoConfig.end_date && ` (ends ${new Date(promoConfig.end_date).toLocaleDateString()})`}
+                      &ldquo;{(promoConfig?.label as string)}&rdquo; &mdash; <span className="line-through text-[#8b949e]">$199</span>{' '}
+                      <strong className="text-[#ef4444]">${(promoConfig?.promo_price as number)}</strong> one-time
+                      {(promoConfig?.end_date as string) && ` (ends ${new Date(promoConfig?.end_date as string).toLocaleDateString()})`}
                     </p>
                   </div>
                 )}
@@ -407,42 +407,42 @@ const HomepageSettings = () => {
                     </div>
                     <button
                       data-testid="toggle-ab-enabled"
-                      onClick={() => up('ab_enabled', !promoConfig.ab_enabled)}
+                      onClick={() => up('ab_enabled', !promoConfig?.ab_enabled)}
                       className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all border ${
-                        promoConfig.ab_enabled ? 'bg-[#8b5cf6]/10 text-[#8b5cf6] border-[#8b5cf6]/30' : 'bg-[#484f58]/10 text-[#8b949e] border-[#484f58]/30'
+                        promoConfig?.ab_enabled ? 'bg-[#8b5cf6]/10 text-[#8b5cf6] border-[#8b5cf6]/30' : 'bg-[#484f58]/10 text-[#8b949e] border-[#484f58]/30'
                       }`}
                     >
-                      {promoConfig.ab_enabled ? 'Enabled' : 'Disabled'}
+                      {promoConfig?.ab_enabled ? 'Enabled' : 'Disabled'}
                     </button>
                   </div>
-                  {promoConfig.ab_enabled && (
+                  {(promoConfig?.ab_enabled as boolean) && (
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="rounded-lg p-3 border" style={{ backgroundColor: '#3b82f610', borderColor: '#3b82f630' }}>
                           <p className="text-[10px] font-bold text-[#3b82f6] mb-2 uppercase tracking-wider">Variant A</p>
                           <Field label="Label">
-                            <input data-testid="input-variant-a-label" type="text" value={promoConfig.variant_a?.label || ''}
-                              onChange={e => up('variant_a', { ...promoConfig.variant_a, label: e.target.value })} className="input-field" />
+                            <input data-testid="input-variant-a-label" type="text" value={((promoConfig?.variant_a as Record<string, unknown>)?.label as string) ?? ''}
+                              onChange={e => up('variant_a', { ...((promoConfig?.variant_a ?? {}) as Record<string, unknown>), label: e.target.value })} className="input-field" />
                           </Field>
-                          <Field label="Price ($)" className="mt-2">
-                            <input data-testid="input-variant-a-price" type="number" step="0.01" value={promoConfig.variant_a?.price || 149}
-                              onChange={e => up('variant_a', { ...promoConfig.variant_a, price: parseFloat(e.target.value) || 0 })} className="input-field" />
+                          <Field label="Price ($)">
+                            <input data-testid="input-variant-a-price" type="number" step="0.01" value={((promoConfig?.variant_a as Record<string, unknown>)?.price as number) ?? 149}
+                              onChange={e => up('variant_a', { ...((promoConfig?.variant_a ?? {}) as Record<string, unknown>), price: parseFloat(e.target.value) || 0 })} className="input-field" />
                           </Field>
                         </div>
                         <div className="rounded-lg p-3 border" style={{ backgroundColor: '#22c55e10', borderColor: '#22c55e30' }}>
                           <p className="text-[10px] font-bold text-[#22c55e] mb-2 uppercase tracking-wider">Variant B</p>
                           <Field label="Label">
-                            <input data-testid="input-variant-b-label" type="text" value={promoConfig.variant_b?.label || ''}
-                              onChange={e => up('variant_b', { ...promoConfig.variant_b, label: e.target.value })} className="input-field" />
+                            <input data-testid="input-variant-b-label" type="text" value={((promoConfig?.variant_b as Record<string, unknown>)?.label as string) ?? ''}
+                              onChange={e => up('variant_b', { ...((promoConfig?.variant_b ?? {}) as Record<string, unknown>), label: e.target.value })} className="input-field" />
                           </Field>
-                          <Field label="Price ($)" className="mt-2">
-                            <input data-testid="input-variant-b-price" type="number" step="0.01" value={promoConfig.variant_b?.price || 159}
-                              onChange={e => up('variant_b', { ...promoConfig.variant_b, price: parseFloat(e.target.value) || 0 })} className="input-field" />
+                          <Field label="Price ($)">
+                            <input data-testid="input-variant-b-price" type="number" step="0.01" value={((promoConfig?.variant_b as Record<string, unknown>)?.price as number) ?? 159}
+                              onChange={e => up('variant_b', { ...((promoConfig?.variant_b ?? {}) as Record<string, unknown>), price: parseFloat(e.target.value) || 0 })} className="input-field" />
                           </Field>
                         </div>
                       </div>
-                      <Field label="Traffic Split (%)" help={`${promoConfig.ab_split || 50}% see Variant A, ${100 - (promoConfig.ab_split || 50)}% see Variant B`}>
-                        <input data-testid="input-ab-split" type="range" min="10" max="90" step="5" value={promoConfig.ab_split || 50}
+                      <Field label="Traffic Split (%)" help={`${(promoConfig?.ab_split as number) ?? 50}% see Variant A, ${100 - ((promoConfig?.ab_split as number) ?? 50)}% see Variant B`}>
+                        <input data-testid="input-ab-split" type="range" min="10" max="90" step="5" value={(promoConfig?.ab_split as number) ?? 50}
                           onChange={e => up('ab_split', parseInt(e.target.value))}
                           className="w-full h-1.5 rounded-lg cursor-pointer" style={{ accentColor: '#8b5cf6' }} />
                       </Field>
@@ -469,25 +469,25 @@ const HomepageSettings = () => {
                               <th className="text-right py-1">Rate</th>
                             </tr></thead>
                             <tbody>
-                              {abResults.results?.map((r: Record<string, unknown>) => (
-                                <tr key={r.variant} style={{ borderTop: '1px solid #1f2937' }}>
-                                  <td className="py-1.5 font-medium" style={{ color: r.variant === 'A' ? '#3b82f6' : '#22c55e' }}>
-                                    {r.variant} — ${r.variant === 'A' ? abResults.variant_a?.price : abResults.variant_b?.price}
-                                    <span className="text-[10px] ml-1 text-[#6b7280]">&ldquo;{r.variant === 'A' ? abResults.variant_a?.label : abResults.variant_b?.label}&rdquo;</span>
+                              {(abResults.results as Record<string, unknown>[])?.map((r) => (
+                                <tr key={(r.variant as string)} style={{ borderTop: '1px solid #1f2937' }}>
+                                  <td className="py-1.5 font-medium" style={{ color: (r.variant as string) === 'A' ? '#3b82f6' : '#22c55e' }}>
+                                    {(r.variant as string)} &mdash; ${(r.variant as string) === 'A' ? ((abResults.variant_a as Record<string, unknown>)?.price as number) : ((abResults.variant_b as Record<string, unknown>)?.price as number)}
+                                    <span className="text-[10px] ml-1 text-[#6b7280]">&ldquo;{(r.variant as string) === 'A' ? ((abResults.variant_a as Record<string, unknown>)?.label as string) : ((abResults.variant_b as Record<string, unknown>)?.label as string)}&rdquo;</span>
                                   </td>
-                                  <td className="text-right py-1.5 text-[#d1d5db]">{r.unique_impressions}</td>
-                                  <td className="text-right py-1.5 text-[#d1d5db]">{r.unique_conversions}</td>
+                                  <td className="text-right py-1.5 text-[#d1d5db]">{(r.unique_impressions as number)}</td>
+                                  <td className="text-right py-1.5 text-[#d1d5db]">{(r.unique_conversions as number)}</td>
                                   <td className="text-right py-1.5">
                                     <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{
-                                      backgroundColor: r.conversion_rate > 5 ? '#22c55e20' : r.conversion_rate > 0 ? '#f59e0b20' : '#374151',
-                                      color: r.conversion_rate > 5 ? '#22c55e' : r.conversion_rate > 0 ? '#f59e0b' : '#6b7280',
-                                    }}>{r.conversion_rate}%</span>
+                                      backgroundColor: (r.conversion_rate as number) > 5 ? '#22c55e20' : (r.conversion_rate as number) > 0 ? '#f59e0b20' : '#374151',
+                                      color: (r.conversion_rate as number) > 5 ? '#22c55e' : (r.conversion_rate as number) > 0 ? '#f59e0b' : '#6b7280',
+                                    }}>{(r.conversion_rate as number)}%</span>
                                   </td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
-                          {abResults.results?.every((r: Record<string, unknown>) => r.unique_impressions === 0) && (
+                          {((abResults.results as Record<string, unknown>[]) ?? [])?.every((r) => (r.unique_impressions as number) === 0) && (
                             <p className="text-center text-[10px] text-[#6b7280] mt-2 py-2">No data yet. Results appear after visitors view the pricing page.</p>
                           )}
                         </div>

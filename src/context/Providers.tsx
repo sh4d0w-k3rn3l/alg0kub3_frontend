@@ -22,6 +22,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <HydrateStores>
           <ThemeProvider>
             <LanguagePrefProvider>
+              <div id="clerk-captcha" style={{ display: 'none' }} />
               {children}
               <Toaster
                 position="bottom-right"

@@ -3,7 +3,6 @@
 import { createContext, useContext, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useUser, useAuth as useClerkAuth } from '@clerk/nextjs';
 import type { User } from '@/types';
-import { useAuthStore } from '@/store/auth';
 import { api } from '@/lib/api';
 import { handleApiError } from '@/lib/toast';
 
@@ -11,7 +10,6 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: () => void;
-  loginWithCredentials: (email: string, password: string) => Promise<User>;
   logout: () => void;
   refreshUser: () => Promise<User | null>;
   isSubscribed: boolean;
@@ -35,20 +33,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(() => {
     window.location.href = '/login';
-  }, []);
-
-  const loginWithCredentials = useCallback(async (email: string, password: string): Promise<User> => {
-    const API = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-    const res = await fetch(`${API}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: 'Login failed' }));
-      throw new Error(err.detail || 'Login failed');
-    }
-    return res.json();
   }, []);
 
   const logout = useCallback(async () => {
@@ -76,11 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           subscription_expires: data.subscription_expires,
         };
         setUser(merged);
-        useAuthStore.getState().setUser(merged);
         return merged;
       }
       setUser(data);
-      useAuthStore.getState().setUser(data);
       return data;
     } catch (err) {
       handleApiError(err, 'Failed to refresh user');
@@ -96,7 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Build initial user from Clerk, then fetch subscription from backend
   useEffect(() => {
     if (!clerkUser) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUser(null);
       fetched.current = false;
       return;
@@ -121,23 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser();
   }, [clerkUser, getToken, refreshUser]);
 
-  // Sync user state into Zustand auth store
-  useEffect(() => {
-    useAuthStore.getState().setUser(user);
-    useAuthStore.getState().setLoading(loading);
-    useAuthStore.getState().setGetToken(getToken);
-    useAuthStore.getState().setLogout(() => signOut({ redirectUrl: '/' }));
-    useAuthStore.getState().setLogin(() => { window.location.href = '/login'; });
-    useAuthStore.getState().setGetAuthHeaders(async () => {
-      const token = await getToken();
-      return token ? { Authorization: `Bearer ${token}` } : {} as Record<string, string>;
-    });
-    useAuthStore.getState().setRefreshUser(refreshUser);
-    useAuthStore.getState().setLoginWithCredentials(loginWithCredentials);
-  }, [user, loading, getToken, signOut, refreshUser, loginWithCredentials]);
-
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithCredentials, logout, refreshUser, isSubscribed, getToken, getAuthHeaders }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser, isSubscribed, getToken, getAuthHeaders }}>
       {children}
     </AuthContext.Provider>
   );

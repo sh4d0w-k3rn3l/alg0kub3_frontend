@@ -1,11 +1,5 @@
 const API_BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`;
 
-function readCsrfToken(): string {
-  if (typeof document === 'undefined') return '';
-  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : '';
-}
-
 export class ApiError extends Error {
   status: number;
   detail: string;
@@ -70,10 +64,7 @@ async function request<T>(
   };
 
   if (!skipCsrf && !['GET', 'HEAD'].includes(method)) {
-    const token = readCsrfToken();
-    if (token) {
-      reqHeaders['X-CSRF-Token'] = token;
-    }
+    reqHeaders['X-CSRF-Token'] = '1';
   }
 
   let res: Response;
@@ -93,7 +84,7 @@ async function request<T>(
       0,
       err instanceof TypeError && err.message === 'Failed to fetch'
         ? 'Unable to reach the server. Please check your internet connection.'
-        : (err as Error)?.message || 'A network error occurred.'
+        : (err as Error)?.message || 'A network error occurred.',
     );
   }
 
@@ -136,10 +127,3 @@ export const api = {
   delete: <T>(endpoint: string, options?: ApiOptions) =>
     request<T>(endpoint, options, 'DELETE'),
 };
-
-export async function ensureCsrfToken(): Promise<void> {
-  if (readCsrfToken()) return;
-  try {
-    await fetch(`${API_BASE}/csrf-token`, { credentials: 'include' });
-  } catch {}
-}

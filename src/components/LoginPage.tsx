@@ -18,7 +18,7 @@ const GoogleIcon = () => (
 
 const LoginPage: React.FC = () => {
   const { colors, isDark, toggleTheme } = useTheme();
-  const { loginWithCredentials, user } = useAuth();
+  const { user } = useAuth();
   const { signIn } = useSignIn();
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -54,10 +54,30 @@ const LoginPage: React.FC = () => {
     if (!email || !password) { setError('Please enter email and password'); return; }
     setLoading(true);
     try {
-      await loginWithCredentials(email, password);
-      router.push('/dashboard');
+      const { error } = await signIn.create({ identifier: email, password });
+      if (error) {
+        const clerkErr = error as unknown as { code?: string; longMessage?: string; message?: string };
+        if (clerkErr.code === 'form_password_incorrect' || clerkErr.code === 'form_identifier_not_found') {
+          setError('Invalid email or password');
+        } else {
+          setError(clerkErr.longMessage || clerkErr.message || 'Login failed');
+        }
+        return;
+      }
+      if (signIn.status === 'complete') {
+        await signIn.finalize();
+        router.push('/dashboard');
+      } else {
+        setError('Additional verification required. Please try signing in with a social provider.');
+      }
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      if (err?.errors?.[0]?.code === 'form_password_incorrect' || err?.errors?.[0]?.code === 'form_identifier_not_found') {
+        setError('Invalid email or password');
+      } else if (err?.errors?.[0]?.longMessage) {
+        setError(err.errors[0].longMessage);
+      } else {
+        setError(err.message || 'Login failed');
+      }
     } finally {
       setLoading(false);
     }

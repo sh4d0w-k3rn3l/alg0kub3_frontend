@@ -1,9 +1,6 @@
-import { ensureCsrfToken } from '@/lib/api';
+// CSRF protection is handled automatically by the api module
+// (sends X-CSRF-Token: 1 on every unsafe method).
+// No additional setup required.
 
-export function installCsrfInterceptor(): void {
-  // CSRF is handled automatically by the api module
-}
-
-export async function ensureCsrfCookie(): Promise<void> {
-  await ensureCsrfToken();
-}
+export function installCsrfInterceptor(): void {}
+export async function ensureCsrfCookie(): Promise<void> {}

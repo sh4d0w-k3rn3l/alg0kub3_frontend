@@ -1,11 +1,14 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser, useClerk } from '@clerk/nextjs';
 import { api, ApiError } from '@/lib/api';
 import { getRefCode } from '@/hooks/useRefTracking';
 
 const AuthCallback = () => {
   const router = useRouter();
+  const { user, isLoaded } = useUser();
+  const clerk = useClerk();
   const hasProcessed = useRef(false);
   const [error, setError] = useState('');
 
@@ -16,35 +19,70 @@ const AuthCallback = () => {
     const ac = new AbortController();
     const timeout = setTimeout(() => ac.abort(), 15000);
 
+    const syncSession = async (params: Record<string, unknown>) => {
+      const res = await api.post<{ success?: boolean }>(
+        '/auth/session',
+        { ...params, ref_code: getRefCode() },
+        { signal: ac.signal },
+      );
+      if (ac.signal.aborted) return false;
+      return res.ok;
+    };
+
     const processSession = async () => {
+      // Try URL hash first (legacy Clerk format)
       const hash = window.location.hash;
-      const match = hash.match(/session_id=([^&]+)/);
-      if (!match) {
-        router.replace('/');
+      const hashMatch = hash.match(/session_id=([^&]+)/);
+      if (hashMatch) {
+        const ok = await syncSession({ session_id: hashMatch[1] });
+        if (ac.signal.aborted) return;
+        if (ok) { router.replace('/dashboard'); return; }
+        setError('Unable to complete sign-in. Please try again.');
         return;
       }
-      const sessionId = match[1];
-      const refCode = getRefCode();
 
-      try {
-        const res = await api.post<{ success?: boolean }>(
-          '/auth/session',
-          { session_id: sessionId, ref_code: refCode },
-          { signal: ac.signal },
-        );
+      // Try URL search params (Core 3 format)
+      const search = window.location.search;
+      const searchMatch = search.match(/[?&]session_id=([^&]+)/);
+      if (searchMatch) {
+        const ok = await syncSession({ session_id: searchMatch[1] });
         if (ac.signal.aborted) return;
-        router.replace('/dashboard');
-      } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          setError('Sign-in timed out. Please try again.');
-          return;
-        }
-        if (err instanceof ApiError) {
-          setError(err.detail || `Sign-in failed (${err.status})`);
-          return;
-        }
+        if (ok) { router.replace('/dashboard'); return; }
         setError('Unable to complete sign-in. Please try again.');
+        return;
       }
+
+      // If Clerk already processed the callback, user will be available
+      if (isLoaded && user) {
+        const ok = await syncSession({ clerk_user_id: user.id });
+        if (ac.signal.aborted) return;
+        if (ok) { router.replace('/dashboard'); return; }
+        setError('Unable to complete sign-in. Please try again.');
+        return;
+      }
+
+      // Wait for Clerk to process callback if it hasn't yet
+      // then check the live clerk.user from the global instance
+      const start = Date.now();
+      while (Date.now() - start < 5000) {
+        await new Promise(r => setTimeout(r, 500));
+        if (ac.signal.aborted) return;
+        const liveUser = clerk.user;
+        if (liveUser) {
+          const ok = await syncSession({ clerk_user_id: liveUser.id });
+          if (ac.signal.aborted) return;
+          if (ok) { router.replace('/dashboard'); return; }
+        }
+        // Also re-check hash in case it was set after our initial check
+        const curHash = window.location.hash;
+        const curMatch = curHash.match(/session_id=([^&]+)/);
+        if (curMatch) {
+          const ok = await syncSession({ session_id: curMatch[1] });
+          if (ac.signal.aborted) return;
+          if (ok) { router.replace('/dashboard'); return; }
+        }
+      }
+      router.replace('/');
     };
 
     processSession();
@@ -52,7 +90,7 @@ const AuthCallback = () => {
       clearTimeout(timeout);
       ac.abort();
     };
-  }, [router]);
+  }, [router, user, isLoaded, clerk]);
 
   if (error) {
     return (

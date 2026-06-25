@@ -31,11 +31,13 @@ const SignUpPage: React.FC = () => {
 
   const ssoSignUp = (strategy: string) => async () => {
     try {
-      await signUp.sso({
-        strategy: strategy as any,
-        redirectUrl: '/auth/callback',
-        redirectCallbackUrl: '/auth/callback',
+      const { error } = await (signUp.create as any)({
+        strategy,
+        redirectUrl: `${window.location.origin}/auth/callback`,
       });
+      if (error) {
+        setError('Social sign up failed. Please try again.');
+      }
     } catch {
       setError('Social sign up failed. Please try again.');
     }

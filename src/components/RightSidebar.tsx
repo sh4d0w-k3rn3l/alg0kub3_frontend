@@ -24,24 +24,30 @@ const RightSidebar = ({ tocItems = [], isMobileOverlay = false }: RightSidebarPr
   const [activeSection, setActiveSection] = useState('');
 
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      const scrollContainer = document.getElementById('main-content');
-      if (!scrollContainer) return;
-      const scrollTop = scrollContainer.scrollTop;
-      const scrollHeight = scrollContainer.scrollHeight - scrollContainer.clientHeight;
-      const progress = scrollHeight > 0 ? Math.round((scrollTop / scrollHeight) * 100) : 0;
-      setReadingProgress(Math.min(progress, 100));
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const scrollContainer = document.getElementById('main-content');
+        if (!scrollContainer) { ticking = false; return; }
+        const scrollTop = scrollContainer.scrollTop;
+        const scrollHeight = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+        const progress = scrollHeight > 0 ? Math.round((scrollTop / scrollHeight) * 100) : 0;
+        setReadingProgress(Math.min(progress, 100));
 
-      for (let i = tocItems.length - 1; i >= 0; i--) {
-        const el = document.getElementById(tocItems[i].id);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          if (rect.top <= 200) {
-            setActiveSection(tocItems[i].id);
-            break;
+        for (let i = tocItems.length - 1; i >= 0; i--) {
+          const el = document.getElementById(tocItems[i].id);
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            if (rect.top <= 200) {
+              setActiveSection(tocItems[i].id);
+              break;
+            }
           }
         }
-      }
+        ticking = false;
+      });
     };
 
     const scrollContainer = document.getElementById('main-content');

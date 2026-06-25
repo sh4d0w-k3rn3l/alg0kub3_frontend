@@ -11,6 +11,15 @@ import { useSettingsStore } from '@/store/settings';
 import { useCourseStore } from '@/store/courses';
 import { useUIStore } from '@/store/ui';
 
+const Header = React.lazy(() => import('@/components/Header'));
+const Sidebar = React.lazy(() => import('@/components/Sidebar'));
+const ArticleContent = React.lazy(() => import('@/components/ArticleContent'));
+const RightSidebar = React.lazy(() => import('@/components/RightSidebar'));
+const BottomBar = React.lazy(() => import('@/components/BottomBar'));
+const AskAIPanel = React.lazy(() => import('@/components/AITutorPanel'));
+const NotesPanel = React.lazy(() => import('@/components/NotesPanel'));
+const SearchModal = React.lazy(() => import('@/components/SearchModal'));
+
 
 
 const FONT_SIZES: Record<string, { content: string; heading: string; subheading: string }> = {
@@ -58,8 +67,8 @@ export default function LearnPage() {
   const [currentLesson, setCurrentLesson] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [tocItems, setTocItems] = useState<{ id: string; title: string }[]>([]);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [askAIOpen, setAskAIOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -100,11 +109,16 @@ export default function LearnPage() {
   }, []);
 
   useEffect(() => {
+    const w = window.innerWidth;
+    setIsMobile(w < 768);
+    setIsTablet(w >= 768 && w < 1024);
+    if (w >= 1024) setSidebarOpen(true);
+    else setSidebarOpen(false);
     const handleResize = () => {
-      const w = window.innerWidth;
-      setIsMobile(w < 768);
-      setIsTablet(w >= 768 && w < 1024);
-      if (w >= 1024) setSidebarOpen(true);
+      const w2 = window.innerWidth;
+      setIsMobile(w2 < 768);
+      setIsTablet(w2 >= 768 && w2 < 1024);
+      if (w2 >= 1024) setSidebarOpen(true);
       else setSidebarOpen(false);
     };
     window.addEventListener('resize', handleResize);
@@ -188,15 +202,6 @@ export default function LearnPage() {
     } catch (err) { handleApiError(err); }
   };
 
-  const Header = React.lazy(() => import('@/components/Header'));
-  const Sidebar = React.lazy(() => import('@/components/Sidebar'));
-  const ArticleContent = React.lazy(() => import('@/components/ArticleContent'));
-  const RightSidebar = React.lazy(() => import('@/components/RightSidebar'));
-  const BottomBar = React.lazy(() => import('@/components/BottomBar'));
-  const AskAIPanel = React.lazy(() => import('@/components/AITutorPanel'));
-  const NotesPanel = React.lazy(() => import('@/components/NotesPanel'));
-  const SearchModal = React.lazy(() => import('@/components/SearchModal'));
-
   const totalLessons = sections.reduce((sum, s) => sum + (s.total || 0), 0);
   const fontConfig = FONT_SIZES[fontSize] || FONT_SIZES.medium;
   const activeFontFamily = FONT_FAMILIES[fontFamily] || FONT_FAMILIES.sans;
@@ -208,7 +213,7 @@ export default function LearnPage() {
   const rightOffset = showDesktopRight ? '280px' : '0';
 
   return (
-    <div className="min-h-screen transition-all duration-300" style={{ backgroundColor: colors.bg }}>
+    <div className="min-h-screen" style={{ backgroundColor: colors.bg }}>
       {!focusMode && (
         <React.Suspense fallback={null}>
           <Header
@@ -244,7 +249,7 @@ export default function LearnPage() {
 
       <main
         id="main-content"
-        className="overflow-y-auto transition-all duration-300"
+        className="overflow-y-auto"
         onScroll={handleScroll}
         style={{
           position: 'fixed',
@@ -252,13 +257,13 @@ export default function LearnPage() {
           bottom: '48px',
           left: (isMobile || isTablet || focusMode) ? '0' : leftOffset,
           right: (isMobile || isTablet || focusMode) ? '0' : rightOffset,
-          transition: 'left 0.3s ease, right 0.3s ease, top 0.3s ease',
           backgroundColor: colors.bg,
           fontFamily: activeFontFamily,
+          scrollBehavior: 'auto',
         }}
       >
         <div
-          className="px-4 sm:px-6 md:px-8 py-6 md:py-8 mx-auto transition-all duration-300"
+          className="px-4 sm:px-6 md:px-8 py-6 md:py-8 mx-auto"
           style={{ maxWidth: activeContentWidth }}
         >
           {loading ? (

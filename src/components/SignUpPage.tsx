@@ -78,7 +78,7 @@ const SignUpPage: React.FC = () => {
         lastName,
       });
       if (signUp.createdSessionId) {
-        const res = await api.post('/api/auth/session', { session_id: signUp.createdSessionId, password });
+        const res = await api.post('/auth/session', { session_id: signUp.createdSessionId, password });
         if (res.ok) {
           router.push('/dashboard');
         } else {

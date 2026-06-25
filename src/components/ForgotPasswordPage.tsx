@@ -59,7 +59,7 @@ const ForgotPasswordPage: React.FC = () => {
       if (submitRes.error) { setError(getErrorMessage(submitRes.error)); setLoading(false); return; }
       const sessionId = signIn.createdSessionId;
       if (sessionId) {
-        const apiRes = await api.post('/api/auth/reset-password', { session_id: sessionId, password });
+        const apiRes = await api.post('/auth/reset-password', { session_id: sessionId, password });
         if (!apiRes.ok) {
           setError('Password reset on Clerk but failed to sync with backend. Please try logging in.');
           setLoading(false);

@@ -1,4 +1,10 @@
-const API_BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`;
+const isServer = typeof window === 'undefined';
+
+const API_ORIGIN = isServer
+  ? process.env.API_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
+  : '';
+
+const API_BASE = `${API_ORIGIN}/api`;
 
 export class ApiError extends Error {
   status: number;
@@ -51,11 +57,10 @@ async function request<T>(
 ): Promise<ApiResponse<T>> {
   const { params, body, headers, skipCsrf, cache, next, signal } = options;
 
-  const url = new URL(`${API_BASE}${endpoint}`, window.location.origin);
+  let url = `${API_BASE}${endpoint}`;
   if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.set(key, value);
-    });
+    const qs = new URLSearchParams(params).toString();
+    url += `?${qs}`;
   }
 
   const reqHeaders: Record<string, string> = {
@@ -69,7 +74,7 @@ async function request<T>(
 
   let res: Response;
   try {
-    res = await fetch(url.toString(), {
+    res = await fetch(url, {
       method,
       headers: reqHeaders,
       body: body ? JSON.stringify(body) : undefined,

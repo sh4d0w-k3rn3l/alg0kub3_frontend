@@ -1,12 +1,23 @@
 import type { NextConfig } from "next";
 
+const API_BACKEND_URL = process.env.API_BACKEND_URL || "http://localhost:8000";
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "img.clerk.com" },
       { protocol: "https", hostname: "*.algokube.dev" },
       { protocol: "https", hostname: "*.algokube.com" },
+      { protocol: "https", hostname: "*.algokube.in" },
     ],
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${API_BACKEND_URL}/api/:path*`,
+      },
+    ];
   },
   async headers() {
     return [

@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/context/ThemeContext';
-
-const API = process.env.NEXT_PUBLIC_BACKEND_URL;
+import { api } from '@/lib/api';
 
 const STYLE_ID = 'live-counter-styles';
 const injectStyles = () => {
@@ -36,9 +35,11 @@ const LiveStudentCounter = () => {
 
   /* Fetch config from API */
   useEffect(() => {
-    fetch(`${API}/api/homepage-settings/live-counter`)
-      .then(r => r.json())
-      .then(data => {
+    const ac = new AbortController();
+    api.get<any>('/homepage-settings/live-counter', { signal: ac.signal })
+      .then(res => {
+        if (ac.signal.aborted) return;
+        const data = res.data;
         setConfig(data);
         const base = data.base_count || 127;
         target.current = base;
@@ -46,12 +47,14 @@ const LiveStudentCounter = () => {
         setCount(base);
       })
       .catch(() => {
+        if (ac.signal.aborted) return;
         /* Fallback defaults */
         setConfig({ enabled: true, base_count: 127, min_count: 40, label: 'learning now', drift_range: 5 });
         target.current = 127;
         actual.current = 127;
         setCount(127);
       });
+    return () => ac.abort();
   }, []);
 
   /* Drift simulation */

@@ -9,11 +9,10 @@ import {
   Map, Clock, HelpCircle, X,
 } from 'lucide-react';
 import { COURSE_ICONS, COURSE_COLORS } from '@/config/courseConfig';
+import { api } from '@/lib/api';
 import CourseNode, { DIFF_COLORS } from './curriculum/CourseNode';
 import { QUIZ_QUESTIONS, getRecommendation } from './curriculum/curriculumData';
 import PageHeader from './PageHeader';
-
-const API = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 interface TrackCourse {
   slug: string;
@@ -133,16 +132,21 @@ const AICurriculumPage = () => {
   const t = isDark ? dk : lt;
 
   useEffect(() => {
-    fetch(`${API}/api/courses`).then(r => r.json()).then(d => setCourses(d?.courses || d || [])).catch(() => {});
-    fetch(`${API}/api/progress/dashboard`)
-      .then(r => r.json()).then(data => {
-        const courses = data?.courses;
+    const ac = new AbortController();
+    api.get<{ courses: Course[] }>('/courses', { signal: ac.signal })
+      .then(res => { if (!ac.signal.aborted) setCourses(res.data.courses || res.data || []); })
+      .catch(() => {});
+    api.get<{ courses: ProgressEntry[] }>('/progress/dashboard', { signal: ac.signal })
+      .then(res => {
+        if (ac.signal.aborted) return;
+        const courses = res.data?.courses;
         if (Array.isArray(courses)) {
           const map: Record<string, ProgressEntry> = {};
           courses.forEach((p: ProgressEntry) => { map[p.course_slug] = p; });
           setProgress(map);
         }
       }).catch(() => {});
+    return () => ac.abort();
   }, []);
 
   const courseMap = useMemo(() => {

@@ -68,8 +68,7 @@ api.get<{ courses: Record<string, unknown>[] }>('/courses', { signal: ac.signal 
   const exportData = async (type: string) => {
     try {
       const endpoint = type === 'users' ? 'export-users' : 'export-progress';
-      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
-      const res = await fetch(`${BACKEND_URL}/api/admin/bulk/${endpoint}`);
+      const res = await fetch(`/api/admin/bulk/${endpoint}`);
       if (!res.ok) throw new Error('Export failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

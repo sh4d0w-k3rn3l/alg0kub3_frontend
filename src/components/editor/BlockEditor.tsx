@@ -69,8 +69,6 @@ interface EditorBlock {
   href?: string;
 }
 
-const API = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`;
-
 // Initialize mermaid
 mermaid.initialize({
   startOnLoad: false,
@@ -574,7 +572,7 @@ const ImageEditor = ({ block, onChange }: { block: EditorBlock; onChange: (block
     try {
       const fd = new FormData();
       fd.append('file', file, file.name || 'pasted-image.png');
-      const res = await fetch(`${API}/admin/upload-image`, {
+      const res = await fetch('/api/admin/upload-image', {
         method: 'POST',
         body: fd,
       });
@@ -1645,8 +1643,7 @@ const BlockEditor = ({ blocks: initialBlocks, onChange, onAiGenerate, generating
     if (!lessonId || !blockText.trim()) return;
     setAiAssisting(blockIndex);
     try {
-      const API = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`;
-      const res = await fetch(`${API}/lessons/${lessonId}/ai-block-assist`, {
+      const res = await fetch(`/api/lessons/${lessonId}/ai-block-assist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, block_index: blockIndex, block_text: blockText }),

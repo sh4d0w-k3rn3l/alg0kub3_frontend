@@ -5,6 +5,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { api } from '@/lib/api';
 import { Menu, Search, Sun, Moon, ChevronDown, Code, BookOpen, LogIn, User, Trophy, Target, Server, Braces, TrendingUp, Play, LayoutDashboard, LogOut } from 'lucide-react';
 import { COURSE_ICONS } from '@/config/courseConfig';
 
@@ -41,9 +42,8 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isMobile, onToggleRigh
   const handleCourseNav = async (slug: string) => {
     setLearnOpen(false);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/courses/${slug}/first-lesson`);
-      const data = await res.json();
-      router.push(data.slug ? `/learn/${slug}/${data.slug}` : `/learn/${slug}`);
+      const res = await api.get<{ slug?: string }>(`/courses/${slug}/first-lesson`);
+      router.push(res.data.slug ? `/learn/${slug}/${res.data.slug}` : `/learn/${slug}`);
     } catch {
       router.push(`/learn/${slug}`);
     }

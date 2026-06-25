@@ -1,10 +1,8 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
-
 import { useRouter } from 'next/navigation';
+import { api, ApiError } from '@/lib/api';
 import { getRefCode } from '@/hooks/useRefTracking';
-
-const API = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`;
 
 const AuthCallback = () => {
   const router = useRouter();
@@ -29,23 +27,20 @@ const AuthCallback = () => {
       const refCode = getRefCode();
 
       try {
-        const res = await fetch(`${API}/auth/session`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ session_id: sessionId, ref_code: refCode }),
-          signal: ac.signal,
-        });
+        const res = await api.post<{ success?: boolean }>(
+          '/auth/session',
+          { session_id: sessionId, ref_code: refCode },
+          { signal: ac.signal },
+        );
         if (ac.signal.aborted) return;
-        if (res.ok) {
-          router.replace('/dashboard');
-        } else {
-          const body = await res.json().catch(() => ({}));
-          setError(body?.detail || `Sign-in failed (${res.status})`);
-        }
+        router.replace('/dashboard');
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') {
           setError('Sign-in timed out. Please try again.');
+          return;
+        }
+        if (err instanceof ApiError) {
+          setError(err.detail || `Sign-in failed (${err.status})`);
           return;
         }
         setError('Unable to complete sign-in. Please try again.');

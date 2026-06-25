@@ -2,9 +2,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
+import { api } from '@/lib/api';
 import { X, ChevronUp, Zap, ArrowRight } from 'lucide-react';
-
-const API = process.env.NEXT_PUBLIC_BACKEND_URL;
 const STORAGE_KEY = 'flash_banner_state';
 
 const STYLE_ID = 'flash-banner-styles';
@@ -87,10 +86,11 @@ const FlashBanner = () => {
 
   /* Fetch config */
   useEffect(() => {
-    fetch(`${API}/api/homepage-settings/flash-banner`)
-      .then(r => r.json())
-      .then(setConfig)
+    const ac = new AbortController();
+    api.get<any>('/homepage-settings/flash-banner', { signal: ac.signal })
+      .then(res => { if (!ac.signal.aborted) setConfig(res.data); })
       .catch(() => {});
+    return () => ac.abort();
   }, []);
 
   const persist = useCallback((state: Record<string, boolean>) => {

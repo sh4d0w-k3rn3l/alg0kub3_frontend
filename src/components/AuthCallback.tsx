@@ -1,90 +1,118 @@
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useClerk } from '@clerk/nextjs';
+import { useSignIn, useSignUp, useClerk } from '@clerk/nextjs';
 import { api } from '@/lib/api';
 import { getRefCode } from '@/hooks/useRefTracking';
 
 const AuthCallback = () => {
   const router = useRouter();
-  const { user, isLoaded } = useUser();
   const clerk = useClerk();
-  const [error, setError] = useState('');
-  const done = useRef(false);
+  const { signIn } = useSignIn();
+  const { signUp } = useSignUp();
+  const hasRun = useRef(false);
+
+  const syncBackend = async (session: { getToken?: () => Promise<string | null> }) => {
+    const token = await session?.getToken?.().catch(() => null) ?? null;
+    if (token) {
+      try {
+        await api.post('/auth/session', { session_id: token, ref_code: getRefCode() });
+      } catch {
+        // non-fatal
+      }
+    }
+  };
 
   useEffect(() => {
-    if (done.current || !isLoaded) return;
-
-    const sessionId =
-      window.location.hash.match(/session_id=([^&]+)/)?.[1] ??
-      window.location.search.match(/[?&]session_id=([^&]+)/)?.[1];
-
-    const ac = new AbortController();
     const timeout = setTimeout(() => {
-      if (!done.current) {
-        done.current = true;
+      if (!hasRun.current) {
+        hasRun.current = true;
         router.replace('/login');
       }
     }, 10000);
 
-    const sync = async () => {
-      if (done.current) return;
-
-      const sid = sessionId || clerk.session?.id;
-      if (!sid) return;
-
-      try {
-        const res = await api.post<{ success?: boolean }>(
-          '/auth/session',
-          { session_id: sid, ref_code: getRefCode() },
-          { signal: ac.signal },
-        );
-        if (ac.signal.aborted || done.current) return;
-        if (res.ok) {
-          done.current = true;
-          clearTimeout(timeout);
-          router.replace('/dashboard');
-        } else {
-          done.current = true;
-          clearTimeout(timeout);
-          setError('Unable to complete sign-in. Please try again.');
-        }
-      } catch {
-        // will retry on next poll interval
-      }
-    };
-
-    sync();
-    const iv = setInterval(sync, 500);
-
-    return () => {
+    (async () => {
+      if (!clerk.loaded || hasRun.current) return;
+      hasRun.current = true;
       clearTimeout(timeout);
-      clearInterval(iv);
-      ac.abort();
-    };
-  }, [router, user, isLoaded, clerk]);
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--theme-bg, #0d1117)' }}>
-        <div className="text-center max-w-sm px-6">
-          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#ef444415' }}>
-            <svg className="w-6 h-6" style={{ color: '#ef4444' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <p className="text-sm mb-4" style={{ color: '#ef4444' }}>{error}</p>
-          <button
-            onClick={() => router.replace('/login')}
-            className="px-6 py-2 rounded-xl text-sm font-medium transition-all duration-200"
-            style={{ backgroundColor: 'var(--theme-green, #22c55e)', color: '#fff' }}
-          >
-            Back to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
+      const navigateTo = async (opts: {
+        session?: { getToken?: () => Promise<string | null> };
+        decorateUrl: (path: string) => string;
+      }) => {
+        await syncBackend(opts.session ?? {});
+        const url = opts.decorateUrl('/dashboard');
+        if (url.startsWith('http')) {
+          window.location.href = url;
+        } else {
+          router.push(url);
+        }
+      };
+
+      const goHome = () => router.replace('/dashboard');
+      const goLogin = () => router.replace('/login');
+
+      const siComplete = () => (signIn.status as string) === 'complete';
+      const suComplete = () => (signUp.status as string) === 'complete';
+
+      if (siComplete()) {
+        const { error } = await signIn.finalize({ navigate: navigateTo });
+        if (error) goLogin();
+        return;
+      }
+
+      if (signUp.isTransferable) {
+        await signIn.create({ transfer: true });
+        if (siComplete()) {
+          const { error } = await signIn.finalize({ navigate: navigateTo });
+          if (error) goLogin();
+          return;
+        }
+        goLogin();
+        return;
+      }
+
+      if (signIn.isTransferable) {
+        const { error } = await signUp.create({ transfer: true });
+        if (!error && suComplete()) {
+          const { error: fe } = await signUp.finalize({ navigate: navigateTo });
+          if (fe) goLogin();
+          return;
+        }
+        goLogin();
+        return;
+      }
+
+      if (suComplete()) {
+        const { error } = await signUp.finalize({ navigate: navigateTo });
+        if (error) goLogin();
+        return;
+      }
+
+      if (signIn.existingSession || signUp.existingSession) {
+        const sessionId = signIn.existingSession?.sessionId || signUp.existingSession?.sessionId;
+        if (sessionId) {
+          await clerk.setActive({
+            session: sessionId,
+            navigate: navigateTo,
+          });
+          return;
+        }
+      }
+
+      if (
+        signIn.status === 'needs_second_factor' ||
+        signIn.status === 'needs_new_password'
+      ) {
+        goLogin();
+        return;
+      }
+
+      goHome();
+    })();
+
+    return () => clearTimeout(timeout);
+  }, [clerk.loaded, signIn.status, signUp.status, signIn.isTransferable, signUp.isTransferable]);
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--theme-bg, #0d1117)' }}>

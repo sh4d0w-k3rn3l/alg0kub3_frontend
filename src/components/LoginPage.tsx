@@ -38,8 +38,8 @@ const LoginPage: React.FC = () => {
         redirectUrl: cbUrl,
         redirectCallbackUrl: cbUrl,
       });
+      setSsoLoading('');
       if (error) {
-        setSsoLoading('');
         setError('Social login failed. Please try again.');
       }
     } catch {
@@ -64,31 +64,29 @@ const LoginPage: React.FC = () => {
     if (!email || !password) { setError('Please enter email and password'); return; }
     setLoading(true);
     try {
-      const { error: createErr } = await signIn.create({ identifier: email });
-      if (createErr) {
-        if (createErr.code === 'form_identifier_not_found') {
+      const { error } = await signIn.password({ emailAddress: email, password });
+      if (error) {
+        if (error.code === 'form_password_incorrect' || error.code === 'form_identifier_not_found') {
           setError('Invalid email or password');
         } else {
-          setError(createErr.longMessage || createErr.message || 'Login failed');
-        }
-        return;
-      }
-      const { error: pwErr } = await signIn.password({ identifier: email, password });
-      if (pwErr) {
-        if (pwErr.code === 'form_password_incorrect') {
-          setError('Invalid email or password');
-        } else {
-          setError(pwErr.longMessage || pwErr.message || 'Login failed');
+          setError(error.longMessage || error.message || 'Login failed');
         }
         return;
       }
       if (signIn.status === 'complete') {
-        const sessionId = signIn.createdSessionId;
-        if (sessionId) {
-          await api.post('/auth/session', { session_id: sessionId });
-        }
-        await signIn.finalize();
-        router.push('/dashboard');
+        await signIn.finalize({
+          navigate: async ({ session, decorateUrl }) => {
+            if (session?.getToken) {
+              const token = await session.getToken().catch(() => null);
+              if (token) {
+                await api.post('/auth/session', { session_id: token }).catch(() => {});
+              }
+            }
+            const url = decorateUrl('/dashboard');
+            if (url.startsWith('http')) window.location.href = url;
+            else router.push(url);
+          },
+        });
       } else {
         setError('Additional verification required. Please try signing in with a social provider.');
       }

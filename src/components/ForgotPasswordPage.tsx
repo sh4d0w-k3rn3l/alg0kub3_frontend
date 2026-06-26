@@ -5,9 +5,9 @@ import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'next/navigation';
 import { useSignIn } from '@clerk/nextjs';
 import { api } from '@/lib/api';
-import { Code, Sun, Moon, Mail, Lock, KeyRound, AlertCircle, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Code, Sun, Moon, Mail, Lock, KeyRound, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
 
-type Step = 'email' | 'code' | 'success';
+type Step = 'email' | 'code';
 
 function getErrorMessage(err: { message?: string; longMessage?: string } | null): string {
   if (!err) return 'Something went wrong. Please try again.';
@@ -57,16 +57,21 @@ const ForgotPasswordPage: React.FC = () => {
       if (verifyRes.error) { setError(getErrorMessage(verifyRes.error)); setLoading(false); return; }
       const submitRes = await signIn.resetPasswordEmailCode.submitPassword({ password, signOutOfOtherSessions: true });
       if (submitRes.error) { setError(getErrorMessage(submitRes.error)); setLoading(false); return; }
-      const sessionId = signIn.createdSessionId;
-      if (sessionId) {
-        const apiRes = await api.post('/auth/reset-password', { session_id: sessionId, password });
-        if (!apiRes.ok) {
-          setError('Password reset on Clerk but failed to sync with backend. Please try logging in.');
-          setLoading(false);
-          return;
-        }
+      const { error: finalizeErr } = await signIn.finalize({
+        navigate: async ({ session, decorateUrl }) => {
+          const token = await session?.getToken?.().catch(() => null) ?? null;
+          if (token) {
+            await api.post('/auth/reset-password', { session_id: token, password }).catch(() => {});
+            await api.post('/auth/session', { session_id: token }).catch(() => {});
+          }
+          const url = decorateUrl('/dashboard');
+          if (url.startsWith('http')) window.location.href = url;
+          else router.push(url);
+        },
+      });
+      if (finalizeErr) {
+        setError('Password reset succeeded but failed to sign in. Please try logging in.');
       }
-      setStep('success');
     } catch (err: any) {
       setError(err.message || 'Failed to reset password.');
     } finally {
@@ -105,14 +110,10 @@ const ForgotPasswordPage: React.FC = () => {
         >
           <div className="text-center mb-6">
             <h1 className="text-2xl font-extrabold mb-1.5 tracking-tight" style={{ color: colors.text }}>
-              {step === 'email' && 'Reset your password'}
-              {step === 'code' && 'Check your email'}
-              {step === 'success' && 'Password reset'}
+              {step === 'email' ? 'Reset your password' : 'Check your email'}
             </h1>
             <p className="text-sm" style={{ color: colors.textSecondary }}>
-              {step === 'email' && "We'll send you a reset code"}
-              {step === 'code' && `Enter the code sent to ${email}`}
-              {step === 'success' && 'Your password has been updated'}
+              {step === 'email' ? "We'll send you a reset code" : `Enter the code sent to ${email}`}
             </p>
           </div>
 
@@ -293,43 +294,14 @@ const ForgotPasswordPage: React.FC = () => {
               </form>
             )}
 
-            {step === 'success' && (
-              <div className="space-y-5 text-center">
-                <div className="flex justify-center">
-                  <div
-                    className="w-14 h-14 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: `${colors.green}20` }}
-                  >
-                    <CheckCircle2 size={28} style={{ color: colors.green }} />
-                  </div>
-                </div>
-                <p className="text-sm" style={{ color: colors.textSecondary }}>
-                  You can now sign in with your new password.
-                </p>
-                <button
-                  onClick={() => router.push('/login')}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
-                  style={{
-                    backgroundColor: colors.green,
-                    color: '#fff',
-                    boxShadow: `0 4px 14px ${colors.green}30`,
-                  }}
-                >
-                  <ArrowLeft size={15} />
-                  Back to Sign In
-                </button>
-              </div>
-            )}
           </div>
 
-          {step !== 'success' && (
-            <p className="text-center text-sm mt-5 animate-in fade-in duration-500 delay-150" style={{ animationFillMode: 'both', color: colors.textMuted }}>
-              Remember your password?{' '}
-              <button onClick={() => router.push('/login')} className="font-semibold hover:underline transition-all duration-200 hover:scale-[1.02]" style={{ color: colors.green }}>
-                Sign in
-              </button>
-            </p>
-          )}
+          <p className="text-center text-sm mt-5 animate-in fade-in duration-500 delay-150" style={{ animationFillMode: 'both', color: colors.textMuted }}>
+            Remember your password?{' '}
+            <button onClick={() => router.push('/login')} className="font-semibold hover:underline transition-all duration-200 hover:scale-[1.02]" style={{ color: colors.green }}>
+              Sign in
+            </button>
+          </p>
         </div>
       </div>
     </div>

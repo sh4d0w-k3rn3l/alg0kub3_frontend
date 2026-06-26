@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useSignUp, useClerk } from '@clerk/nextjs';
+import { useSignUp } from '@clerk/nextjs';
 import { api } from '@/lib/api';
 import { Code, Sun, Moon, LogIn, Mail, Lock, User, KeyRound, ArrowLeft, AlertCircle, Loader2, Github, Twitter } from 'lucide-react';
 
@@ -23,7 +23,6 @@ const SignUpPage: React.FC = () => {
   const { colors, isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { signUp } = useSignUp();
-  const clerk = useClerk();
   const router = useRouter();
   const [step, setStep] = useState<SignUpStep>('form');
   const [name, setName] = useState('');
@@ -45,8 +44,8 @@ const SignUpPage: React.FC = () => {
         redirectUrl: cbUrl,
         redirectCallbackUrl: cbUrl,
       });
+      setSsoLoading('');
       if (error) {
-        setSsoLoading('');
         setError('Social sign up failed. Please try again.');
       }
     } catch {
@@ -85,32 +84,28 @@ const SignUpPage: React.FC = () => {
       const nameParts = name.trim().split(/\s+/);
       const firstName = nameParts[0];
       const lastName = nameParts.slice(1).join(' ') || undefined;
-      const { error: createErr } = await signUp.create({
+      const { error } = await signUp.password({
         emailAddress: email,
+        password,
         firstName,
         lastName,
       });
-      if (createErr) {
-        setError(createErr.message || 'Sign up failed');
-        return;
-      }
-      const { error: pwErr } = await signUp.password({ password, emailAddress: email });
-      if (pwErr) {
-        setError(pwErr.message || 'Failed to set password');
+      if (error) {
+        setError(error.message || 'Sign up failed');
         return;
       }
       if (signUp.status === 'complete') {
-        const sessionId = signUp.createdSessionId;
-        if (sessionId) {
-          const res = await api.post('/auth/session', { session_id: sessionId, password });
-          if (!res.ok) {
-            setError('Account created but failed to sign in. Please try logging in.');
-            return;
-          }
-        }
-        const { error: finalizeErr } = await signUp.finalize();
-        if (!finalizeErr) router.push('/dashboard');
-        else router.push('/login');
+        await signUp.finalize({
+          navigate: async ({ session, decorateUrl }) => {
+            const token = await session?.getToken?.().catch(() => null) ?? null;
+            if (token) {
+              await api.post('/auth/session', { session_id: token, password }).catch(() => {});
+            }
+            const url = decorateUrl('/dashboard');
+            if (url.startsWith('http')) window.location.href = url;
+            else router.push(url);
+          },
+        });
       } else {
         const { error: sendErr } = await signUp.verifications.sendEmailCode();
         if (sendErr) {
@@ -141,24 +136,20 @@ const SignUpPage: React.FC = () => {
         setError(verifyErr.message || 'Invalid verification code');
         return;
       }
-      // Poll for Clerk state to propagate (avoid stale closure)
-      let sid: string | null = null;
-      for (let i = 0; i < 20; i++) {
-        await new Promise(r => setTimeout(r, 100));
-        sid = signUp.createdSessionId || clerk.client?.signUp?.createdSessionId || null;
-        if (sid) break;
-      }
-      if (sid) {
-        const res = await api.post('/auth/session', { session_id: sid, password });
-        if (!res.ok) {
-          setError('Email verified but failed to sign in. Please try logging in.');
-          return;
-        }
-        const { error: finalizeErr } = await signUp.finalize();
-        if (!finalizeErr) router.push('/dashboard');
-        else router.push('/login');
+      if (signUp.status === 'complete') {
+        await signUp.finalize({
+          navigate: async ({ session, decorateUrl }) => {
+            const token = await session?.getToken?.().catch(() => null) ?? null;
+            if (token) {
+              await api.post('/auth/session', { session_id: token, password }).catch(() => {});
+            }
+            const url = decorateUrl('/dashboard');
+            if (url.startsWith('http')) window.location.href = url;
+            else router.push(url);
+          },
+        });
       } else {
-        setError('Verification succeeded but sign-up not complete. Please try logging in.');
+        setError('Verification succeeded but sign-up not complete. Please try again.');
       }
     } catch (err: any) {
       setError(err.message || 'Verification failed');

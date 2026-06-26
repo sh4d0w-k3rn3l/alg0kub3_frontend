@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useSignIn } from '@clerk/nextjs';
+import { useSignIn, useClerk } from '@clerk/nextjs';
 import { api } from '@/lib/api';
 import { Code, Sun, Moon, LogIn, Shield, Mail, Lock, AlertCircle, Loader2, Github, Twitter } from 'lucide-react';
 
@@ -21,6 +21,7 @@ const LoginPage: React.FC = () => {
   const { colors, isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { signIn } = useSignIn();
+  const clerk = useClerk();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -73,7 +74,8 @@ const LoginPage: React.FC = () => {
         }
         return;
       }
-      if (signIn.status === 'complete') {
+      const siStatus = signIn.status as string || (clerk.client?.signIn?.status as string) || '';
+      if (siStatus === 'complete') {
         await signIn.finalize({
           navigate: async ({ session, decorateUrl }) => {
             if (session?.getToken) {
@@ -322,6 +324,8 @@ const LoginPage: React.FC = () => {
               <span>Secured with Clerk</span>
             </div>
           </div>
+
+          <div id="clerk-captcha" />
 
           <p className="text-center text-sm mt-5 animate-in fade-in duration-500 delay-150" style={{ animationFillMode: 'both', color: colors.textMuted }}>
             Don&apos;t have an account?{' '}

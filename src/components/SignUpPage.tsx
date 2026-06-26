@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useSignUp } from '@clerk/nextjs';
+import { useSignUp, useClerk } from '@clerk/nextjs';
 import { api } from '@/lib/api';
 import { Code, Sun, Moon, LogIn, Mail, Lock, User, KeyRound, ArrowLeft, AlertCircle, Loader2, Github, Twitter } from 'lucide-react';
 
@@ -23,6 +23,7 @@ const SignUpPage: React.FC = () => {
   const { colors, isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { signUp } = useSignUp();
+  const clerk = useClerk();
   const router = useRouter();
   const [step, setStep] = useState<SignUpStep>('form');
   const [name, setName] = useState('');
@@ -94,7 +95,8 @@ const SignUpPage: React.FC = () => {
         setError(error.message || 'Sign up failed');
         return;
       }
-      if (signUp.status === 'complete') {
+      const suStatus = signUp.status as string || (clerk.client?.signUp?.status as string) || '';
+      if (suStatus === 'complete') {
         await signUp.finalize({
           navigate: async ({ session, decorateUrl }) => {
             const token = await session?.getToken?.().catch(() => null) ?? null;
@@ -136,7 +138,9 @@ const SignUpPage: React.FC = () => {
         setError(verifyErr.message || 'Invalid verification code');
         return;
       }
-      if (signUp.status === 'complete') {
+      // Check both React snapshot and live Clerk client (stale closure mitigation)
+      const isComplete = signUp.status === 'complete' || (clerk.client?.signUp?.status as string) === 'complete';
+      if (isComplete) {
         await signUp.finalize({
           navigate: async ({ session, decorateUrl }) => {
             const token = await session?.getToken?.().catch(() => null) ?? null;
@@ -478,6 +482,8 @@ const SignUpPage: React.FC = () => {
           </form>
           )}
         </div>
+
+        <div id="clerk-captcha" />
 
         <p className="text-center text-sm mt-5 animate-in fade-in duration-500 delay-150" style={{ animationFillMode: 'both', color: colors.textMuted }}>
           Already have an account?{' '}

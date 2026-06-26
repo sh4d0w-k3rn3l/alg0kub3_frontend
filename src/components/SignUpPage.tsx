@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useSignUp } from '@clerk/nextjs';
+import { useSignUp, useClerk } from '@clerk/nextjs';
 import { api } from '@/lib/api';
 import { Code, Sun, Moon, LogIn, Mail, Lock, User, KeyRound, ArrowLeft, AlertCircle, Loader2, Github, Twitter } from 'lucide-react';
 
@@ -23,6 +23,7 @@ const SignUpPage: React.FC = () => {
   const { colors, isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { signUp } = useSignUp();
+  const clerk = useClerk();
   const router = useRouter();
   const [step, setStep] = useState<SignUpStep>('form');
   const [name, setName] = useState('');
@@ -32,9 +33,11 @@ const SignUpPage: React.FC = () => {
   const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState('');
 
   const ssoSignUp = (strategy: string) => async () => {
-    if (!signUp?.sso) return;
+    if (!signUp?.sso || ssoLoading) return;
+    setSsoLoading(strategy);
     try {
       const cbUrl = `${window.location.origin}/auth/callback`;
       const { error } = await signUp.sso({
@@ -43,9 +46,11 @@ const SignUpPage: React.FC = () => {
         redirectCallbackUrl: cbUrl,
       });
       if (error) {
+        setSsoLoading('');
         setError('Social sign up failed. Please try again.');
       }
     } catch {
+      setSsoLoading('');
       setError('Social sign up failed. Please try again.');
     }
   };
@@ -82,12 +87,16 @@ const SignUpPage: React.FC = () => {
       const lastName = nameParts.slice(1).join(' ') || undefined;
       const { error: createErr } = await signUp.create({
         emailAddress: email,
-        password,
         firstName,
         lastName,
       });
       if (createErr) {
         setError(createErr.message || 'Sign up failed');
+        return;
+      }
+      const { error: pwErr } = await signUp.password({ password, emailAddress: email });
+      if (pwErr) {
+        setError(pwErr.message || 'Failed to set password');
         return;
       }
       if (signUp.status === 'complete') {
@@ -132,14 +141,18 @@ const SignUpPage: React.FC = () => {
         setError(verifyErr.message || 'Invalid verification code');
         return;
       }
-      if (signUp.status === 'complete') {
-        const sessionId = signUp.createdSessionId;
-        if (sessionId) {
-          const res = await api.post('/auth/session', { session_id: sessionId, password });
-          if (!res.ok) {
-            setError('Email verified but failed to sign in. Please try logging in.');
-            return;
-          }
+      // Poll for Clerk state to propagate (avoid stale closure)
+      let sid: string | null = null;
+      for (let i = 0; i < 20; i++) {
+        await new Promise(r => setTimeout(r, 100));
+        sid = signUp.createdSessionId || clerk.client?.signUp?.createdSessionId || null;
+        if (sid) break;
+      }
+      if (sid) {
+        const res = await api.post('/auth/session', { session_id: sid, password });
+        if (!res.ok) {
+          setError('Email verified but failed to sign in. Please try logging in.');
+          return;
         }
         const { error: finalizeErr } = await signUp.finalize();
         if (!finalizeErr) router.push('/dashboard');
@@ -339,7 +352,8 @@ const SignUpPage: React.FC = () => {
               <button
                 data-testid="google-signup-btn"
                 onClick={handleGoogleSignUp}
-                className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                disabled={!!ssoLoading}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{
                   borderColor: colors.border,
                   color: colors.text,
@@ -354,13 +368,14 @@ const SignUpPage: React.FC = () => {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                <GoogleIcon />
+                {ssoLoading === 'oauth_google' ? <Loader2 size={15} className="animate-spin" /> : <GoogleIcon />}
                 Google
               </button>
               <button
                 data-testid="github-signup-btn"
                 onClick={handleGithubSignUp}
-                className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                disabled={!!ssoLoading}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{
                   borderColor: colors.border,
                   color: colors.text,
@@ -375,13 +390,14 @@ const SignUpPage: React.FC = () => {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                <Github size={15} className="shrink-0" />
+                {ssoLoading === 'oauth_github' ? <Loader2 size={15} className="animate-spin" /> : <Github size={15} className="shrink-0" />}
                 GitHub
               </button>
               <button
                 data-testid="twitter-signup-btn"
                 onClick={handleTwitterSignUp}
-                className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                disabled={!!ssoLoading}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{
                   borderColor: colors.border,
                   color: colors.text,
@@ -396,7 +412,7 @@ const SignUpPage: React.FC = () => {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                <Twitter size={15} className="shrink-0" />
+                {ssoLoading === 'oauth_twitter' ? <Loader2 size={15} className="animate-spin" /> : <Twitter size={15} className="shrink-0" />}
                 X
               </button>
             </div>

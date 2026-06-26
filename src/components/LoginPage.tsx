@@ -26,9 +26,11 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState('');
 
   const ssoLogin = (strategy: string) => async () => {
-    if (!signIn?.sso) return;
+    if (!signIn?.sso || ssoLoading) return;
+    setSsoLoading(strategy);
     try {
       const cbUrl = `${window.location.origin}/auth/callback`;
       const { error } = await signIn.sso({
@@ -37,9 +39,11 @@ const LoginPage: React.FC = () => {
         redirectCallbackUrl: cbUrl,
       });
       if (error) {
+        setSsoLoading('');
         setError('Social login failed. Please try again.');
       }
     } catch {
+      setSsoLoading('');
       setError('Social login failed. Please try again.');
     }
   };
@@ -60,13 +64,21 @@ const LoginPage: React.FC = () => {
     if (!email || !password) { setError('Please enter email and password'); return; }
     setLoading(true);
     try {
-      const { error } = await signIn.create({ identifier: email, password });
-      if (error) {
-        const clerkErr = error as unknown as { code?: string; longMessage?: string; message?: string };
-        if (clerkErr.code === 'form_password_incorrect' || clerkErr.code === 'form_identifier_not_found') {
+      const { error: createErr } = await signIn.create({ identifier: email });
+      if (createErr) {
+        if (createErr.code === 'form_identifier_not_found') {
           setError('Invalid email or password');
         } else {
-          setError(clerkErr.longMessage || clerkErr.message || 'Login failed');
+          setError(createErr.longMessage || createErr.message || 'Login failed');
+        }
+        return;
+      }
+      const { error: pwErr } = await signIn.password({ identifier: email, password });
+      if (pwErr) {
+        if (pwErr.code === 'form_password_incorrect') {
+          setError('Invalid email or password');
+        } else {
+          setError(pwErr.longMessage || pwErr.message || 'Login failed');
         }
         return;
       }
@@ -242,7 +254,8 @@ const LoginPage: React.FC = () => {
               <button
                 data-testid="google-login-btn"
                 onClick={handleGoogleLogin}
-                className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                disabled={!!ssoLoading}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{
                   borderColor: colors.border,
                   color: colors.text,
@@ -257,13 +270,14 @@ const LoginPage: React.FC = () => {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                <GoogleIcon />
+                {ssoLoading === 'oauth_google' ? <Loader2 size={15} className="animate-spin" /> : <GoogleIcon />}
                 Google
               </button>
               <button
                 data-testid="github-login-btn"
                 onClick={handleGithubLogin}
-                className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                disabled={!!ssoLoading}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{
                   borderColor: colors.border,
                   color: colors.text,
@@ -278,13 +292,14 @@ const LoginPage: React.FC = () => {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                <Github size={15} className="shrink-0" />
+                {ssoLoading === 'oauth_github' ? <Loader2 size={15} className="animate-spin" /> : <Github size={15} className="shrink-0" />}
                 GitHub
               </button>
               <button
                 data-testid="twitter-login-btn"
                 onClick={handleTwitterLogin}
-                className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                disabled={!!ssoLoading}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{
                   borderColor: colors.border,
                   color: colors.text,
@@ -299,7 +314,7 @@ const LoginPage: React.FC = () => {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                <Twitter size={15} className="shrink-0" />
+                {ssoLoading === 'oauth_twitter' ? <Loader2 size={15} className="animate-spin" /> : <Twitter size={15} className="shrink-0" />}
                 X
               </button>
             </div>

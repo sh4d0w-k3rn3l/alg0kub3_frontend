@@ -34,6 +34,7 @@ const SignUpPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const ssoSignUp = (strategy: string) => async () => {
+    if (!signUp?.sso) return;
     try {
       const cbUrl = `${window.location.origin}/auth/callback`;
       const { error } = await signUp.sso({

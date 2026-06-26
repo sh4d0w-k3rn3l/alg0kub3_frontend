@@ -28,6 +28,7 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const ssoLogin = (strategy: string) => async () => {
+    if (!signIn?.sso) return;
     try {
       const cbUrl = `${window.location.origin}/auth/callback`;
       const { error } = await signIn.sso({

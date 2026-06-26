@@ -2,92 +2,64 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useClerk } from '@clerk/nextjs';
-import { api, ApiError } from '@/lib/api';
+import { api } from '@/lib/api';
 import { getRefCode } from '@/hooks/useRefTracking';
 
 const AuthCallback = () => {
   const router = useRouter();
   const { user, isLoaded } = useUser();
   const clerk = useClerk();
-  const hasProcessed = useRef(false);
   const [error, setError] = useState('');
+  const done = useRef(false);
 
   useEffect(() => {
-    if (hasProcessed.current) return;
-    hasProcessed.current = true;
+    if (done.current || !isLoaded) return;
+
+    const sessionId =
+      window.location.hash.match(/session_id=([^&]+)/)?.[1] ??
+      window.location.search.match(/[?&]session_id=([^&]+)/)?.[1];
 
     const ac = new AbortController();
-    const timeout = setTimeout(() => ac.abort(), 15000);
+    const timeout = setTimeout(() => {
+      if (!done.current) {
+        done.current = true;
+        router.replace('/login');
+      }
+    }, 10000);
 
-    const syncSession = async (params: Record<string, unknown>) => {
-      const res = await api.post<{ success?: boolean }>(
-        '/auth/session',
-        { ...params, ref_code: getRefCode() },
-        { signal: ac.signal },
-      );
-      if (ac.signal.aborted) return false;
-      return res.ok;
+    const sync = async () => {
+      if (done.current) return;
+
+      const sid = sessionId || clerk.session?.id;
+      if (!sid) return;
+
+      try {
+        const res = await api.post<{ success?: boolean }>(
+          '/auth/session',
+          { session_id: sid, ref_code: getRefCode() },
+          { signal: ac.signal },
+        );
+        if (ac.signal.aborted || done.current) return;
+        if (res.ok) {
+          done.current = true;
+          clearTimeout(timeout);
+          router.replace('/dashboard');
+        } else {
+          done.current = true;
+          clearTimeout(timeout);
+          setError('Unable to complete sign-in. Please try again.');
+        }
+      } catch {
+        // will retry on next poll interval
+      }
     };
 
-    const processSession = async () => {
-      // Try URL hash first (legacy Clerk format)
-      const hash = window.location.hash;
-      const hashMatch = hash.match(/session_id=([^&]+)/);
-      if (hashMatch) {
-        const ok = await syncSession({ session_id: hashMatch[1] });
-        if (ac.signal.aborted) return;
-        if (ok) { router.replace('/dashboard'); return; }
-        setError('Unable to complete sign-in. Please try again.');
-        return;
-      }
+    sync();
+    const iv = setInterval(sync, 500);
 
-      // Try URL search params (Core 3 format)
-      const search = window.location.search;
-      const searchMatch = search.match(/[?&]session_id=([^&]+)/);
-      if (searchMatch) {
-        const ok = await syncSession({ session_id: searchMatch[1] });
-        if (ac.signal.aborted) return;
-        if (ok) { router.replace('/dashboard'); return; }
-        setError('Unable to complete sign-in. Please try again.');
-        return;
-      }
-
-      // If Clerk already processed the callback, user will be available
-      if (isLoaded && user) {
-        const ok = await syncSession({ clerk_user_id: user.id });
-        if (ac.signal.aborted) return;
-        if (ok) { router.replace('/dashboard'); return; }
-        setError('Unable to complete sign-in. Please try again.');
-        return;
-      }
-
-      // Wait for Clerk to process callback if it hasn't yet
-      // then check the live clerk.user from the global instance
-      const start = Date.now();
-      while (Date.now() - start < 5000) {
-        await new Promise(r => setTimeout(r, 500));
-        if (ac.signal.aborted) return;
-        const liveUser = clerk.user;
-        if (liveUser) {
-          const ok = await syncSession({ clerk_user_id: liveUser.id });
-          if (ac.signal.aborted) return;
-          if (ok) { router.replace('/dashboard'); return; }
-        }
-        // Also re-check hash in case it was set after our initial check
-        const curHash = window.location.hash;
-        const curMatch = curHash.match(/session_id=([^&]+)/);
-        if (curMatch) {
-          const ok = await syncSession({ session_id: curMatch[1] });
-          if (ac.signal.aborted) return;
-          if (ok) { router.replace('/dashboard'); return; }
-        }
-      }
-      router.replace('/');
-    };
-
-    processSession();
     return () => {
       clearTimeout(timeout);
+      clearInterval(iv);
       ac.abort();
     };
   }, [router, user, isLoaded, clerk]);

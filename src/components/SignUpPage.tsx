@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useSignUp } from '@clerk/nextjs';
 import { api } from '@/lib/api';
-import { Code, Sun, Moon, LogIn, Mail, Lock, User, AlertCircle, Loader2, Github, Twitter } from 'lucide-react';
+import { Code, Sun, Moon, LogIn, Mail, Lock, User, KeyRound, ArrowLeft, AlertCircle, Loader2, Github, Twitter } from 'lucide-react';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0">
@@ -17,23 +17,29 @@ const GoogleIcon = () => (
   </svg>
 );
 
+type SignUpStep = 'form' | 'verify';
+
 const SignUpPage: React.FC = () => {
   const { colors, isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { signUp } = useSignUp();
   const router = useRouter();
+  const [step, setStep] = useState<SignUpStep>('form');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const ssoSignUp = (strategy: string) => async () => {
     try {
-      const { error } = await (signUp.create as any)({
+      const cbUrl = `${window.location.origin}/auth/callback`;
+      const { error } = await signUp.sso({
         strategy,
-        redirectUrl: `${window.location.origin}/auth/callback`,
+        redirectUrl: cbUrl,
+        redirectCallbackUrl: cbUrl,
       });
       if (error) {
         setError('Social sign up failed. Please try again.');
@@ -73,25 +79,75 @@ const SignUpPage: React.FC = () => {
       const nameParts = name.trim().split(/\s+/);
       const firstName = nameParts[0];
       const lastName = nameParts.slice(1).join(' ') || undefined;
-      await signUp.create({
+      const { error: createErr } = await signUp.create({
         emailAddress: email,
         password,
         firstName,
         lastName,
       });
-      if (signUp.createdSessionId) {
-        const res = await api.post('/auth/session', { session_id: signUp.createdSessionId, password });
-        if (res.ok) {
-          router.push('/dashboard');
-        } else {
-          setError('Account created but failed to sign in. Please try logging in.');
+      if (createErr) {
+        setError(createErr.message || 'Sign up failed');
+        return;
+      }
+      if (signUp.status === 'complete') {
+        const sessionId = signUp.createdSessionId;
+        if (sessionId) {
+          const res = await api.post('/auth/session', { session_id: sessionId, password });
+          if (!res.ok) {
+            setError('Account created but failed to sign in. Please try logging in.');
+            return;
+          }
         }
+        const { error: finalizeErr } = await signUp.finalize();
+        if (!finalizeErr) router.push('/dashboard');
+        else router.push('/login');
       } else {
-        router.push('/login?verified=true');
+        const { error: sendErr } = await signUp.verifications.sendEmailCode();
+        if (sendErr) {
+          setError(sendErr.message || 'Failed to send verification code');
+          return;
+        }
+        setStep('verify');
       }
     } catch (err: any) {
       const msg = err.errors?.[0]?.message || err.message || 'Sign up failed. Please try again.';
       setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!verificationCode) {
+      setError('Please enter the verification code');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error: verifyErr } = await signUp.verifications.verifyEmailCode({ code: verificationCode });
+      if (verifyErr) {
+        setError(verifyErr.message || 'Invalid verification code');
+        return;
+      }
+      if (signUp.status === 'complete') {
+        const sessionId = signUp.createdSessionId;
+        if (sessionId) {
+          const res = await api.post('/auth/session', { session_id: sessionId, password });
+          if (!res.ok) {
+            setError('Email verified but failed to sign in. Please try logging in.');
+            return;
+          }
+        }
+        const { error: finalizeErr } = await signUp.finalize();
+        if (!finalizeErr) router.push('/dashboard');
+        else router.push('/login');
+      } else {
+        setError('Verification succeeded but sign-up not complete. Please try logging in.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Verification failed');
     } finally {
       setLoading(false);
     }
@@ -128,10 +184,10 @@ const SignUpPage: React.FC = () => {
         >
           <div className="text-center mb-6">
             <h1 className="text-2xl font-extrabold mb-1.5 tracking-tight" style={{ color: colors.text }}>
-              Create your account
+              {step === 'form' ? 'Create your account' : 'Check your email'}
             </h1>
             <p className="text-sm" style={{ color: colors.textSecondary }}>
-              Start your learning journey
+              {step === 'form' ? 'Start your learning journey' : `Enter the code sent to ${email}`}
             </p>
           </div>
 
@@ -147,7 +203,8 @@ const SignUpPage: React.FC = () => {
               WebkitBackdropFilter: 'blur(12px)',
             }}
           >
-            <form onSubmit={handleSubmit} className="space-y-3">
+            {step === 'form' ? (
+            <><form onSubmit={handleSubmit} className="space-y-3">
               <div
                 className="flex items-center rounded-xl border overflow-hidden transition-all duration-200"
                 style={{
@@ -347,17 +404,82 @@ const SignUpPage: React.FC = () => {
               <AlertCircle size={11} className="opacity-60" />
               <span>No credit card required</span>
             </div>
-          </div>
-
-          <p className="text-center text-sm mt-5 animate-in fade-in duration-500 delay-150" style={{ animationFillMode: 'both', color: colors.textMuted }}>
-            Already have an account?{' '}
-            <button onClick={() => router.push('/login')} className="font-semibold hover:underline transition-all duration-200 hover:scale-[1.02]" style={{ color: colors.green }}>
-              Sign in
+          </>
+          ) : (
+          <form onSubmit={handleVerifyCode} className="space-y-3">
+            <div
+              className="flex items-center rounded-xl border overflow-hidden transition-all duration-200"
+              style={{
+                borderColor: colors.border,
+                backgroundColor: isDark ? '#0d1117' : '#fafbfc',
+              }}
+              onFocusCapture={e => {
+                e.currentTarget.style.borderColor = colors.green;
+                e.currentTarget.style.boxShadow = `0 0 0 3px ${colors.green}20`;
+              }}
+              onBlurCapture={e => {
+                e.currentTarget.style.borderColor = colors.border;
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <KeyRound size={15} className="ml-3.5 shrink-0" style={{ color: colors.textMuted }} />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={verificationCode}
+                onChange={e => setVerificationCode(e.target.value)}
+                placeholder="Verification code"
+                className="flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
+                style={{ color: colors.text }}
+              />
+            </div>
+            {error && (
+              <div
+                className="flex items-center gap-2 text-xs px-3.5 py-2 rounded-xl animate-in fade-in duration-300"
+                style={{ backgroundColor: '#ef444415', color: '#ef4444', border: '1px solid #ef444430' }}
+              >
+                <AlertCircle size={12} className="shrink-0" /> {error}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-semibold text-sm transition-all duration-200 disabled:opacity-60 hover:scale-[1.01] active:scale-[0.99]"
+              style={{
+                backgroundColor: colors.green,
+                color: '#fff',
+                boxShadow: `0 4px 14px ${colors.green}30`,
+              }}
+            >
+              {loading ? <Loader2 size={15} className="animate-spin" /> : <Mail size={15} />}
+              {loading ? 'Verifying...' : 'Verify Email'}
             </button>
-          </p>
+            <button
+              type="button"
+              onClick={() => { setStep('form'); setError(''); }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200 border hover:scale-[1.01] active:scale-[0.99]"
+              style={{
+                borderColor: colors.border,
+                color: colors.textSecondary,
+                backgroundColor: 'transparent',
+              }}
+            >
+              <ArrowLeft size={14} />
+              Back
+            </button>
+          </form>
+          )}
         </div>
+
+        <p className="text-center text-sm mt-5 animate-in fade-in duration-500 delay-150" style={{ animationFillMode: 'both', color: colors.textMuted }}>
+          Already have an account?{' '}
+          <button onClick={() => router.push('/login')} className="font-semibold hover:underline transition-all duration-200 hover:scale-[1.02]" style={{ color: colors.green }}>
+            Sign in
+          </button>
+        </p>
       </div>
     </div>
+  </div>
   );
 };
 

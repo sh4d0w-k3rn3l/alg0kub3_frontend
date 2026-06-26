@@ -5,6 +5,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useSignIn } from '@clerk/nextjs';
+import { api } from '@/lib/api';
 import { Code, Sun, Moon, LogIn, Shield, Mail, Lock, AlertCircle, Loader2, Github, Twitter } from 'lucide-react';
 
 const GoogleIcon = () => (
@@ -67,6 +68,10 @@ const LoginPage: React.FC = () => {
         return;
       }
       if (signIn.status === 'complete') {
+        const sessionId = signIn.createdSessionId;
+        if (sessionId) {
+          await api.post('/auth/session', { session_id: sessionId });
+        }
         await signIn.finalize();
         router.push('/dashboard');
       } else {

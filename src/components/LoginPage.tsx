@@ -81,7 +81,7 @@ const LoginPage: React.FC = () => {
             if (session?.getToken) {
               const token = await session.getToken().catch(() => null);
               if (token) {
-                await api.post('/auth/session', { session_id: token }).catch(() => {});
+                await api.post('/auth/session', { session_id: token, email }).catch(() => {});
               }
             }
             const url = decorateUrl('/dashboard');

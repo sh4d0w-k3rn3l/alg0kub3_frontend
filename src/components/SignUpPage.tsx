@@ -103,7 +103,7 @@ const SignUpPage: React.FC = () => {
           navigate: async ({ session, decorateUrl }) => {
             const token = await session?.getToken?.().catch(() => null) ?? null;
             if (token) {
-              await api.post('/auth/session', { session_id: token, password }).catch(() => {});
+              await api.post('/auth/session', { session_id: token, password, email, name }).catch(() => {});
             }
             const url = decorateUrl('/dashboard');
             if (url.startsWith('http')) window.location.href = url;
@@ -147,7 +147,7 @@ const SignUpPage: React.FC = () => {
           navigate: async ({ session, decorateUrl }) => {
             const token = await session?.getToken?.().catch(() => null) ?? null;
             if (token) {
-              await api.post('/auth/session', { session_id: token, password }).catch(() => {});
+              await api.post('/auth/session', { session_id: token, password, email, name }).catch(() => {});
             }
             const url = decorateUrl('/dashboard');
             if (url.startsWith('http')) window.location.href = url;

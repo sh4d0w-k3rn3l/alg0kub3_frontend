@@ -1,142 +1,78 @@
 'use client';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSignIn, useSignUp, useClerk } from '@clerk/nextjs';
-import { api } from '@/lib/api';
-import { getRefCode } from '@/hooks/useRefTracking';
+import { useClerk } from '@clerk/nextjs';
+import { useAuth } from '@/context/AuthContext';
+import { AlertCircle, Loader2, RefreshCw, ArrowLeft } from 'lucide-react';
 
 const AuthCallback = () => {
   const router = useRouter();
   const clerk = useClerk();
-  const { signIn } = useSignIn();
-  const { signUp } = useSignUp();
-  const hasRun = useRef(false);
-
-  const syncBackend = async (session: { getToken?: () => Promise<string | null> }) => {
-    const token = await session?.getToken?.().catch(() => null) ?? null;
-    if (token) {
-      try {
-        await api.post('/auth/session', { session_id: token, ref_code: getRefCode() });
-      } catch {
-        // non-fatal
-      }
-    }
-  };
+  const { user } = useAuth();
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!clerk.loaded || hasRun.current) return;
+    if (user) { router.replace('/dashboard'); return; }
+  }, [user, router]);
 
-    const timeout = setTimeout(() => {
-      if (!hasRun.current) {
-        hasRun.current = true;
-        router.replace('/login');
-      }
-    }, 30000);
+  useEffect(() => {
+    if (!clerk.loaded || user) return;
 
-    const navigateTo = async (opts: {
-      session?: { getToken?: () => Promise<string | null> };
-      decorateUrl: (path: string) => string;
-    }) => {
-      await syncBackend(opts.session ?? {});
-      const url = opts.decorateUrl('/dashboard');
-      if (url.startsWith('http')) {
-        window.location.href = url;
-      } else {
-        router.push(url);
+    const process = async () => {
+      try {
+        await clerk.handleRedirectCallback({
+          signInFallbackRedirectUrl: '/dashboard',
+          signUpFallbackRedirectUrl: '/dashboard',
+          transferable: true,
+        });
+      } catch (err: any) {
+        const msg = err?.errors?.[0]?.longMessage
+          || err?.errors?.[0]?.message
+          || err?.message
+          || 'Authentication failed. Please try signing in again.';
+        setError(msg);
       }
     };
 
-    const goHome = () => router.replace('/dashboard');
-    const goLogin = () => router.replace('/login');
+    process();
+  }, [clerk.loaded, clerk, router, user]);
 
-    // Read live Clerk client state as fallback for stale React snapshots
-    const siStatus = (signIn.status as string) || (clerk.client?.signIn?.status as string) || '';
-    const suStatus = (signUp.status as string) || (clerk.client?.signUp?.status as string) || '';
-    const siComplete = siStatus === 'complete';
-    const suComplete = suStatus === 'complete';
-
-    if (siComplete) {
-      hasRun.current = true;
-      clearTimeout(timeout);
-      signIn.finalize({ navigate: navigateTo }).then(({ error }) => {
-        if (error) goLogin();
-      });
-      return;
-    }
-
-    if (signUp.isTransferable) {
-      hasRun.current = true;
-      clearTimeout(timeout);
-      signIn.create({ transfer: true }).then(() => {
-        const st = (signIn.status as string) || (clerk.client?.signIn?.status as string) || '';
-        if (st === 'complete') {
-          signIn.finalize({ navigate: navigateTo }).then(({ error }) => {
-            if (error) goLogin();
-          });
-        } else {
-          goLogin();
-        }
-      });
-      return;
-    }
-
-    if (signIn.isTransferable) {
-      hasRun.current = true;
-      clearTimeout(timeout);
-      signUp.create({ transfer: true }).then(({ error }) => {
-        if (!error) {
-          const st = (signUp.status as string) || (clerk.client?.signUp?.status as string) || '';
-          if (st === 'complete') {
-            signUp.finalize({ navigate: navigateTo }).then(({ error: fe }) => {
-              if (fe) goLogin();
-            });
-          } else {
-            goLogin();
-          }
-        } else {
-          goLogin();
-        }
-      });
-      return;
-    }
-
-    if (suComplete) {
-      hasRun.current = true;
-      clearTimeout(timeout);
-      signUp.finalize({ navigate: navigateTo }).then(({ error }) => {
-        if (error) goLogin();
-      });
-      return;
-    }
-
-    if (signIn.existingSession || signUp.existingSession) {
-      hasRun.current = true;
-      clearTimeout(timeout);
-      const sessionId = signIn.existingSession?.sessionId || signUp.existingSession?.sessionId;
-      if (sessionId) {
-        clerk.setActive({
-          session: sessionId,
-          navigate: navigateTo,
-        });
-      }
-      return;
-    }
-
-    if (siStatus === 'needs_second_factor' || siStatus === 'needs_new_password') {
-      hasRun.current = true;
-      clearTimeout(timeout);
-      goLogin();
-      return;
-    }
-
-    return () => clearTimeout(timeout);
-  }, [clerk.loaded, signIn.status, signUp.status, signIn.isTransferable, signUp.isTransferable, signIn.existingSession, signUp.existingSession, clerk, router]);
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#0d1117' }}>
+        <div className="max-w-sm text-center px-6">
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#ef444415' }}>
+            <AlertCircle size={24} style={{ color: '#ef4444' }} />
+          </div>
+          <h1 className="text-xl font-bold mb-2" style={{ color: '#e6edf3' }}>Sign-in failed</h1>
+          <p className="text-sm mb-6" style={{ color: '#8b949e' }}>{error}</p>
+          <div className="flex flex-col gap-2.5">
+            <button
+              onClick={() => { setError(''); window.location.href = '/auth/callback'; }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
+              style={{ backgroundColor: '#22c55e', color: '#fff', boxShadow: '0 4px 14px #22c55e30' }}
+            >
+              <RefreshCw size={15} /> Try Again
+            </button>
+            <button
+              onClick={() => router.push('/login')}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-200 border hover:scale-[1.01] active:scale-[0.99]"
+              style={{ borderColor: '#30363d', color: '#8b949e', backgroundColor: 'transparent' }}
+            >
+              <ArrowLeft size={14} /> Back to Login
+            </button>
+          </div>
+        </div>
+        <div id="clerk-captcha" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--theme-bg, #0d1117)' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#0d1117' }}>
       <div className="text-center">
-        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-4" style={{ borderColor: 'var(--theme-green, #22c55e)', borderTopColor: 'transparent' }} />
-        <p style={{ color: 'var(--theme-text-secondary, #8b949e)' }}>Signing you in...</p>
+        <Loader2 size={32} className="animate-spin mx-auto mb-4" style={{ color: '#22c55e' }} />
+        <p style={{ color: '#8b949e' }}>Signing you in...</p>
       </div>
       <div id="clerk-captcha" />
     </div>

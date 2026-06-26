@@ -43,9 +43,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = await getToken();
     if (!token) return null;
     try {
-      const res = await api.get('/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+      if (clerkUser?.primaryEmailAddress?.emailAddress) {
+        headers['X-User-Email'] = clerkUser.primaryEmailAddress.emailAddress;
+      }
+      if (clerkUser?.fullName) {
+        headers['X-User-Name'] = clerkUser.fullName;
+      }
+      const res = await api.get('/auth/me', { headers });
       const data = res.data as User;
       const clerkId = clerkUser?.id;
       if (clerkId) {
@@ -72,8 +77,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
     const token = await getToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }, [getToken]);
+    if (!token) return {};
+    const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+    if (clerkUser?.primaryEmailAddress?.emailAddress) {
+      headers['X-User-Email'] = clerkUser.primaryEmailAddress.emailAddress;
+    }
+    if (clerkUser?.fullName) {
+      headers['X-User-Name'] = clerkUser.fullName;
+    }
+    return headers;
+  }, [getToken, clerkUser]);
 
   // Build initial user from Clerk, then fetch subscription from backend
   useEffect(() => {
@@ -99,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!clerkUser || !getToken || fetched.current) return;
     fetched.current = true;
-    refreshUser();
+    refreshUser().catch(() => { fetched.current = false; });
   }, [clerkUser, getToken, refreshUser]);
 
   return (

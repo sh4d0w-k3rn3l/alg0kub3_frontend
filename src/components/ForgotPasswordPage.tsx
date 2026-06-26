@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useSignIn } from '@clerk/nextjs';
+import { useSignIn, useClerk } from '@clerk/nextjs';
 import { api } from '@/lib/api';
 import { Code, Sun, Moon, Mail, Lock, KeyRound, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
 
@@ -16,10 +17,18 @@ function getErrorMessage(err: { message?: string; longMessage?: string } | null)
 
 const ForgotPasswordPage: React.FC = () => {
   const { colors, isDark, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const { signIn } = useSignIn();
+  const clerk = useClerk();
   const router = useRouter();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    if (user) router.push('/dashboard');
+  }, [user, router]);
+
+  if (user) return null;
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -62,7 +71,7 @@ const ForgotPasswordPage: React.FC = () => {
           const token = await session?.getToken?.().catch(() => null) ?? null;
           if (token) {
             await api.post('/auth/reset-password', { session_id: token, password }).catch(() => {});
-            await api.post('/auth/session', { session_id: token }).catch(() => {});
+            await api.post('/auth/session', { session_id: token, email }).catch(() => {});
           }
           const url = decorateUrl('/dashboard');
           if (url.startsWith('http')) window.location.href = url;
@@ -295,6 +304,8 @@ const ForgotPasswordPage: React.FC = () => {
             )}
 
           </div>
+
+          <div id="clerk-captcha" />
 
           <p className="text-center text-sm mt-5 animate-in fade-in duration-500 delay-150" style={{ animationFillMode: 'both', color: colors.textMuted }}>
             Remember your password?{' '}

@@ -455,12 +455,12 @@ const PricingPage = () => {
             ) : (
               <button
                 data-testid="subscribe-pro-btn"
-                onClick={() => handleSubscribe(activePlanId)}
+                onClick={() => handlePhonePeSubscribe(activePlanId)}
                 disabled={loading !== null}
                 className="w-full py-2.5 rounded-lg text-sm font-medium transition-opacity"
-                style={{ backgroundColor: '#22c55e', color: '#fff', opacity: loading === activePlanId ? 0.7 : 1 }}
+                style={{ backgroundColor: '#22c55e', color: '#fff', opacity: loading === `phonepe_${activePlanId}` ? 0.7 : 1 }}
               >
-                {loading === activePlanId ? 'Redirecting...' : user ? `Upgrade to Pro ${billing === 'annual' ? '(Annual)' : ''}` : 'Sign in & Subscribe'}
+                {loading === `phonepe_${activePlanId}` ? 'Redirecting...' : user ? `Pay with PhonePe ${billing === 'annual' ? '(Annual)' : '(Monthly)'}` : 'Sign in & Subscribe'}
               </button>
             )}
             <MoneyBackBadge variant="card" className="mt-4" />
@@ -542,17 +542,17 @@ const PricingPage = () => {
               ) : (
                 <button
                   data-testid="subscribe-lifetime-btn"
-                  onClick={() => handleSubscribe('pro_lifetime')}
+                  onClick={() => handlePhonePeSubscribe('pro_lifetime')}
                   disabled={loading !== null}
                   className="w-full py-2.5 rounded-lg text-sm font-medium transition-opacity"
                   style={{
                     backgroundColor: promoActive ? '#ef4444' : '#f59e0b',
                     color: '#fff',
-                    opacity: loading === 'pro_lifetime' ? 0.7 : 1,
+                    opacity: loading === 'phonepe_pro_lifetime' ? 0.7 : 1,
                   }}
                 >
-                  {loading === 'pro_lifetime' ? 'Redirecting...' : user
-                    ? (promoActive ? `Claim ${promoLabel} — ${sym}${fmtPrice(lifetimeDisplay)}` : 'Get Lifetime Access')
+                  {loading === 'phonepe_pro_lifetime' ? 'Redirecting...' : user
+                    ? (promoActive ? `Claim ${promoLabel} — ${sym}${fmtPrice(lifetimeDisplay)}` : 'Pay with PhonePe (Lifetime)')
                     : (promoActive ? `Sign in & Claim ${sym}${fmtPrice(lifetimeDisplay)} Deal` : 'Sign in & Get Lifetime')}
                 </button>
               )}
@@ -573,47 +573,6 @@ const PricingPage = () => {
           </div>
         </div>
 
-        {user && !isSubscribed && (
-          <div className="mt-8 text-center">
-            <div className="border-t pt-6" style={{ borderColor: '#2d333b' }}>
-              <p className="text-xs mb-3" style={{ color: '#8b949e' }}>
-                <svg className="inline-block w-4 h-4 mr-1 -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-                  <path d="M12 6v6l4 2" />
-                </svg>
-                Also available via PhonePe
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <button
-                  data-testid="phonepe-pro-btn"
-                  onClick={() => handlePhonePeSubscribe(activePlanId)}
-                  disabled={loading !== null}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-opacity border"
-                  style={{
-                    borderColor: '#6b47dc',
-                    color: '#6b47dc',
-                    opacity: loading === `phonepe_${activePlanId}` ? 0.7 : 1,
-                  }}
-                >
-                  {loading === `phonepe_${activePlanId}` ? 'Redirecting...' : `Pay with PhonePe ${billing === 'annual' ? '(Annual)' : '(Monthly)'}`}
-                </button>
-                <button
-                  data-testid="phonepe-lifetime-btn"
-                  onClick={() => handlePhonePeSubscribe('pro_lifetime')}
-                  disabled={loading !== null}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-opacity border"
-                  style={{
-                    borderColor: '#6b47dc',
-                    color: '#6b47dc',
-                    opacity: loading === 'phonepe_pro_lifetime' ? 0.7 : 1,
-                  }}
-                >
-                  {loading === 'phonepe_pro_lifetime' ? 'Redirecting...' : 'Pay with PhonePe (Lifetime)'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

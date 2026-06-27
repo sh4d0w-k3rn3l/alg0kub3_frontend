@@ -41,3 +41,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 // https://www.algokube.in/api/checkout/phonepe/callback
 // callback Url
+
+// client_id: su
+// client_secret: 45

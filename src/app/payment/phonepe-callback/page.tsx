@@ -28,24 +28,29 @@ const PhonePeCallback = () => {
 
     const checkStatus = async (attempts = 0) => {
       if (ac.signal.aborted) return;
-      if (attempts >= 10) {
+      if (attempts >= 20) {
         setStatus('failed');
         return;
       }
       try {
-        const res = await api.get<{ success: boolean; code: string }>(
+        const res = await api.get<{ success: boolean; code: string; state: string }>(
           `/checkout/phonepe/status/${merchantTransactionId}`,
           { signal: ac.signal }
         );
         if (ac.signal.aborted) return;
-        if (res.data.success && res.data.code === 'PAYMENT_SUCCESS') {
+        if (res.data.success) {
           setStatus('success');
           await refreshUser();
           return;
         }
-        setTimeout(() => checkStatus(attempts + 1), 2000);
+        // If PhonePe reports a terminal failure, bail early
+        if (res.data.code === 'PAYMENT_FAILED') {
+          setStatus('failed');
+          return;
+        }
+        setTimeout(() => checkStatus(attempts + 1), 1500);
       } catch {
-        setTimeout(() => checkStatus(attempts + 1), 2000);
+        setTimeout(() => checkStatus(attempts + 1), 1500);
       }
     };
 

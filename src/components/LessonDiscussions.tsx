@@ -191,17 +191,18 @@ const LessonDiscussions: React.FC<LessonDiscussionsProps> = ({ lessonSlug, cours
     try {
       await api.post(`/lessons/${lessonSlug}/discussions`, { content: newComment.trim() }, { headers: authHeaders, params: { course: courseSlug } });
       setNewComment('');
-      fetchComments();
+      await fetchComments();
     } catch (err) {
       showError(err instanceof ApiError ? err.detail : (err as Error)?.message || 'Failed to post comment');
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   const handleReply = async (parentId: string, content: string) => {
     try {
       await api.post(`/lessons/${lessonSlug}/discussions`, { content, parent_id: parentId }, { headers: authHeaders, params: { course: courseSlug } });
-      fetchComments();
+      await fetchComments();
     } catch (err) {
       showError(err instanceof ApiError ? err.detail : (err as Error)?.message || 'Failed to post reply');
     }
@@ -211,7 +212,7 @@ const LessonDiscussions: React.FC<LessonDiscussionsProps> = ({ lessonSlug, cours
     if (!(await showConfirm('Delete this comment?'))) return;
     try {
       await api.delete(`/discussions/${commentId}`, { headers: authHeaders });
-      fetchComments();
+      await fetchComments();
     } catch { /* ignore */ }
   };
 

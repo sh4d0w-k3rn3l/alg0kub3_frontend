@@ -27,8 +27,8 @@ interface LessonFeedbackProps {
 const LessonFeedback: React.FC<LessonFeedbackProps> = ({ lessonSlug }) => {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const [summary, setSummary] = useState<{ up: number; down: number; my_rating: string | null }>({ up: 0, down: 0, my_rating: null });
-  const [picked, setPicked] = useState<string | null>(null);
+  const [summary, setSummary] = useState<{ up: number; down: number; my_rating: number | null }>({ up: 0, down: 0, my_rating: null });
+  const [picked, setPicked] = useState<number | null>(null);
   const [showComment, setShowComment] = useState(false);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -40,7 +40,7 @@ const LessonFeedback: React.FC<LessonFeedbackProps> = ({ lessonSlug }) => {
     if (!lessonSlug) return;
     try {
       const params = user ? undefined : { anon_id: anonId };
-      const r = await api.get<{ up: number; down: number; my_rating: string | null }>(`/lessons/${lessonSlug}/feedback-summary`, {
+      const r = await api.get<{ up: number; down: number; my_rating: number | null }>(`/lessons/${lessonSlug}/feedback-summary`, {
         params,
         signal,
       });
@@ -64,7 +64,7 @@ const LessonFeedback: React.FC<LessonFeedbackProps> = ({ lessonSlug }) => {
     setThanks(false);
   }, [lessonSlug]);
 
-  const submit = async (rating: string, commentText = '') => {
+  const submit = async (rating: number, commentText = '') => {
     if (!lessonSlug || submitting) return;
     setSubmitting(true);
     const prev = picked;
@@ -72,10 +72,10 @@ const LessonFeedback: React.FC<LessonFeedbackProps> = ({ lessonSlug }) => {
     try {
       await api.post(
         `/lessons/${lessonSlug}/feedback`,
-        { rating, comment: commentText, anon_id: user ? '' : anonId },
+        { rating, comment: commentText },
       );
       await load();
-      if (rating === 'down' && !commentText) {
+      if (rating <= 2 && !commentText) {
         setShowComment(true);
       } else {
         setThanks(true);
@@ -88,12 +88,12 @@ const LessonFeedback: React.FC<LessonFeedbackProps> = ({ lessonSlug }) => {
     }
   };
 
-  const onUp = () => submit('up');
-  const onDown = () => submit('down');
+  const onUp = () => submit(5);
+  const onDown = () => submit(1);
   const onSubmitComment = async () => {
     const c = comment.trim();
     if (!c) { setShowComment(false); return; }
-    await submit('down', c);
+    await submit(1, c);
     setComment('');
     setShowComment(false);
   };
@@ -101,8 +101,8 @@ const LessonFeedback: React.FC<LessonFeedbackProps> = ({ lessonSlug }) => {
   const total = (summary.up || 0) + (summary.down || 0);
   const ratio = total > 0 ? Math.round((summary.up / total) * 100) : null;
 
-  const isUp = picked === 'up';
-  const isDown = picked === 'down';
+  const isUp = picked !== null && picked >= 4;
+  const isDown = picked !== null && picked <= 2;
 
   return (
     <div
@@ -136,7 +136,7 @@ const LessonFeedback: React.FC<LessonFeedbackProps> = ({ lessonSlug }) => {
               color: isUp ? '#22c55e' : colors.textSecondary,
             }}
           >
-            {submitting && picked === 'up' ? (
+            {submitting && picked === 5 ? (
               <Loader2 size={15} className="animate-spin" />
             ) : isUp ? (
               <Check size={15} />
@@ -162,7 +162,7 @@ const LessonFeedback: React.FC<LessonFeedbackProps> = ({ lessonSlug }) => {
               color: isDown ? '#ef4444' : colors.textSecondary,
             }}
           >
-            {submitting && picked === 'down' ? (
+            {submitting && picked === 1 ? (
               <Loader2 size={15} className="animate-spin" />
             ) : isDown ? (
               <Check size={15} />

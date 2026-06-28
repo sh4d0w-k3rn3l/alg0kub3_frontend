@@ -182,7 +182,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code = '', language = 'Python', r
           {runnable && (
             <>
               {renderStdinToggle()}
-              <button data-testid="code-run-button" onClick={handleRun} disabled={isRunning} className="flex items-center gap-1 px-2 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50" style={{ color: colors.green }}>
+              <button data-testid="code-run-button" onClick={handleRun} disabled={isRunning} className="flex items-center gap-1 px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 flex-shrink-0" style={{ color: colors.green, minWidth: '72px', justifyContent: 'center' }}>
                 {isRunning ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} fill={colors.green} />}
                 <span>{isRunning ? 'Running...' : 'Run'}</span>
               </button>
@@ -295,14 +295,14 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code = '', language = 'Python', r
   if (isExpanded) {
     return (
       <>
-        <div className="fixed inset-0 bg-black/70 z-[75]" onClick={() => setIsExpanded(false)} />
-        <div className="fixed inset-4 z-[80] flex flex-col rounded-xl overflow-hidden border" style={{ borderColor: colors.border, backgroundColor: colors.bgCode }}>
-          <div className="flex items-center justify-between px-4 py-2 border-b" style={{ borderColor: colors.border, backgroundColor: colors.bgCodeHeader }}>
+        <div className="fixed inset-0 bg-black/70 z-[90]" onClick={() => setIsExpanded(false)} />
+        <div className="fixed inset-0 sm:inset-4 z-[100] flex flex-col rounded-none sm:rounded-xl overflow-hidden border-0 sm:border" style={{ borderColor: colors.border, backgroundColor: colors.bgCode }}>
+          <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: colors.border, backgroundColor: colors.bgCodeHeader }}>
             <div className="flex items-center gap-2">
               {renderLangBadge(true)}
               <span className="text-xs" style={{ color: colors.textMuted }}>Expanded View</span>
             </div>
-            <button onClick={() => setIsExpanded(false)} className="p-1.5 transition-colors rounded" style={{ color: colors.textMuted }}><X size={16} /></button>
+            <button onClick={() => setIsExpanded(false)} className="p-1.5 transition-colors rounded hover:opacity-80" style={{ color: colors.text }}><X size={18} /></button>
           </div>
           {renderStdinInput()}
           <div className="flex-1 overflow-auto">
@@ -335,9 +335,9 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code = '', language = 'Python', r
               {runnable && (
                 <>
                   {renderStdinToggle()}
-                  <button onClick={handleRun} disabled={isRunning} className="flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium" style={{ color: colors.green }}>
+                  <button onClick={handleRun} disabled={isRunning} className="flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium flex-shrink-0" style={{ color: colors.green, minWidth: '80px', justifyContent: 'center' }}>
                     {isRunning ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} fill={colors.green} />}
-                    {isRunning ? 'Running...' : 'Run'}
+                    <span>{isRunning ? 'Running...' : 'Run'}</span>
                   </button>
                 </>
               )}

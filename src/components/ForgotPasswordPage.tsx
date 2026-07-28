@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useSignIn, useClerk } from '@clerk/nextjs';
+import { useSignIn } from '@clerk/nextjs';
 import { api } from '@/lib/api';
 import { Code, Sun, Moon, Mail, Lock, KeyRound, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
 
@@ -19,21 +19,20 @@ const ForgotPasswordPage: React.FC = () => {
   const { colors, isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { signIn } = useSignIn();
-  const clerk = useClerk();
   const router = useRouter();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) router.push('/dashboard');
   }, [user, router]);
 
   if (user) return null;
-  const [code, setCode] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();

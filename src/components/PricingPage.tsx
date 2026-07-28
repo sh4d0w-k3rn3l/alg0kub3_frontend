@@ -229,6 +229,31 @@ const PricingPage = () => {
     }
   };
 
+  const handlePayPalSubscribe = async (planId: string) => {
+    if (!user) { login(); return; }
+    setLoading(`paypal_${planId}`);
+    if (abVariant && planId === 'pro_lifetime') {
+      api.post(`/pricing/ab-impression`, { variant: abVariant, event: 'conversion', visitor_id: visitorId }).catch(() => {});
+    }
+    try {
+      const res = await api.post<{ approval_url: string; order_id: string }>(`/checkout/paypal/create`, {
+        plan_id: planId,
+        origin_url: window.location.origin,
+        country_code: geo?.country_code || '',
+        ab_variant: abVariant || '',
+        visitor_id: visitorId,
+      });
+      // Store order_id so callback page can retrieve it after PayPal redirect
+      sessionStorage.setItem('paypal_order_id', res.data.order_id);
+      window.location.href = res.data.approval_url;
+    } catch (err) {
+      handleApiError(err);
+      setLoading(null);
+    }
+  };
+
+  const isIndianUser = geo?.country_code === 'IN';
+
   const freePlan = plans.find(p => p.id === 'free') || ({ features: [] } as unknown as Plan);
   const monthlyPlan = plans.find(p => p.id === 'pro') || ({ features: [], price: 14.99 } as unknown as Plan);
   const annualPlan = plans.find(p => p.id === 'pro_annual') || ({ features: [], price: 99, monthly_equivalent: 8.25, savings_percent: 45 } as unknown as Plan);
@@ -453,15 +478,29 @@ const PricingPage = () => {
                 Current Plan
               </button>
             ) : (
-              <button
-                data-testid="subscribe-pro-btn"
-                onClick={() => handlePhonePeSubscribe(activePlanId)}
-                disabled={loading !== null}
-                className="w-full py-2.5 rounded-lg text-sm font-medium transition-opacity"
-                style={{ backgroundColor: '#22c55e', color: '#fff', opacity: loading === `phonepe_${activePlanId}` ? 0.7 : 1 }}
-              >
-                {loading === `phonepe_${activePlanId}` ? 'Redirecting...' : user ? `Pay with PhonePe ${billing === 'annual' ? '(Annual)' : '(Monthly)'}` : 'Sign in & Subscribe'}
-              </button>
+              <div className="space-y-2">
+                <button
+                  data-testid="subscribe-pro-btn"
+                  onClick={() => isIndianUser ? handlePhonePeSubscribe(activePlanId) : handlePayPalSubscribe(activePlanId)}
+                  disabled={loading !== null}
+                  className="w-full py-2.5 rounded-lg text-sm font-medium transition-opacity"
+                  style={{ backgroundColor: '#22c55e', color: '#fff', opacity: loading === `paypal_${activePlanId}` || loading === `phonepe_${activePlanId}` ? 0.7 : 1 }}
+                >
+                  {(loading === `paypal_${activePlanId}` || loading === `phonepe_${activePlanId}`) ? 'Redirecting...' : user
+                    ? (isIndianUser ? `Pay with PhonePe ${billing === 'annual' ? '(Annual)' : '(Monthly)'}` : `Pay with PayPal ${billing === 'annual' ? '(Annual)' : '(Monthly)'}`)
+                    : 'Sign in & Subscribe'}
+                </button>
+                {!isIndianUser && (
+                  <button
+                    onClick={() => handlePhonePeSubscribe(activePlanId)}
+                    disabled={loading !== null}
+                    className="w-full py-2 rounded-lg text-xs font-medium transition-opacity border"
+                    style={{ borderColor: colors.border, color: colors.textMuted, opacity: loading !== null ? 0.5 : 1 }}
+                  >
+                    Or pay with PhonePe
+                  </button>
+                )}
+              </div>
             )}
             <MoneyBackBadge variant="card" className="mt-4" />
           </div>
@@ -540,21 +579,35 @@ const PricingPage = () => {
                   Current Plan
                 </button>
               ) : (
-                <button
-                  data-testid="subscribe-lifetime-btn"
-                  onClick={() => handlePhonePeSubscribe('pro_lifetime')}
-                  disabled={loading !== null}
-                  className="w-full py-2.5 rounded-lg text-sm font-medium transition-opacity"
-                  style={{
-                    backgroundColor: promoActive ? '#ef4444' : '#f59e0b',
-                    color: '#fff',
-                    opacity: loading === 'phonepe_pro_lifetime' ? 0.7 : 1,
-                  }}
-                >
-                  {loading === 'phonepe_pro_lifetime' ? 'Redirecting...' : user
-                    ? (promoActive ? `Claim ${promoLabel} — ${sym}${fmtPrice(lifetimeDisplay)}` : 'Pay with PhonePe (Lifetime)')
-                    : (promoActive ? `Sign in & Claim ${sym}${fmtPrice(lifetimeDisplay)} Deal` : 'Sign in & Get Lifetime')}
-                </button>
+                <div className="space-y-2">
+                  <button
+                    data-testid="subscribe-lifetime-btn"
+                    onClick={() => isIndianUser ? handlePhonePeSubscribe('pro_lifetime') : handlePayPalSubscribe('pro_lifetime')}
+                    disabled={loading !== null}
+                    className="w-full py-2.5 rounded-lg text-sm font-medium transition-opacity"
+                    style={{
+                      backgroundColor: promoActive ? '#ef4444' : '#f59e0b',
+                      color: '#fff',
+                      opacity: loading === 'paypal_pro_lifetime' || loading === 'phonepe_pro_lifetime' ? 0.7 : 1,
+                    }}
+                  >
+                    {(loading === 'paypal_pro_lifetime' || loading === 'phonepe_pro_lifetime') ? 'Redirecting...' : user
+                      ? (promoActive
+                        ? (isIndianUser ? `Claim ${promoLabel} via PhonePe — ${sym}${fmtPrice(lifetimeDisplay)}` : `Claim ${promoLabel} via PayPal — ${sym}${fmtPrice(lifetimeDisplay)}`)
+                        : (isIndianUser ? 'Pay with PhonePe (Lifetime)' : 'Pay with PayPal (Lifetime)'))
+                      : (promoActive ? `Sign in & Claim ${sym}${fmtPrice(lifetimeDisplay)} Deal` : 'Sign in & Get Lifetime')}
+                  </button>
+                  {!isIndianUser && (
+                    <button
+                      onClick={() => handlePhonePeSubscribe('pro_lifetime')}
+                      disabled={loading !== null}
+                      className="w-full py-2 rounded-lg text-xs font-medium transition-opacity border"
+                      style={{ borderColor: colors.border, color: colors.textMuted, opacity: loading !== null ? 0.5 : 1 }}
+                    >
+                      Or pay with PhonePe
+                    </button>
+                  )}
+                </div>
               )}
               {promoActive && claimsCount > 0 && (
                 <div

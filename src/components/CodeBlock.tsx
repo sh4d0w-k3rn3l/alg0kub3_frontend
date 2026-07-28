@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, atomDark, dracula, oneDark, materialDark, nightOwl, coldarkDark, nord, vs, oneLight, materialLight, coldarkCold } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import Editor from '@monaco-editor/react';
 import { Play, Copy, Hash, ChevronUp, ChevronDown, Maximize2, Minimize2, Check, Loader2, RotateCcw, Edit3, X, Palette, Terminal, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { CodeExecutionResponse } from '@/types';
@@ -47,7 +48,7 @@ interface CodeBlockProps {
 }
 
 const CodeBlock: React.FC<CodeBlockProps> = ({ code = '', language = 'Python', runnable = false, syntaxTheme: propTheme, onSyntaxThemeChange }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { setPreferredLang } = useLanguagePref();
   const [copied, setCopied] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
@@ -63,7 +64,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code = '', language = 'Python', r
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [stdinValue, setStdinValue] = useState('');
   const [showStdin, setShowStdin] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<any>(null);
   const langPickerRef = useRef<HTMLDivElement>(null);
 
   const syntaxTheme = propTheme || 'vscDarkPlus';
@@ -102,7 +103,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code = '', language = 'Python', r
     finally { setIsRunning(false); }
   };
 
-  const handleEdit = () => { setIsEditing(true); setEditedCode(currentCode); setTimeout(() => textareaRef.current?.focus(), 100); };
+  const handleEdit = () => { setIsEditing(true); setEditedCode(currentCode); setTimeout(() => editorRef.current?.focus(), 100); };
   const handleReset = () => { setEditedCode(code); setIsEditing(false); setOutput(null); };
   const lines = currentCode.split('\n');
 
@@ -241,17 +242,28 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code = '', language = 'Python', r
       {!isCollapsed && (
       <div className="relative" style={isExpanded ? { flex: 1, overflow: 'auto' } : {}}>
         {isEditing ? (
-          <div className="flex">
-            {showLineNumbers && (
-              <div className="flex flex-col items-end pr-4 pl-4 pt-4 pb-4 select-none" style={{ minWidth: '40px' }}>
-                {editedCode.split('\n').map((_, i) => (<span key={i} className="text-[13px] leading-[1.6] font-mono" style={{ color: colors.textMuted }}>{i + 1}</span>))}
-              </div>
-            )}
-            <textarea ref={textareaRef} value={editedCode} onChange={(e) => setEditedCode(e.target.value)}
-              className={`flex-1 bg-transparent text-[13px] leading-[1.6] font-mono outline-none resize-none p-4 ${showLineNumbers ? 'pl-0' : ''}`}
-              style={{ color: colors.text, minHeight: `${Math.max(lines.length * 21, 60)}px`, tabSize: 4 }}
-              spellCheck={false}
-              onKeyDown={(e) => { if (e.key === 'Tab') { e.preventDefault(); const s = e.currentTarget.selectionStart; const end = e.currentTarget.selectionEnd; setEditedCode(editedCode.substring(0, s) + '    ' + editedCode.substring(end)); setTimeout(() => { e.currentTarget.selectionStart = e.currentTarget.selectionEnd = s + 4; }, 0); } }}
+          <div style={{ height: isExpanded ? '100%' : `${Math.max(lines.length * 21, 60)}px`, minHeight: 60 }}>
+            <Editor
+              height={isExpanded ? '100%' : `${Math.max(lines.length * 21, 60)}px`}
+              language={langMeta.syntax}
+              value={editedCode}
+              onChange={(val) => setEditedCode(val || '')}
+              theme={isDark ? 'vs-dark' : 'vs'}
+              onMount={(editor) => { editorRef.current = editor; }}
+              options={{
+                minimap: { enabled: false },
+                fontSize: 13,
+                lineNumbers: showLineNumbers ? 'on' : 'off',
+                scrollBeyondLastLine: false,
+                wordWrap: 'on',
+                padding: { top: 12, bottom: 12 },
+                automaticLayout: true,
+                tabSize: 4,
+                readOnly: isRunning,
+                renderLineHighlight: 'none',
+                overviewRulerBorder: false,
+                scrollbar: { vertical: 'hidden', horizontal: 'auto' },
+              }}
             />
           </div>
         ) : (
@@ -307,14 +319,28 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code = '', language = 'Python', r
           {renderStdinInput()}
           <div className="flex-1 overflow-auto">
             {isEditing ? (
-              <div className="flex h-full">
-                <div className="flex flex-col items-end pr-4 pl-4 pt-4 pb-4 select-none" style={{ minWidth: '50px' }}>
-                  {editedCode.split('\n').map((_, i) => (<span key={i} className="text-[13px] leading-[1.6] font-mono" style={{ color: colors.textMuted }}>{i + 1}</span>))}
-                </div>
-                <textarea ref={textareaRef} value={editedCode} onChange={(e) => setEditedCode(e.target.value)}
-                  className="flex-1 bg-transparent text-[14px] leading-[1.7] font-mono outline-none resize-none p-4 pl-0 h-full"
-                  style={{ color: colors.text, tabSize: 4 }} spellCheck={false}
-                  onKeyDown={(e) => { if (e.key === 'Tab') { e.preventDefault(); const s = e.currentTarget.selectionStart; setEditedCode(editedCode.substring(0, s) + '    ' + editedCode.substring(e.currentTarget.selectionEnd)); setTimeout(() => { e.currentTarget.selectionStart = e.currentTarget.selectionEnd = s + 4; }, 0); } }}
+              <div className="h-full">
+                <Editor
+                  height="100%"
+                  language={langMeta.syntax}
+                  value={editedCode}
+                  onChange={(val) => setEditedCode(val || '')}
+                  theme={isDark ? 'vs-dark' : 'vs'}
+                  onMount={(editor) => { editorRef.current = editor; }}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: 'on',
+                    scrollBeyondLastLine: false,
+                    wordWrap: 'on',
+                    padding: { top: 12, bottom: 12 },
+                    automaticLayout: true,
+                    tabSize: 4,
+                    readOnly: isRunning,
+                    renderLineHighlight: 'none',
+                    overviewRulerBorder: false,
+                    scrollbar: { vertical: 'hidden', horizontal: 'auto' },
+                  }}
                 />
               </div>
             ) : (

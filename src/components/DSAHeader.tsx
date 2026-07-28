@@ -61,8 +61,17 @@ const DSAHeader = () => {
           </Link>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[#1f1f23]/50 rounded-full border border-[#2f2f35]/50">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/learn/dsa/course-roadmap"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-[#22c55e]/10 hover:bg-[#22c55e]/20 rounded-full border border-[#22c55e]/20 text-[#22c55e] text-xs font-medium transition-colors"
+          >
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Roadmap
+          </Link>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1f1f23]/50 rounded-full border border-[#2f2f35]/50">
             <div className="w-1.5 h-1.5 bg-[#22c55e] rounded-full animate-pulse" />
             <span className="text-xs text-gray-400">175 Algorithms</span>
           </div>

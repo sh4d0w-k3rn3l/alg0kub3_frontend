@@ -60,6 +60,7 @@ const NotificationBell = () => {
     } catch (err) {
       if ((err as any)?.name === 'AbortError') return;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const fetchNotifications = useCallback(async (signal?: AbortSignal) => {
@@ -74,6 +75,7 @@ const NotificationBell = () => {
       if ((err as any)?.name === 'AbortError') return;
     }
     setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   useEffect(() => {

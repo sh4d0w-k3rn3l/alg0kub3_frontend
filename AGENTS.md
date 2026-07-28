@@ -123,3 +123,11 @@ PHONEPE_ENV=UAT
 - `src/components/admin/AdminPanel.tsx` — all admin routes, param pass-through, mutation handlers
 - `src/components/admin/PolicyEditor.tsx` — button nesting fix
 - `src/app/globals.css` — global scrollbar hiding
+- `src/data/mockData.js` — 175 DSA algorithms (mock data for animations)
+- `src/components/DSAHeader.tsx` — DSA section header with "Roadmap" link to `/learn/dsa/course-roadmap`
+- `src/components/DSAAnimations.tsx` — DSA listing with "Course Roadmap" button
+- `src/components/Sidebar.tsx` — course sidebar with "Course Roadmap" link at bottom
+- `src/components/d3/D3BarChart.tsx` — D3 bar chart visualization
+- `src/app/learn/[courseSlug]/course-roadmap/page.tsx` — generic course roadmap page
+- `src/app/animations/dsa/[algorithmId]/page.tsx` — DSA algorithm animation page
+- `backend/scripts/seed_dsa_course.py` — seed script to create DSA course (run via `venv/bin/python3 scripts/seed_dsa_course.py`)

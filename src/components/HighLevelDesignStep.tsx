@@ -57,6 +57,7 @@ const HighLevelDesignStep: React.FC<HighLevelDesignStepProps> = ({ session, onSa
     if (saved.elements && !elementsRef.current) {
       try { elementsRef.current = JSON.parse(saved.elements); } catch {}
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const bgFixedRef = useRef(false);

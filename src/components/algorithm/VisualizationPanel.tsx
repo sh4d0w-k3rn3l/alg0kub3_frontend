@@ -8,6 +8,8 @@ import {
   GraphVisualization as _GraphVisualization,
   IslandGridVisualization as _IslandGridVisualization 
 } from '../AlgorithmVisualizations';
+import D3BarChart from '@/components/d3/D3BarChart';
+import { useTheme } from '@/context/ThemeContext';
 import type React from 'react';
 
 interface AnimationStep {
@@ -1030,70 +1032,24 @@ const BarChartVisualization = ({
   animationStep,
   algorithmId
 }: BarChartVisualizationProps) => {
-  // Calculate dynamic gap based on array length
-  const gapClass = array.length > 15 ? 'gap-1' : array.length > 10 ? 'gap-2' : 'gap-3';
-  const barWidth = array.length > 15 ? 'w-5 md:w-6' : array.length > 10 ? 'w-6 md:w-8' : 'w-8 md:w-10';
-  
-  // Extract current index and variables for buy-sell-stock
+  const { isDark } = useTheme();
   const isBuySellStock = algorithmId === 'best-time-to-buy-and-sell-stock';
   const currentIndex = animationStep?.currentIndex ?? -1;
   const variables = animationStep?.variables;
-  
+
   return (
     <div className="flex flex-col items-center justify-center h-full" data-testid="bar-chart-visualization">
-      {/* i pointer label - ABOVE bars */}
-      {isBuySellStock && (
-        <div className="flex justify-center mb-2" style={{ width: `${array.length * 52}px` }}>
-          {array.map((_, index) => (
-            <div key={`pointer-${index}`} className="w-[52px] flex justify-center">
-              {currentIndex === index && (
-                <span className="text-[#22c55e] text-sm font-semibold">i</span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      <D3BarChart
+        array={array}
+        highlightedIndices={highlightedIndices}
+        swappingIndices={swappingIndices}
+        sortedIndices={sortedIndices}
+        maxValue={maxValue}
+        isDark={isDark}
+      />
       
-      {/* Bar chart */}
-      <div className={`flex items-end justify-center ${gapClass} px-4 overflow-x-auto`}>
-        {array.map((value, index) => {
-          const isCurrentIndex = isBuySellStock && currentIndex === index;
-          const isComparing = highlightedIndices.includes(index);
-          const isSwapping = swappingIndices.includes(index);
-          const isSorted = sortedIndices.includes(index);
-          const absValue = Math.abs(value);
-          const heightPercent = (absValue / maxValue) * 100;
-          
-          return (
-            <div key={index} className="flex flex-col items-center gap-1 flex-shrink-0">
-              <span className={`text-xs font-medium whitespace-nowrap ${isCurrentIndex || isComparing || isSwapping ? 'text-white' : 'text-gray-400'}`}>
-                {value}
-              </span>
-              <div
-                className={`${barWidth} rounded-t transition-all duration-300 ${
-                  isSwapping 
-                    ? 'bg-[#f59e0b]' 
-                    : isCurrentIndex || isComparing 
-                    ? 'bg-[#22c55e]' 
-                    : isSorted 
-                    ? 'bg-[#3b82f6]' 
-                    : 'bg-[#06b6d4]'
-                }`}
-                style={{ 
-                  height: `${Math.max(heightPercent * 1.5, 20)}px`,
-                  minHeight: '20px'
-                }}
-                data-testid={`bar-${index}`}
-              />
-              <span className="text-xs text-gray-500">{index}</span>
-            </div>
-          );
-        })}
-      </div>
-      
-      {/* Variables display for buy-sell-stock */}
       {isBuySellStock && variables && (
-        <div className="flex gap-6 mt-6" data-testid="buysell-variables">
+        <div className="flex gap-6 mt-4" data-testid="buysell-variables">
           <div className="flex items-center gap-2 bg-[#1f1f23] px-4 py-2 rounded-lg">
             <span className="text-gray-400 text-sm">maxProfit =</span>
             <span className="text-[#22c55e] font-bold text-xl">{variables.maxProfit}</span>

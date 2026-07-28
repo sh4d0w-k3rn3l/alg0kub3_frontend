@@ -765,6 +765,15 @@ const NODE_PALETTES = [
   },
 ];
 
+const MERMAID_THEMES = [
+  { value: 'brand', label: 'Brand (Green)', preview: '#22c55e', config: { theme: 'base', themeVariables: { primaryColor: '#22c55e', primaryTextColor: '#ffffff', primaryBorderColor: '#16a34a', secondaryColor: '#3b82f6', secondaryTextColor: '#ffffff', secondaryBorderColor: '#2563eb', tertiaryColor: '#0d1117', tertiaryTextColor: '#c9d1d9', tertiaryBorderColor: '#2d333b', lineColor: '#484f58', textColor: '#c9d1d9', mainBkg: '#161b22', nodeBorder: '#22c55e', clusterBkg: '#0d1117', clusterBorder: '#2d333b', titleColor: '#c9d1d9', edgeLabelBackground: '#161b22', nodeTextColor: '#ffffff' } } },
+  { value: 'brand-blue', label: 'Brand (Blue)', preview: '#3b82f6', config: { theme: 'base', themeVariables: { primaryColor: '#3b82f6', primaryTextColor: '#ffffff', primaryBorderColor: '#2563eb', secondaryColor: '#22c55e', secondaryTextColor: '#ffffff', secondaryBorderColor: '#16a34a', tertiaryColor: '#0d1117', tertiaryTextColor: '#c9d1d9', tertiaryBorderColor: '#2d333b', lineColor: '#484f58', textColor: '#c9d1d9', mainBkg: '#161b22', nodeBorder: '#3b82f6', clusterBkg: '#0d1117', clusterBorder: '#2d333b', titleColor: '#c9d1d9', edgeLabelBackground: '#161b22', nodeTextColor: '#ffffff' } } },
+  { value: 'brand-purple', label: 'Brand (Purple)', preview: '#a855f7', config: { theme: 'base', themeVariables: { primaryColor: '#a855f7', primaryTextColor: '#ffffff', primaryBorderColor: '#9333ea', secondaryColor: '#22c55e', secondaryTextColor: '#ffffff', secondaryBorderColor: '#16a34a', tertiaryColor: '#0d1117', tertiaryTextColor: '#c9d1d9', tertiaryBorderColor: '#2d333b', lineColor: '#484f58', textColor: '#c9d1d9', mainBkg: '#161b22', nodeBorder: '#a855f7', clusterBkg: '#0d1117', clusterBorder: '#2d333b', titleColor: '#c9d1d9', edgeLabelBackground: '#161b22', nodeTextColor: '#ffffff' } } },
+  { value: 'dark', label: 'Dark', preview: '#1f2937', config: { theme: 'dark' } },
+  { value: 'neutral', label: 'Neutral', preview: '#6b7280', config: { theme: 'neutral' } },
+  { value: 'forest', label: 'Forest', preview: '#2d5a27', config: { theme: 'forest' } },
+];
+
 const MermaidEditor = ({ block, onChange }: { block: EditorBlock; onChange: (block: EditorBlock) => void }) => {
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -794,15 +803,6 @@ const MermaidEditor = ({ block, onChange }: { block: EditorBlock; onChange: (blo
     { label: 'Gantt Chart', code: 'gantt\n    title Project Timeline\n    dateFormat YYYY-MM-DD\n    section Phase 1\n    Task 1: 2024-01-01, 30d\n    Task 2: 2024-01-15, 20d\n    section Phase 2\n    Task 3: 2024-02-01, 25d' },
     { label: 'Pie Chart', code: 'pie title Browser Usage\n    "Chrome" : 65\n    "Firefox" : 15\n    "Safari" : 12\n    "Edge" : 8' },
     { label: 'Git Graph', code: 'gitGraph\n    commit\n    branch develop\n    checkout develop\n    commit\n    commit\n    checkout main\n    merge develop\n    commit' },
-  ];
-
-  const MERMAID_THEMES = [
-    { value: 'brand', label: 'Brand (Green)', preview: '#22c55e', config: { theme: 'base', themeVariables: { primaryColor: '#22c55e', primaryTextColor: '#ffffff', primaryBorderColor: '#16a34a', secondaryColor: '#3b82f6', secondaryTextColor: '#ffffff', secondaryBorderColor: '#2563eb', tertiaryColor: '#0d1117', tertiaryTextColor: '#c9d1d9', tertiaryBorderColor: '#2d333b', lineColor: '#484f58', textColor: '#c9d1d9', mainBkg: '#161b22', nodeBorder: '#22c55e', clusterBkg: '#0d1117', clusterBorder: '#2d333b', titleColor: '#c9d1d9', edgeLabelBackground: '#161b22', nodeTextColor: '#ffffff' } } },
-    { value: 'brand-blue', label: 'Brand (Blue)', preview: '#3b82f6', config: { theme: 'base', themeVariables: { primaryColor: '#3b82f6', primaryTextColor: '#ffffff', primaryBorderColor: '#2563eb', secondaryColor: '#22c55e', secondaryTextColor: '#ffffff', secondaryBorderColor: '#16a34a', tertiaryColor: '#0d1117', tertiaryTextColor: '#c9d1d9', tertiaryBorderColor: '#2d333b', lineColor: '#484f58', textColor: '#c9d1d9', mainBkg: '#161b22', nodeBorder: '#3b82f6', clusterBkg: '#0d1117', clusterBorder: '#2d333b', titleColor: '#c9d1d9', edgeLabelBackground: '#161b22', nodeTextColor: '#ffffff' } } },
-    { value: 'brand-purple', label: 'Brand (Purple)', preview: '#a855f7', config: { theme: 'base', themeVariables: { primaryColor: '#a855f7', primaryTextColor: '#ffffff', primaryBorderColor: '#9333ea', secondaryColor: '#22c55e', secondaryTextColor: '#ffffff', secondaryBorderColor: '#16a34a', tertiaryColor: '#0d1117', tertiaryTextColor: '#c9d1d9', tertiaryBorderColor: '#2d333b', lineColor: '#484f58', textColor: '#c9d1d9', mainBkg: '#161b22', nodeBorder: '#a855f7', clusterBkg: '#0d1117', clusterBorder: '#2d333b', titleColor: '#c9d1d9', edgeLabelBackground: '#161b22', nodeTextColor: '#ffffff' } } },
-    { value: 'dark', label: 'Dark', preview: '#1f2937', config: { theme: 'dark' } },
-    { value: 'neutral', label: 'Neutral', preview: '#6b7280', config: { theme: 'neutral' } },
-    { value: 'forest', label: 'Forest', preview: '#2d5a27', config: { theme: 'forest' } },
   ];
 
   const currentTheme = block.theme || 'brand';
@@ -1558,6 +1558,7 @@ const BlockEditor = ({ blocks: initialBlocks, onChange, onAiGenerate, generating
       setBlocks(newBlocks);
     }
   /* eslint-enable react-hooks/set-state-in-effect */
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialBlocks]);
 
   // Handle onChange after state updates (avoids setState during render)

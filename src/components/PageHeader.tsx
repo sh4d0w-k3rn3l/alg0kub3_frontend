@@ -121,7 +121,7 @@ const PageHeader = () => {
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [setCoursesOpen, setMoreOpen, setPracticeOpen, userMenuRef]);
 
   useEffect(() => {
     const ac = new AbortController();

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronUp, ChevronDown, Search, SlidersHorizontal, FileText, Code, Type, GitBranch, List, Braces, BookOpen, CircleDot, ChevronLeft, Package, File, AlertTriangle, Box, Layers, Repeat, AtSign, Brackets, Zap, Calendar, Calculator, HardDrive, Database, Globe, CheckSquare, Archive, Tag, Activity, Network, TrendingUp, Layout, Star, Wifi, Cpu, Folder, Lock, Brain, BarChart3, Rocket, Link, Wrench, Users, Monitor, Terminal, Shield, MessageCircle, Clock, Settings } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronUp, ChevronDown, Search, SlidersHorizontal, FileText, Code, Type, GitBranch, List, Braces, BookOpen, CircleDot, ChevronLeft, Package, File, AlertTriangle, Box, Layers, Repeat, AtSign, Brackets, Zap, Calendar, Calculator, HardDrive, Database, Globe, CheckSquare, Archive, Tag, Activity, Network, TrendingUp, Layout, Star, Wifi, Cpu, Folder, Lock, Brain, BarChart3, Rocket, Link as LinkIcon, Wrench, Users, Monitor, Terminal, Shield, MessageCircle, Clock, Settings, Map } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 
@@ -45,7 +46,7 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; style?: React
   'tag': Tag, 'activity': Activity, 'network': Network, 'trending-up': TrendingUp,
   'layout': Layout, 'star': Star, 'wifi': Wifi, 'cpu': Cpu, 'folder': Folder,
   'brain': Brain, 'target': CircleDot, 'grid': Layout, 'bar-chart': BarChart3,
-  'rocket': Rocket, 'link': Link, 'wrench': Wrench, 'users': Users, 'monitor': Monitor,
+  'rocket': Rocket, 'link': LinkIcon, 'wrench': Wrench, 'users': Users, 'monitor': Monitor,
   'terminal': Terminal, 'shield': Shield, 'message-circle': MessageCircle, 'clock': Clock,
   'lock': Lock,
   'settings': Settings,
@@ -172,6 +173,19 @@ const Sidebar = ({ isOpen, onToggle, sections = [], activeSlug, onLessonClick, t
           );
         })}
       </div>
+
+      {courseSlug && (
+        <div className="px-4 py-3 border-t" style={{ borderColor: colors.borderLight }}>
+          <Link
+            href={`/learn/${courseSlug}/course-roadmap`}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+            style={{ color: colors.green, backgroundColor: `${colors.green}10` }}
+          >
+            <Map size={14} />
+            <span>Course Roadmap</span>
+          </Link>
+        </div>
+      )}
 
       <div className="h-2" />
     </aside>

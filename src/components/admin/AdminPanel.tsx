@@ -933,7 +933,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
       }
     }, 3000);
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); ac.abort(); };
-  }, [blocks, lesson?.title, lesson?.read_time]);
+  }, [blocks, lesson, lessonId]);
 
   // Warn before unload if unsaved
   useEffect(() => {
@@ -1096,7 +1096,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
     showSuccess('Markdown copied to clipboard!');
   };
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     // Cancel any pending auto-save
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     setSaving(true);
@@ -1120,7 +1120,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
       setSaveStatus('error');
     }
     finally { setSaving(false); }
-  };
+  }, [blocks, lesson, lessonId, navigate]);
 
   const handleGenerate = async () => {
     if (!(await showConfirm('Generate AI content? This will replace existing content.'))) return;
@@ -1259,7 +1259,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [blocks, lesson]);
+  }, [handleSave]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#0d1117' }}><Loader2 size={32} className="text-[#22c55e] animate-spin" /></div>;
   if (!lesson) return <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#0d1117' }}><p className="text-[#8b949e]">Lesson not found</p></div>;

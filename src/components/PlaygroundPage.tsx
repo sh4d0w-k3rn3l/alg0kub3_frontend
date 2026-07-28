@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import Editor from '@monaco-editor/react';
 import {
   Play, Copy, Check, Loader2, RotateCcw, Terminal, ChevronDown, ChevronRight,
   Sun, Moon, Trash2, Clock, Code2, Maximize2, Minimize2,
@@ -182,7 +181,7 @@ const PlaygroundPage = () => {
   const [execTime, setExecTime] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editorRef = useRef<any>(null);
   const langRef = useRef<HTMLDivElement | null>(null);
 
   const meta = LANG_META[lang];
@@ -348,33 +347,29 @@ const PlaygroundPage = () => {
             </div>
           )}
 
-          <div className="flex-1 overflow-auto" style={{ backgroundColor: editorBg }}>
-            <div className="flex min-h-full">
-              <div className="flex flex-col items-end pl-3 pr-3 pt-3 pb-3 select-none flex-shrink-0" style={{ minWidth: '44px' }}>
-                {code.split('\n').map((_: string, i: number) => (
-                  <span key={i} className="text-[13px] leading-[1.65] font-mono" style={{ color: textMut }}>{i + 1}</span>
-                ))}
-              </div>
-              <textarea
-                ref={textareaRef}
-                data-testid="playground-editor"
-                value={code}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCode(e.target.value)}
-                className="flex-1 bg-transparent text-[13px] leading-[1.65] font-mono outline-none resize-none pt-3 pb-3 pr-4"
-                style={{ color: text, tabSize: 4, caretColor: accent }}
-                spellCheck={false}
-                onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-                  if (e.key === 'Tab') {
-                    e.preventDefault();
-                    const target = e.target as HTMLTextAreaElement;
-                    const s = target.selectionStart;
-                    const end = target.selectionEnd;
-                    setCode(code.substring(0, s) + '    ' + code.substring(end));
-                    setTimeout(() => { target.selectionStart = target.selectionEnd = s + 4; }, 0);
-                  }
-                }}
-              />
-            </div>
+          <div className="flex-1 overflow-hidden" style={{ backgroundColor: editorBg }}>
+            <Editor
+              height="100%"
+              language={meta.syntax}
+              value={code}
+              onChange={(val) => setCode(val || '')}
+              theme={isDark ? 'vs-dark' : 'vs'}
+              onMount={(editor) => { editorRef.current = editor; }}
+              options={{
+                minimap: { enabled: false },
+                fontSize: 13,
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                wordWrap: 'on',
+                padding: { top: 12, bottom: 12 },
+                automaticLayout: true,
+                tabSize: 4,
+                readOnly: running,
+                renderLineHighlight: 'none',
+                overviewRulerBorder: false,
+                scrollbar: { vertical: 'hidden', horizontal: 'auto' },
+              }}
+            />
           </div>
         </div>
 

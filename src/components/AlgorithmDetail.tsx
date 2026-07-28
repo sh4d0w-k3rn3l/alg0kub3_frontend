@@ -380,7 +380,7 @@ const AlgorithmDetail = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="h-[500px]">
+          <div className="h-[560px]">
             <CodePanel
               code={code}
               selectedLanguage={selectedLanguage}
@@ -389,8 +389,8 @@ const AlgorithmDetail = () => {
             />
           </div>
 
-          <div className="bg-[#141416] border border-[#1f1f23] rounded-lg overflow-hidden flex flex-col h-[500px]">
-            <div className="relative flex-1 flex items-center justify-center">
+          <div className="bg-[#141416] border border-[#1f1f23] rounded-lg flex flex-col h-[560px]">
+            <div className="relative flex-1 flex items-center justify-center overflow-hidden">
               <VisualizationPanel
                 algorithmId={algorithmId}
                 category={algorithm.category}

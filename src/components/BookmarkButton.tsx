@@ -32,6 +32,7 @@ const BookmarkButton = ({ lessonSlug, size = 18 }: BookmarkButtonProps) => {
         });
     })();
     return () => ac.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessonSlug, user]);
 
   const toggle = async () => {

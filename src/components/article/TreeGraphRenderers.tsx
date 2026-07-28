@@ -462,7 +462,7 @@ const BinaryTreeRenderer = ({ frame }: { frame: BinaryTreeFrame }) => {
 //     pointers: [{name, id, position?}]
 //   }
 const TrieRenderer = ({ frame }: { frame: TrieFrame }) => {
-  const nodes = frame.trie_nodes || [];
+  const nodes = useMemo(() => frame.trie_nodes || [], [frame.trie_nodes]);
 
   interface TrieNodeLayout {
     x: number;
@@ -641,7 +641,7 @@ const TrieRenderer = ({ frame }: { frame: TrieFrame }) => {
 //     pointers: [{name, id, position?}]
 //   }
 const GraphRenderer = ({ frame }: { frame: GraphFrame }) => {
-  const nodes = frame.graph_nodes || [];
+  const nodes = useMemo(() => frame.graph_nodes || [], [frame.graph_nodes]);
   const edges = frame.graph_edges || [];
 
   const layout = useMemo(() => {
@@ -830,7 +830,7 @@ const GraphRenderer = ({ frame }: { frame: GraphFrame }) => {
 //     pointers: [{name, value, position?}]   // value on the number line
 //   }
 const IntervalTimeline = ({ frame }: { frame: IntervalFrame }) => {
-  const intervals = frame.intervals || [];
+  const intervals = useMemo(() => frame.intervals || [], [frame.intervals]);
 
   const layout = useMemo(() => {
     let lo: number, hi: number;

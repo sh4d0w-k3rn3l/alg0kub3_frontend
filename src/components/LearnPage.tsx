@@ -123,7 +123,7 @@ export default function LearnPage() {
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [setSidebarOpen]);
 
   // Settings persist to localStorage via useSettingsStore setters
 

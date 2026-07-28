@@ -5,6 +5,7 @@ import { useUser, useAuth as useClerkAuth } from '@clerk/nextjs';
 import type { User } from '@/types';
 import { api } from '@/lib/api';
 import { handleApiError } from '@/lib/toast';
+import { identify as phIdentify, reset as phReset } from '@/lib/posthog';
 
 interface AuthContextValue {
   user: User | null;
@@ -93,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!clerkUser) {
       setUser(null);
       fetched.current = false;
+      phReset();
       return;
     }
     const clerkMapped: User = {
@@ -106,6 +108,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription_expires: undefined,
     };
     setUser(clerkMapped);
+    phIdentify(clerkUser.id, {
+      ...(clerkMapped.email && { email: clerkMapped.email }),
+      ...(clerkMapped.name && { name: clerkMapped.name }),
+      ...(clerkMapped.role && { role: clerkMapped.role }),
+    });
   }, [clerkUser]);
 
   // Fetch real subscription from backend after Clerk user is set

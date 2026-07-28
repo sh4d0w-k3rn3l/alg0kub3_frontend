@@ -41,6 +41,7 @@ const PolicyEditor = () => {
       handleApiError(err);
     }
     finally { if (!signal?.aborted) setLoading(false); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

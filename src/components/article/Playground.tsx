@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { api } from '@/lib/api';
 import type { ApiError } from '@/lib/api';
+import Editor from '@monaco-editor/react';
 import {
   Play, ChevronDown, CheckCircle, XCircle, Loader2, Clock,
   Pause, RotateCcw, Send, Beaker, Plus, Trash2, Lightbulb, FileCode,
@@ -127,7 +128,20 @@ const Playground = ({
     return () => clearInterval(id);
   }, [timer, timerRunning]);
 
-  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<any>(null);
+  const langPickerRef = useRef<HTMLDivElement>(null);
+
+  // Close language picker on outside click
+  useEffect(() => {
+    if (!showLangPicker) return undefined;
+    const handler = (e: MouseEvent) => {
+      if (langPickerRef.current && !langPickerRef.current.contains(e.target as Node)) {
+        setShowLangPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showLangPicker]);
 
   const runCase = useCallback(async (idx: number): Promise<RunResult | null> => {
     const tc = cases[idx];
@@ -235,7 +249,7 @@ const Playground = ({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {/* Language dropdown */}
-          <div style={{ position: 'relative' }}>
+          <div ref={langPickerRef} style={{ position: 'relative' }}>
             <button
               data-testid="playground-lang-button"
               onClick={() => setShowLangPicker(v => !v)}
@@ -326,40 +340,30 @@ const Playground = ({
       </div>
 
       {/* Editor */}
-      <div style={{ display: 'flex', borderBottom: `1px solid ${borderCol}`, background: isDark ? '#0d1117' : '#f9fafb' }}>
-        <div
-          aria-hidden
-          style={{
-            padding: '14px 8px 14px 14px', textAlign: 'right',
-            fontFamily: 'ui-monospace,SFMono-Regular,monospace', fontSize: 13,
-            color: mutedCol, userSelect: 'none', lineHeight: 1.6, whiteSpace: 'pre',
-            minWidth: 40,
-          }}
-        >
-          {code.split('\n').map((_, i) => i + 1).join('\n')}
+      <div style={{ borderBottom: `1px solid ${borderCol}`, background: isDark ? '#0d1117' : '#f9fafb' }}>
+        <div style={{ height: 280 }}>
+          <Editor
+            height="280px"
+            language={LANG_META[lang]?.syntax || 'plaintext'}
+            value={code}
+            onChange={(val) => setCode(val || '')}
+            theme={isDark ? 'vs-dark' : 'vs'}
+            onMount={(editor) => { editorRef.current = editor; }}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 13,
+              lineNumbers: 'on',
+              scrollBeyondLastLine: false,
+              wordWrap: 'on',
+              padding: { top: 12, bottom: 12 },
+              automaticLayout: true,
+              tabSize: 4,
+              renderLineHighlight: 'none',
+              overviewRulerBorder: false,
+              scrollbar: { vertical: 'hidden', horizontal: 'auto' },
+            }}
+          />
         </div>
-        <textarea
-          ref={editorRef}
-          data-testid="playground-editor"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          spellCheck={false}
-          onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-            if (e.key === 'Tab') {
-              e.preventDefault();
-              const target = e.target as HTMLTextAreaElement;
-              const s = target.selectionStart; const end = target.selectionEnd;
-              setCode(code.substring(0, s) + '    ' + code.substring(end));
-              setTimeout(() => { if (editorRef.current) { editorRef.current.selectionStart = editorRef.current.selectionEnd = s + 4; } }, 0);
-            }
-          }}
-          style={{
-            flex: 1, minHeight: 280, padding: '14px 14px 14px 6px', resize: 'vertical',
-            background: 'transparent', border: 0, outline: 'none',
-            fontFamily: 'ui-monospace,SFMono-Regular,monospace', fontSize: 13, lineHeight: 1.6,
-            color: textCol, tabSize: 4, whiteSpace: 'pre',
-          }}
-        />
       </div>
 
       {/* Action bar */}

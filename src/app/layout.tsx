@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { Providers } from '@/context/Providers';
-// import { SpeedInsights } from "@vercel/speed-insights/next"
-// import { Analytics } from "@vercel/analytics/next"
+import { PostHogPageView } from '@/components/PostHogPageView';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -29,20 +29,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-[#0d1117] text-[#c9d1d9] antialiased">
         <Providers>
+          <Suspense fallback={null}>
+            <PostHogPageView />
+          </Suspense>
           <div id="main-content" className="min-h-screen flex flex-col">
             {children}
           </div>
         </Providers>
-        {/* <Analytics />
-        <SpeedInsights /> */}
       </body>
     </html>
   );
 }
-
-
-// https://www.algokube.in/api/checkout/phonepe/callback
-// callback Url
-
-// client_id: su
-// client_secret: 45

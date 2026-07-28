@@ -7,12 +7,14 @@ function isValidPostHogKey(key: string | undefined): key is string {
 }
 
 const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+const POSTHOG_HOST = process.env.POSTHOG_HOST || 'https://us.i.posthog.com';
+const isVercel = process.env.VERCEL === '1';
 
 export const isEnabled = typeof window !== 'undefined' && isValidPostHogKey(POSTHOG_KEY);
 
 if (isValidPostHogKey(POSTHOG_KEY)) {
   posthog.init(POSTHOG_KEY, {
-    api_host: '/ingest',
+    api_host: isVercel ? POSTHOG_HOST : '/ingest',
     person_profiles: 'identified_only',
     capture_pageview: false,
     capture_pageleave: true,

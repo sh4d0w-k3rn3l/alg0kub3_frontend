@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { Menu, Search, Sun, Moon, ChevronDown, Code, BookOpen, LogIn, User, Trophy, Target, Server, Braces, TrendingUp, Play, LayoutDashboard, LogOut, Map } from 'lucide-react';
+import { Menu, Search, Sun, Moon, ChevronDown, Code, BookOpen, LogIn, User, Trophy, Target, Server, Braces, TrendingUp, Play, LayoutDashboard, LogOut, Map, Route } from 'lucide-react';
 import { COURSE_ICONS } from '@/config/courseConfig';
 
 interface HeaderProps {
@@ -178,7 +178,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isMobile, onToggleRigh
             <button onClick={() => router.push('/admin')} className="text-xs px-2.5 py-1.5 rounded transition-colors" style={{ color: colors.textSecondary }}>Admin</button>
           )}
           <button data-testid="header-leaderboard-btn" onClick={() => router.push('/leaderboard')} className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded transition-colors" style={{ color: colors.textSecondary }}><Trophy size={12} /> Leaderboard</button>
-          <button data-testid="header-paths-btn" onClick={() => router.push('/paths')} className="text-xs px-2.5 py-1.5 rounded transition-colors" style={{ color: colors.textSecondary }}>Paths</button>
+          <button data-testid="header-paths-btn" onClick={() => router.push('/paths')} className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded transition-colors" style={{ color: colors.textSecondary }}><Route size={12} /> Paths</button>
           <button data-testid="header-roadmaps-btn" onClick={() => router.push('/roadmaps')} className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded transition-colors" style={{ color: colors.textSecondary }}><Map size={12} /> Roadmaps</button>
           <button data-testid="header-dsa-animations-btn" onClick={() => router.push('/animations/dsa')} className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded transition-colors" style={{ color: colors.textSecondary }}><Play size={12} /> DSA Animations</button>
         </nav>

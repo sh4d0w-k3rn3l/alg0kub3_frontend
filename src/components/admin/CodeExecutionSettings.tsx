@@ -4,14 +4,13 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { showError, handleApiError, showConfirm } from '@/lib/toast';
 import {
-  ArrowLeft, Key, Save, CheckCircle2, XCircle, Loader2, Play,
-  Server, Zap, AlertTriangle, Eye, EyeOff, Trash2,
+  ArrowLeft, Save, CheckCircle2, XCircle, Loader2, Play,
+  Server, Zap, Eye, EyeOff, Trash2,
 } from 'lucide-react';
 
 const PROVIDERS = [
-  { id: 'local',   label: 'Local (in-process)', desc: 'Run code on this server (fast, limited languages, no extra keys)' },
-  { id: 'judge0',  label: 'Judge0 (RapidAPI)',  desc: 'Full-language support with strict sandboxing — recommended for prod' },
-  { id: 'piston',  label: 'Piston (public)',    desc: 'Free public API by engineer-man — no key required, modest quotas' },
+  { id: 'local',  label: 'Local (in-process)', desc: 'Run code on this server (fast, limited languages, no extra keys)' },
+  { id: 'docker', label: 'Docker Sandbox (DO)', desc: 'Run code in ephemeral Docker containers on your DigitalOcean droplet (recommended for prod)' },
 ];
 
 const LANGS = [
@@ -70,15 +69,15 @@ const CodeExecutionSettings = () => {
 
   const saveKey = async () => {
     if (!keyInput.trim()) return;
-    await save({ judge0_api_key: keyInput.trim() });
+    await save({ sandbox_api_key: keyInput.trim() });
     setKeyInput('');
   };
 
   const clearKey = async () => {
-    if (!(await showConfirm('Clear the stored Judge0 API key?'))) return;
+    if (!(await showConfirm('Clear the stored sandbox API key?'))) return;
     setSaving(true);
     try {
-      const r = await api.post<Record<string, unknown>>('/admin/code-execution/settings/clear-key');
+      const r = await api.post<Record<string, unknown>>('/admin/code-execution/settings/clear-sandbox-key');
       setCfg(r.data);
     } catch { showError('Failed to clear'); }
     setSaving(false);
@@ -167,59 +166,45 @@ const CodeExecutionSettings = () => {
         </div>
       </div>
 
-      {/* Judge0 config */}
-      {(cfg?.provider as string) === 'judge0' && (
+      {(cfg?.provider as string) === 'docker' && (
         <div style={{ ...card, marginTop: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Key size={18} color="#22c55e" />
-            <div style={{ fontSize: 16, fontWeight: 600 }}>Judge0 RapidAPI configuration</div>
+            <Server size={18} color="#22c55e" />
+            <div style={{ fontSize: 16, fontWeight: 600 }}>Docker Sandbox Server</div>
           </div>
 
           <div style={{ marginBottom: 18 }}>
-            <div style={label}>API URL</div>
+            <div style={label}>Sandbox Server URL</div>
             <input
-              data-testid="judge0-url"
+              data-testid="sandbox-url"
               style={input}
-              value={(cfg?.judge0_api_url as string) ?? ''}
-              onChange={(e) => setCfg({ ...cfg, judge0_api_url: e.target.value })}
-              onBlur={() => save({ judge0_api_url: cfg?.judge0_api_url })}
-              placeholder="https://judge0-ce.p.rapidapi.com"
+              value={(cfg?.sandbox_server_url as string) ?? ''}
+              onChange={(e) => setCfg({ ...(cfg ?? {}), sandbox_server_url: e.target.value } as Record<string, unknown>)}
+              onBlur={() => save({ sandbox_server_url: cfg?.sandbox_server_url })}
+              placeholder="http://your-droplet-ip:8080"
             />
           </div>
 
           <div style={{ marginBottom: 18 }}>
-            <div style={label}>RapidAPI Host</div>
-            <input
-              data-testid="judge0-host"
-              style={input}
-              value={(cfg?.judge0_host as string) ?? ''}
-              onChange={(e) => setCfg({ ...(cfg ?? {}), judge0_host: e.target.value } as Record<string, unknown>)}
-              onBlur={() => save({ judge0_host: cfg?.judge0_host })}
-              placeholder="judge0-ce.p.rapidapi.com"
-            />
-          </div>
-
-          <div style={{ marginBottom: 8 }}>
-            <div style={label}>API Key {(cfg?.judge0_api_key_configured as boolean) ? <span style={{ color: '#22c55e', textTransform: 'none', letterSpacing: 0 }}>· stored: {(cfg?.judge0_api_key_masked as string)}</span> : null}</div>
+            <div style={label}>API Key {(cfg?.sandbox_api_key_configured as boolean) ? <span style={{ color: '#22c55e', textTransform: 'none', letterSpacing: 0 }}>· configured</span> : null}</div>
             <div style={{ display: 'flex', gap: 10 }}>
               <input
-                data-testid="judge0-key"
+                data-testid="sandbox-key"
                 style={{ ...input, fontFamily: 'ui-monospace,monospace' }}
                 type={showKey ? 'text' : 'password'}
                 value={keyInput}
                 onChange={(e) => setKeyInput(e.target.value)}
-                placeholder={(cfg?.judge0_api_key_configured as boolean) ? 'Enter new key to replace existing' : 'Paste your RapidAPI key'}
+                placeholder="SANDBOX_API_KEY"
                 autoComplete="off"
               />
               <button
-                data-testid="judge0-key-toggle-visibility"
                 onClick={() => setShowKey(v => !v)}
                 style={{ ...btn, background: 'rgba(255,255,255,0.05)', color: '#a1a1aa' }}
               >
                 {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
               <button
-                data-testid="judge0-key-save"
+                data-testid="sandbox-key-save"
                 onClick={saveKey}
                 disabled={!keyInput.trim() || saving}
                 style={{ ...btn, background: '#22c55e', color: '#0a0a0a', opacity: !keyInput.trim() || saving ? 0.5 : 1 }}
@@ -227,42 +212,14 @@ const CodeExecutionSettings = () => {
                 <Save size={16} /> Save key
               </button>
             </div>
-            {(cfg?.judge0_api_key_configured as boolean) ? (
+            {(cfg?.sandbox_api_key_configured as boolean) ? (
               <button
-                data-testid="judge0-key-clear"
                 onClick={clearKey}
                 style={{ ...btn, background: 'transparent', color: '#ef4444', padding: '6px 0', marginTop: 8, fontSize: 13 }}
               >
                 <Trash2 size={14} /> Clear stored key
               </button>
             ) : null}
-            <div style={{ fontSize: 12, color: '#8b949e', marginTop: 10, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-              <AlertTriangle size={12} style={{ marginTop: 2, flexShrink: 0 }} />
-              <span>
-                Get a free key at <a href="https://rapidapi.com/judge0-official/api/judge0-ce/" target="_blank" rel="noopener" style={{ color: '#22c55e' }}>rapidapi.com/judge0-official</a>. Keys are stored encrypted-at-rest in MongoDB and never returned in plaintext.
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {(cfg?.provider as string) === 'piston' && (
-        <div style={{ ...card, marginTop: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Server size={18} color="#22c55e" />
-            <div style={{ fontSize: 16, fontWeight: 600 }}>Piston configuration</div>
-          </div>
-          <div style={label}>API URL</div>
-          <input
-            data-testid="piston-url"
-            style={input}
-            value={(cfg?.piston_api_url as string) ?? ''}
-            onChange={(e) => setCfg({ ...(cfg ?? {}), piston_api_url: e.target.value } as Record<string, unknown>)}
-            onBlur={() => save({ piston_api_url: cfg?.piston_api_url })}
-            placeholder="https://emkc.org/api/v2/piston"
-          />
-          <div style={{ fontSize: 12, color: '#8b949e', marginTop: 10 }}>
-            Public Piston API has rate limits (5 req/s per IP). For high traffic, self-host Piston.
           </div>
         </div>
       )}

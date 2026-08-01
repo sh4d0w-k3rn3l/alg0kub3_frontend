@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Suspense fallback={null}>
             <PostHogPageView />
           </Suspense>
-          <div id="main-content" className="min-h-screen flex flex-col">
+          <div className="min-h-screen flex flex-col">
             {children}
           </div>
         </Providers>

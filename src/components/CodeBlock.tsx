@@ -13,6 +13,10 @@ import SyntaxThemeSelector from '@/components/SyntaxThemeSelector';
 
 const themeMap: Record<string, typeof vscDarkPlus> = { vscDarkPlus, atomDark, dracula, oneDark, materialDark, nightOwl, coldarkDark, nord, vs, oneLight, materialLight, coldarkCold };
 
+interface MonacoEditorHandle {
+  focus?: () => void;
+}
+
 const LANG_META: Record<string, { label: string; syntax: string; icon: string }> = {
   python:     { label: 'Python',     syntax: 'python',     icon: '🐍' },
   javascript: { label: 'JavaScript', syntax: 'javascript', icon: 'JS' },
@@ -64,7 +68,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code = '', language = 'Python', r
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [stdinValue, setStdinValue] = useState('');
   const [showStdin, setShowStdin] = useState(false);
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<MonacoEditorHandle | null>(null);
   const langPickerRef = useRef<HTMLDivElement>(null);
 
   const syntaxTheme = propTheme || 'vscDarkPlus';
@@ -103,7 +107,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code = '', language = 'Python', r
     finally { setIsRunning(false); }
   };
 
-  const handleEdit = () => { setIsEditing(true); setEditedCode(currentCode); setTimeout(() => editorRef.current?.focus(), 100); };
+  const handleEdit = () => { setIsEditing(true); setEditedCode(currentCode); setTimeout(() => editorRef.current?.focus?.(), 100); };
   const handleReset = () => { setEditedCode(code); setIsEditing(false); setOutput(null); };
   const lines = currentCode.split('\n');
 

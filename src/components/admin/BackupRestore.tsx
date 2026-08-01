@@ -46,8 +46,7 @@ const BackupRestore = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadBackups(ac.signal);
+    (async () => { await loadBackups(ac.signal); })();
     return () => ac.abort();
   }, [loadBackups]);
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Layers, ArrowLeft, Loader2, ThumbsUp, ThumbsDown, Eye, Lightbulb, Trash2, CheckCircle } from 'lucide-react';
+import { Layers, ArrowLeft, Loader2, ThumbsUp, ThumbsDown, Eye, Lightbulb, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
@@ -46,7 +46,7 @@ const FlashcardsPage: React.FC = () => {
   const sessionToken = user?.session_token;
 
   useEffect(() => {
-    if (!sessionToken) { setLoading(false); return; }
+    if (!sessionToken) return;
     const ac = new AbortController();
     const fetch = async () => {
       try {
@@ -57,7 +57,7 @@ const FlashcardsPage: React.FC = () => {
         if (ac.signal.aborted) return;
         setData(res.data);
       } catch (err) {
-        if ((err as any)?.name === 'AbortError') return;
+        if (err && typeof err === 'object' && (err as { name?: string }).name === 'AbortError') return;
         setData(null);
       }
       finally { setLoading(false); }
@@ -116,7 +116,7 @@ const FlashcardsPage: React.FC = () => {
     setShowHint(false);
   };
 
-  if (loading) return (
+  if (loading && sessionToken) return (
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: colors.bg }}>
       <Loader2 className="animate-spin" size={32} style={{ color: colors.green }} />
     </div>

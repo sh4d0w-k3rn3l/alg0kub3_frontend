@@ -102,7 +102,7 @@ const AffiliateDashboard = () => {
       .catch((err) => {
         if (err instanceof DOMException && err.name === 'AbortError') return;
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!signal?.aborted) setLoading(false); });
   }, []);
 
   useEffect(() => {

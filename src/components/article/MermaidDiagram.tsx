@@ -172,8 +172,7 @@ const MermaidDiagram = ({ code = '', title = '', theme: appTheme, diagramTheme =
       }
     };
     renderDiagram();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code, themeConfig, isDark, diagramTheme]);
+  }, [code, themeConfig, isDark, diagramTheme, svg]);
 
   return (
     <div className="mb-5">

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import type { FC, ReactNode } from 'react';
+import Image from 'next/image';
 import CodeBlock from '@/components/CodeBlock';
 import QuizComponent from '@/components/QuizComponent';
 import SEO from '@/components/SEO';
@@ -71,6 +72,48 @@ const renderMarkdown = (text: string): string => {
     .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-blue-500 hover:underline">$1</a>');
 };
 
+interface SectionBrief {
+  course_id?: string;
+  [key: string]: unknown;
+}
+
+interface TestCaseItem {
+  name: string;
+  input: string;
+  expected: string;
+}
+
+interface WalkthroughStep {
+  array?: (string | number)[];
+  pointers?: Array<{ name: string; index: number; position?: 'above' | 'below' }>;
+  highlights?: number[];
+  finalized?: number[];
+  swapping?: number[];
+  label?: string;
+  kind?: string;
+  stackMode?: boolean;
+  linked?: boolean;
+  matrix?: (string | number)[][];
+  description?: string;
+  code?: string;
+  chart?: Record<string, unknown>;
+  tree?: Record<string, unknown>;
+  trie_nodes?: Record<string, unknown>;
+  graph_nodes?: unknown[];
+  graph_edges?: unknown[];
+  graph?: Record<string, unknown>;
+  intervals?: unknown[];
+  frames?: WalkthroughStep[];
+  scale?: number;
+  show_indices?: boolean;
+  edge_labels?: Array<{ from: number; to: number; label: string }>;
+  node_labels?: string[];
+  path_overlay?: unknown[];
+  path?: number[];
+  visited?: number[];
+  current?: number;
+}
+
 interface ContentBlock {
   type: string;
   text?: string;
@@ -99,10 +142,10 @@ interface ContentBlock {
   bare?: boolean;
   linked?: boolean;
   kind?: string;
-  steps?: Array<{ title?: string; text?: string; content?: string }>;
+  steps?: WalkthroughStep[];
   starter_code?: Record<string, string>;
   languages?: string[];
-  test_cases?: unknown[];
+  test_cases?: TestCaseItem[];
   timer?: boolean;
   ordered?: boolean;
   headers?: string[];
@@ -145,7 +188,13 @@ interface ArticleContentInnerProps {
   courseSlug?: string;
 }
 
-const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, lineHeight, fontFamily, syntaxTheme, onSyntaxThemeChange, sectionId, sectionTitle, courseSlug }) => {
+const formatUpdatedDate = (iso?: string): string => {
+  if (!iso) return 'December 6, 2025';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, lineHeight, syntaxTheme, onSyntaxThemeChange, sectionId, sectionTitle, courseSlug }) => {
   const { colors, isDark } = useTheme();
   const { user, login, isSubscribed } = useAuth();
   const { preferredLang, setPreferredLang } = useLanguagePref();
@@ -154,6 +203,12 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
   const [activeTab, setActiveTab] = useState<Record<string | number, number>>({});
   const [access, setAccess] = useState<{ has_access: boolean; is_free: boolean; is_subscribed: boolean; access_type: string; price?: number }>({ has_access: true, is_free: true, is_subscribed: false, access_type: 'free' });
   const [lessonCompleted, setLessonCompleted] = useState(false);
+  const progressKey = `${courseSlug}:${lesson?.id ?? ''}:${user ? 'u' : 'g'}`;
+  const [prevProgressKey, setPrevProgressKey] = useState(progressKey);
+  if (prevProgressKey !== progressKey) {
+    setPrevProgressKey(progressKey);
+    setLessonCompleted(false);
+  }
 
   useEffect(() => {
     if (!lesson?.slug) return;
@@ -164,7 +219,7 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
         setAccess(r.data);
       })
       .catch((err) => {
-        if ((err as any)?.name === 'AbortError') return;
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         setAccess({ has_access: true, is_free: true, is_subscribed: false, access_type: 'free' });
       });
     return () => ac.abort();
@@ -172,7 +227,6 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
 
   useEffect(() => {
     if (!user || !lesson?.id || !courseSlug) {
-      setLessonCompleted(false);
       return;
     }
     const ac = new AbortController();
@@ -182,7 +236,7 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
         setLessonCompleted(r.data.completed_lessons?.includes(String(lesson.id)) || false);
       })
       .catch((err) => {
-        if ((err as any)?.name === 'AbortError') return;
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         setLessonCompleted(false);
       });
     return () => ac.abort();
@@ -191,8 +245,8 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
   const handleToggleProgress = async () => {
     if (!user || !lesson?.id) return;
     try {
-      const sectionRes = await api.get<Record<string, any>>(`/sections?course_slug=${courseSlug}`);
-      const secs = sectionRes.data?.sections || sectionRes.data || [];
+      const sectionRes = await api.get<{ sections?: SectionBrief[] } | SectionBrief[]>(`/sections?course_slug=${courseSlug}`);
+      const secs = Array.isArray(sectionRes.data) ? sectionRes.data : (sectionRes.data.sections ?? []);
       const courseId = secs[0]?.course_id || '';
       const res = await api.post<{ completed: boolean }>(`/progress/complete`, {
         lesson_id: lesson.id,
@@ -480,7 +534,7 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
         return (
           <div key={idx} className="mb-5">
             {block.url ? (
-              <img src={block.url} alt={block.alt || ''} className="max-w-full rounded-lg border" style={{ borderColor: colors.border, backgroundColor: isDark ? '#f8f9fa' : 'transparent', padding: isDark ? '12px' : '0', borderRadius: '8px' }} />
+              <Image src={block.url} alt={block.alt || ''} width={1200} height={675} unoptimized className="max-w-full rounded-lg border" style={{ borderColor: colors.border, backgroundColor: isDark ? '#f8f9fa' : 'transparent', padding: isDark ? '12px' : '0', borderRadius: '8px' }} />
             ) : (
               <div className="h-32 rounded-lg border flex items-center justify-center" style={{ borderColor: colors.border, backgroundColor: colors.bgCard, color: colors.textMuted }}>
                 No image
@@ -642,7 +696,7 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
           <Suspense key={idx} fallback={<div className="mb-5 h-40 rounded-lg animate-pulse" style={{ backgroundColor: colors.bgSecondary }} />}>
             <ArrayWalkthrough
               title={block.title}
-              steps={(block.steps || []) as any}
+              steps={block.steps || []}
               isDark={isDark}
               bare={block.bare}
               linked={block.linked}
@@ -656,7 +710,7 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
           <Suspense key={idx} fallback={<div className="mb-5 h-40 rounded-lg animate-pulse" style={{ backgroundColor: colors.bgSecondary }} />}>
             <ArrayStoryboard
               title={block.title}
-              steps={(block.steps || []) as any}
+              steps={block.steps || []}
               isDark={isDark}
             />
           </Suspense>
@@ -670,7 +724,7 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
               lesson_slug={lesson?.slug}
               starter_code={block.starter_code || {}}
               languages={block.languages}
-              test_cases={block.test_cases as any}
+              test_cases={block.test_cases}
               timer={block.timer !== false}
               isDark={isDark}
             />
@@ -741,7 +795,7 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-1 gap-2">
           <h1 className="font-bold leading-tight" style={{ fontSize: fs.heading, color: colors.text }}>{title}</h1>
           <span className="text-sm whitespace-nowrap sm:mt-2" style={{ color: colors.textMuted }}>
-            Last Updated: {last_updated || 'December 6, 2025'}
+            Last Updated: {formatUpdatedDate(last_updated)}
           </span>
         </div>
         <div className="flex items-center gap-3 text-sm mt-2" style={{ color: colors.textMuted }}>

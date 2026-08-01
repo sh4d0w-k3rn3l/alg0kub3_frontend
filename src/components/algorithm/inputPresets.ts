@@ -1,5 +1,9 @@
 // Input presets for different algorithm types
-export const getInputPresets = (algorithmId: string, category?: string) => {
+type PresetValue = number[] | Record<string, unknown>;
+type PresetMap = Record<string, PresetValue>;
+
+export const getInputPresets = (algorithmId: string, category?: string): PresetMap => {
+  void category;
   const defaultArrayPresets = {
     "Array 1": [64, 34, 25, 12, 22, 11, 90],
     "Array 2": [5, 1, 4, 2, 8, 3],
@@ -287,7 +291,7 @@ export const getInputPresets = (algorithmId: string, category?: string) => {
     }
   };
 
-  return (presetsByAlgorithm as Record<string, any>)[algorithmId] || defaultArrayPresets;
+  return (presetsByAlgorithm as Record<string, PresetMap>)[algorithmId] || defaultArrayPresets;
 };
 
 // Get default code for algorithms not in the code file

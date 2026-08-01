@@ -29,13 +29,13 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState('');
 
-  const ssoLogin = (strategy: string) => async () => {
+  const ssoLogin = (strategy: 'oauth_google' | 'oauth_github' | 'oauth_twitter') => async () => {
     if (!signIn?.sso || ssoLoading) return;
     setSsoLoading(strategy);
     try {
       const cbUrl = `${window.location.origin}/auth/callback`;
       const { error } = await signIn.sso({
-        strategy: strategy as any,
+        strategy,
         redirectUrl: cbUrl,
         redirectCallbackUrl: cbUrl,
       });
@@ -92,13 +92,14 @@ const LoginPage: React.FC = () => {
       } else {
         setError('Additional verification required. Please try signing in with a social provider.');
       }
-    } catch (err: any) {
-      if (err?.errors?.[0]?.code === 'form_password_incorrect' || err?.errors?.[0]?.code === 'form_identifier_not_found') {
+    } catch (err: unknown) {
+      const e = err as { errors?: { code?: string; longMessage?: string }[]; message?: string } | null;
+      if (e?.errors?.[0]?.code === 'form_password_incorrect' || e?.errors?.[0]?.code === 'form_identifier_not_found') {
         setError('Invalid email or password');
-      } else if (err?.errors?.[0]?.longMessage) {
-        setError(err.errors[0].longMessage);
+      } else if (e?.errors?.[0]?.longMessage) {
+        setError(e.errors[0].longMessage);
       } else {
-        setError(err.message || 'Login failed');
+        setError(e?.message || 'Login failed');
       }
     } finally {
       setLoading(false);

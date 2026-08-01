@@ -130,8 +130,7 @@ const EmailDigest = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (tab === 'user-digest') fetchUserDigestLogs(ac.signal);
+    (async () => { if (tab === 'user-digest') await fetchUserDigestLogs(ac.signal); })();
     return () => ac.abort();
   }, [tab]);
 
@@ -350,11 +349,11 @@ const EmailDigest = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((log: DigestLogData, i: number) => {
+                  {logs.map((log: DigestLogData) => {
                     const success = (log.results || []).filter((r: { status: string }) => r.status === 'sent').length;
                     const failed = (log.results || []).filter((r: { status: string }) => r.status === 'failed').length;
                     return (
-                      <tr key={i} className="border-b border-[#2d333b]/50">
+                      <tr key={log.sent_at} className="border-b border-[#2d333b]/50">
                         <td className="px-4 py-3 text-xs text-[#c9d1d9]">{new Date(log.sent_at).toLocaleString()}</td>
                         <td className="px-4 py-3">
                           <span className="text-xs px-2 py-0.5 rounded-full bg-[#3b82f620] text-[#3b82f6] capitalize">{log.frequency}</span>
@@ -445,8 +444,8 @@ const EmailDigest = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {userDigestLogs.map((log, i) => (
-                      <tr key={i} className="border-b border-[#2d333b]/50">
+                    {userDigestLogs.map((log) => (
+                      <tr key={log.sent_at} className="border-b border-[#2d333b]/50">
                         <td className="px-4 py-3 text-xs text-[#c9d1d9]">{new Date(log.sent_at).toLocaleString()}</td>
                         <td className="px-4 py-3 text-sm text-[#c9d1d9]">{log.total_users}</td>
                         <td className="px-4 py-3 text-xs text-[#22c55e]">{log.sent}</td>

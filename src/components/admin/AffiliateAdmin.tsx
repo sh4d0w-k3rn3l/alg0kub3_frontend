@@ -45,8 +45,7 @@ const AffiliateAdmin = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchAll(ac.signal);
+    (async () => { await fetchAll(ac.signal); })();
     return () => ac.abort();
   }, [fetchAll]);
 

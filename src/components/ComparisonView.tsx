@@ -144,7 +144,10 @@ const ComparisonView = () => {
   const algorithmsByCategory = getAlgorithmsByCategory();
 
   const [selectedCategory, setSelectedCategory] = useState('Sorting');
-  const [selectedAlgorithms, setSelectedAlgorithms] = useState<string[]>([]);
+  const [selectedAlgorithms, setSelectedAlgorithms] = useState<string[]>(() => {
+    const sortingAlgos = algorithmsByCategory['Sorting'] || [];
+    return sortingAlgos.length >= 3 ? sortingAlgos.slice(0, 3).map((a: AlgorithmData) => a.id) : [];
+  });
   const [inputArray, setInputArray] = useState([64, 34, 25, 12, 22, 11, 90, 45, 33, 18]);
   const [customInput, setCustomInput] = useState('64, 34, 25, 12, 22, 11, 90, 45, 33, 18');
   const [isRacing, setIsRacing] = useState(false);
@@ -155,31 +158,21 @@ const ComparisonView = () => {
 
   const raceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    const sortingAlgos = algorithmsByCategory['Sorting'] || [];
-    if (sortingAlgos.length >= 3) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedAlgorithms(sortingAlgos.slice(0, 3).map((a: AlgorithmData) => a.id));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
+  const animationKey = JSON.stringify([selectedAlgorithms, inputArray]);
+  const [prevAnimationKey, setPrevAnimationKey] = useState(animationKey);
+  if (animationKey !== prevAnimationKey) {
+    setPrevAnimationKey(animationKey);
     const newAnimationData: Record<string, AnimationStep[]> = {};
     const newCurrentSteps: Record<string, number> = {};
-
     selectedAlgorithms.forEach(algoId => {
       const steps = generateAnimationSteps(algoId, [...inputArray]);
       newAnimationData[algoId] = steps;
       newCurrentSteps[algoId] = 0;
     });
-
-    /* eslint-disable react-hooks/set-state-in-effect */
     setAnimationData(newAnimationData);
     setCurrentSteps(newCurrentSteps);
     setFinishOrder([]);
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [selectedAlgorithms, inputArray, selectedCategory]);
+  }
 
   useEffect(() => {
     if (isRacing) {

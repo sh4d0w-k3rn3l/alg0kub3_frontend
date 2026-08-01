@@ -59,11 +59,14 @@ const ChatTab = ({ lessonSlug, courseSlug, sessionToken }: { lessonSlug: string;
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  const [prevLessonSlug, setPrevLessonSlug] = useState(lessonSlug);
+  if (lessonSlug !== prevLessonSlug) {
+    setPrevLessonSlug(lessonSlug);
+    setMessages([]);
+    setSessionId('');
+  }
+
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMessages([]); setSessionId('');
-  }, [lessonSlug]);
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   const send = async () => {
@@ -496,12 +499,12 @@ const AITutorPanel = ({ isOpen, onClose, lessonSlug, lessonTitle, courseSlug }: 
   const [activeTab, setActiveTab] = useState('chat');
   const sessionToken = '';
 
-  useEffect(() => {
-    if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setActiveTab('chat');
-    }
-  }, [isOpen, lessonSlug]);
+  const panelKey = `${isOpen}|${lessonSlug}`;
+  const [prevPanelKey, setPrevPanelKey] = useState(panelKey);
+  if (panelKey !== prevPanelKey) {
+    setPrevPanelKey(panelKey);
+    setActiveTab('chat');
+  }
 
   if (!isOpen) return null;
 

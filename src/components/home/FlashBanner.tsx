@@ -1,5 +1,5 @@
 'use client';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { api } from '@/lib/api';
@@ -37,25 +37,25 @@ const injectStyles = () => {
   document.head.appendChild(s);
 };
 
+const calcRemaining = (endDate: string) => {
+  const diff = new Date(endDate).getTime() - Date.now();
+  if (diff <= 0) return { d: 0, h: 0, m: 0, s: 0, expired: true };
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  return { d, h, m, s, expired: false };
+};
+
 const useCountdown = (endDate: string | null | undefined) => {
-  const [remaining, setRemaining] = useState({ d: 0, h: 0, m: 0, s: 0, expired: true });
+  const [remaining, setRemaining] = useState<ReturnType<typeof calcRemaining> | null>(null);
 
   useEffect(() => {
-    if (!endDate) { setRemaining({ d: 0, h: 0, m: 0, s: 0, expired: true }); return; }
-
-    const calc = () => {
-      const diff = new Date(endDate).getTime() - Date.now();
-      if (diff <= 0) return { d: 0, h: 0, m: 0, s: 0, expired: true };
-      const d = Math.floor(diff / 86400000);
-      const h = Math.floor((diff % 86400000) / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      return { d, h, m, s, expired: false };
-    };
-
-    setRemaining(calc());
-    const iv = setInterval(() => setRemaining(calc()), 1000);
-    return () => clearInterval(iv);
+    if (!endDate) return;
+    const tick = () => setRemaining(calcRemaining(endDate));
+    const iv = setInterval(tick, 1000);
+    const t = setTimeout(tick, 0);
+    return () => { clearInterval(iv); clearTimeout(t); };
   }, [endDate]);
 
   return remaining;
@@ -63,31 +63,39 @@ const useCountdown = (endDate: string | null | undefined) => {
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
+interface FlashBannerConfig {
+  enabled: boolean;
+  title: string;
+  subtitle?: string;
+  accent_color?: string;
+  end_date?: string;
+  link_url?: string;
+  link_text?: string;
+}
+
 const FlashBanner = () => {
   const navigate = useRouter();
   const { isDark } = useTheme();
-  const [config, setConfig] = useState<any>(null);
-  const [mode, setMode] = useState('full'); // 'full' | 'pill' | 'dismissed'
-  const countdown = useCountdown(config?.end_date);
-
-  useEffect(() => { injectStyles(); }, []);
-
-  /* Restore session state */
-  useEffect(() => {
+  const [config, setConfig] = useState<FlashBannerConfig | null>(null);
+  const [mode, setMode] = useState<'full' | 'pill' | 'dismissed'>(() => {
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.dismissed) setMode('dismissed');
-        else if (parsed.minimized) setMode('pill');
+        if (parsed.dismissed) return 'dismissed';
+        if (parsed.minimized) return 'pill';
       }
     } catch {}
-  }, []);
+    return 'full';
+  });
+  const countdown = useCountdown(config?.end_date);
+
+  useEffect(() => { injectStyles(); }, []);
 
   /* Fetch config */
   useEffect(() => {
     const ac = new AbortController();
-    api.get<any>('/homepage-settings/flash-banner', { signal: ac.signal })
+    api.get<FlashBannerConfig>('/homepage-settings/flash-banner', { signal: ac.signal })
       .then(res => { if (!ac.signal.aborted) setConfig(res.data); })
       .catch(() => {});
     return () => ac.abort();
@@ -103,10 +111,12 @@ const FlashBanner = () => {
 
   /* Don't render if disabled, no config, or timer expired */
   if (!config || !config.enabled || mode === 'dismissed') return null;
-  if (countdown.expired && config.end_date) return null;
+  if (countdown?.expired && config.end_date) return null;
 
   const accent = config.accent_color || '#f59e0b';
-  const hasCountdown = config.end_date && !countdown.expired;
+  const hasCountdown = config.end_date && !!countdown && !countdown.expired;
+  const ctaUrl = config.link_url;
+  const ctaText = config.link_text;
 
   /* ── Minimized floating pill ── */
   if (mode === 'pill') {
@@ -237,10 +247,10 @@ const FlashBanner = () => {
         )}
 
         {/* CTA link */}
-        {config.link_url && config.link_text && (
+        {ctaUrl && ctaText && (
           <button
             data-testid="flash-cta-btn"
-            onClick={() => navigate.push(config.link_url)}
+            onClick={() => navigate.push(ctaUrl)}
             className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all hover:gap-2"
             style={{
               backgroundColor: accent,
@@ -248,7 +258,7 @@ const FlashBanner = () => {
               boxShadow: `0 2px 8px ${accent}30`,
             }}
           >
-            {config.link_text}
+            {ctaText}
             <ArrowRight size={12} />
           </button>
         )}

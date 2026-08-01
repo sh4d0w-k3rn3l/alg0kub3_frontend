@@ -6,7 +6,79 @@ import { api } from '@/lib/api';
 import { showError } from '@/lib/toast';
 import TemplateLibrary from './TemplateLibrary';
 
-let ExcalidrawComponent: React.ComponentType<any> | null = null;
+interface ExcalidrawElement {
+  id?: string;
+  [key: string]: unknown;
+}
+
+interface ExcalidrawAppState {
+  theme?: string;
+  viewBackgroundColor?: string;
+  currentItemStrokeWidth?: number;
+  currentItemStrokeColor?: string;
+  currentItemRoughness?: number;
+  currentItemFontSize?: number;
+  zoom?: { value?: number };
+}
+
+interface ExcalidrawAPI {
+  getAppState?: () => Partial<ExcalidrawAppState> | undefined;
+  updateScene: (data: { appState?: Partial<ExcalidrawAppState>; elements?: ExcalidrawElement[] }) => void;
+  getSceneElements?: () => ExcalidrawElement[];
+  scrollToContent?: (element?: unknown, opts?: { fitToViewport?: boolean; viewportZoomFactor?: number }) => void;
+}
+
+interface ExcalidrawInitialData {
+  appState: Partial<ExcalidrawAppState>;
+  elements?: ExcalidrawElement[];
+}
+
+interface ExcalidrawCanvasProps {
+  excalidrawAPI?: (api: ExcalidrawAPI) => void;
+  theme?: string;
+  onChange?: (elements: readonly ExcalidrawElement[], appState: ExcalidrawAppState) => void;
+  initialData?: ExcalidrawInitialData;
+  UIOptions?: { canvasActions?: { loadScene?: boolean; saveToActiveFile?: boolean; export?: boolean } };
+}
+
+interface TemplateLibraryElement {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  angle: number;
+  strokeColor: string;
+  backgroundColor: string;
+  fillStyle: string;
+  strokeWidth: number;
+  roughness: number;
+  opacity: number;
+  groupIds: string[];
+  frameId: string | null;
+  index: string;
+  roundness: { type: number } | null;
+  isDeleted: boolean;
+  boundElements: { id: string; type: string }[] | null;
+  locked: boolean;
+  link: string | null;
+  updated: number;
+  seed: number;
+  version: number;
+  versionNonce: number;
+  [key: string]: unknown;
+}
+
+interface TemplateLibraryExcalidrawAPI {
+  getAppState?: () => { scrollX: number; scrollY: number; zoom: { value: number } } | undefined;
+  getSceneElements?: () => TemplateLibraryElement[];
+  updateScene?: (data: { elements: TemplateLibraryElement[] }) => void;
+}
+
+type ExcalidrawComponentType = React.ComponentType<ExcalidrawCanvasProps>;
+
+let ExcalidrawComponent: ExcalidrawComponentType | null = null;
 let excalidrawLoaded = false;
 
 interface SessionData {
@@ -28,9 +100,9 @@ const HighLevelDesignStep: React.FC<HighLevelDesignStepProps> = ({ session, onSa
   const [fullscreen, setFullscreen] = useState(false);
   const saved = session?.answers?.['high-level'] || {};
   const [explanation, setExplanation] = useState(saved.content || '');
-  const excalidrawRef = useRef<any>(null);
-  const elementsRef = useRef<any[] | null>(null);
-  const appStateRef = useRef<any>(null);
+  const excalidrawRef = useRef<ExcalidrawAPI | null>(null);
+  const elementsRef = useRef<ExcalidrawElement[] | null>(null);
+  const appStateRef = useRef<ExcalidrawAppState | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [renderKey, setRenderKey] = useState(0);
   const [showTemplates, setShowTemplates] = useState(false);
@@ -42,12 +114,12 @@ const HighLevelDesignStep: React.FC<HighLevelDesignStepProps> = ({ session, onSa
   const chunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
-    if (excalidrawLoaded) { setLoaded(true); return; }
+    if (excalidrawLoaded) return;
     Promise.all([
       import('@excalidraw/excalidraw'),
       import('@excalidraw/excalidraw/index.css'),
     ]).then(([mod]) => {
-      ExcalidrawComponent = mod.Excalidraw;
+      ExcalidrawComponent = mod.Excalidraw as unknown as ExcalidrawComponentType;
       excalidrawLoaded = true;
       setLoaded(true);
     }).catch((err) => { console.error('Excalidraw load error:', err); });
@@ -57,13 +129,12 @@ const HighLevelDesignStep: React.FC<HighLevelDesignStepProps> = ({ session, onSa
     if (saved.elements && !elementsRef.current) {
       try { elementsRef.current = JSON.parse(saved.elements); } catch {}
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [saved.elements]);
 
   const bgFixedRef = useRef(false);
   const mountRetryRef = useRef(0);
 
-  const forceExcalidrawSettings = useCallback((api: any) => {
+  const forceExcalidrawSettings = useCallback((api: ExcalidrawAPI) => {
     if (!api) return;
     try {
       const appState = api.getAppState?.();
@@ -88,8 +159,8 @@ const HighLevelDesignStep: React.FC<HighLevelDesignStepProps> = ({ session, onSa
     }
   }, []);
 
-  const handleExcalidrawChange = useCallback((elements: any, appState: any) => {
-    elementsRef.current = elements.map((e: any) => ({ ...e }));
+  const handleExcalidrawChange = useCallback((elements: readonly ExcalidrawElement[], appState: ExcalidrawAppState) => {
+    elementsRef.current = elements.map((e) => ({ ...e }));
     appStateRef.current = appState;
 
     if (!bgFixedRef.current) {
@@ -119,7 +190,7 @@ const HighLevelDesignStep: React.FC<HighLevelDesignStepProps> = ({ session, onSa
     const api = excalidrawRef.current;
     if (!api) return;
     if (api.getSceneElements) {
-      elementsRef.current = api.getSceneElements().map((e: any) => ({ ...e }));
+      elementsRef.current = api.getSceneElements().map((e) => ({ ...e }));
     }
   };
 
@@ -192,7 +263,7 @@ const HighLevelDesignStep: React.FC<HighLevelDesignStepProps> = ({ session, onSa
   };
 
   const getInitialData = () => {
-    const data: { appState: any; elements?: any[] } = {
+    const data: ExcalidrawInitialData = {
       appState: {
         theme: 'dark',
         currentItemStrokeWidth: 1,
@@ -202,11 +273,16 @@ const HighLevelDesignStep: React.FC<HighLevelDesignStepProps> = ({ session, onSa
         viewBackgroundColor: '#161b22',
       },
     };
-    if (elementsRef.current?.length) data.elements = elementsRef.current;
+    if (saved.elements) {
+      try {
+        const parsed = JSON.parse(saved.elements);
+        if (parsed?.length) data.elements = parsed;
+      } catch {}
+    }
     return data;
   };
 
-  const handleExcalidrawMount = useCallback((api: any) => {
+  const handleExcalidrawMount = useCallback((api: ExcalidrawAPI) => {
     excalidrawRef.current = api;
     bgFixedRef.current = false;
     mountRetryRef.current = 0;
@@ -232,7 +308,7 @@ const HighLevelDesignStep: React.FC<HighLevelDesignStepProps> = ({ session, onSa
     <div className="flex-1 flex" style={{ minHeight: 0 }}>
       {showTemplates && (
         <div className="w-44 shrink-0 border-r border-[#2d333b] overflow-hidden" style={{ backgroundColor: '#0d1117' }}>
-          <TemplateLibrary excalidrawRef={excalidrawRef as any} elementsRef={elementsRef as any} />
+          <TemplateLibrary excalidrawRef={excalidrawRef as unknown as React.RefObject<TemplateLibraryExcalidrawAPI | null>} elementsRef={elementsRef as unknown as React.RefObject<TemplateLibraryElement[]>} />
         </div>
       )}
       <div className="flex-1" style={{ minHeight: 0 }}>

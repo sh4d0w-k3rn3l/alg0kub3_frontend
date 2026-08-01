@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -8,13 +9,14 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Menu, Search, Sun, Moon, ChevronDown, Code, BookOpen, LogIn, User, Trophy, Target, Server, Braces, TrendingUp, Play, LayoutDashboard, LogOut, Map, Route } from 'lucide-react';
 import { COURSE_ICONS } from '@/config/courseConfig';
+import type { Course } from '@/types';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
   isMobile: boolean;
   onToggleRight: () => void;
   onOpenSearch: () => void;
-  courses?: any[];
+  courses?: Course[];
   activeCourse?: string;
 }
 
@@ -75,7 +77,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isMobile, onToggleRigh
             </button>
             {learnOpen && (
               <div className="absolute top-full left-0 mt-1 w-64 border rounded-lg shadow-xl py-2 z-50" style={{ backgroundColor: colors.bgCard, borderColor: colors.border }}>
-                {courses.map((course: any) => {
+                {courses.map((course: Course) => {
                   const Icon = COURSE_ICONS[course.slug] || Code;
                   const isActive = course.slug === activeCourse;
                   return (
@@ -203,7 +205,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isMobile, onToggleRigh
               onMouseLeave={(e) => { if (!userMenuOpen) e.currentTarget.style.backgroundColor = 'transparent'; }}
             >
               {user.picture ? (
-                <img src={user.picture} alt="" className="w-5 h-5 rounded-full" />
+                <Image src={user.picture} alt="" width={20} height={20} className="w-5 h-5 rounded-full" />
               ) : (
                 <User size={14} />
               )}

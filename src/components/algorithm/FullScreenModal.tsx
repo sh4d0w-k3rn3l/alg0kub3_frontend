@@ -9,7 +9,16 @@ const BOX_VISUALIZATION_ALGORITHMS = [
 
 interface AlgorithmInfo {
   title: string;
-  [key: string]: any;
+}
+
+interface FullScreenAnimationStep {
+  array?: number[];
+  comparing?: number[];
+  swapping?: number[];
+  sorted?: number[];
+  highlightedLines?: number[];
+  description?: string;
+  variables?: Record<string, number | string>;
 }
 
 interface FullScreenModalProps {
@@ -19,7 +28,7 @@ interface FullScreenModalProps {
   highlightedIndices: number[];
   swappingIndices: number[];
   sortedIndices: number[];
-  animationStep: { variables?: Record<string, any>; [key: string]: any } | undefined;
+  animationStep?: FullScreenAnimationStep;
   currentStep: number;
   totalSteps: number;
   isPlaying: boolean;

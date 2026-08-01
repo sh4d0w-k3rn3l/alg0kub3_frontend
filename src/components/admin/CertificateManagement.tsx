@@ -6,12 +6,12 @@ import { handleApiError, showError, showConfirm } from '@/lib/toast';
 import { ArrowLeft, Award, Search, Trash2, Loader2, ChevronLeft, ChevronRight, Users, BookOpen } from 'lucide-react';
 
 const CertificateManagement = () => {
-  const [total, setTotal] = useState<number>(0);
   const [certs, setCerts] = useState<Record<string, unknown>[]>([]);
   const [stats, setStats] = useState<Record<string, unknown>>({});
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState<string>('');
+  const [, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const navigate = useRouter();
 

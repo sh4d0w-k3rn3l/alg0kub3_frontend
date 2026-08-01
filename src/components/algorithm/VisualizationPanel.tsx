@@ -12,9 +12,10 @@ import D3BarChart from '@/components/d3/D3BarChart';
 import { useTheme } from '@/context/ThemeContext';
 import type React from 'react';
 
+type AnimationVariables = Record<string, number | string>;
+
 interface AnimationStep {
-  [key: string]: any;
-  variables?: Record<string, any>;
+  variables?: AnimationVariables;
   algorithmType?: string;
   readPos?: number;
   writePos?: number;
@@ -88,7 +89,7 @@ interface ArrayBoxVisualizationProps {
   highlightedIndices: number[];
   swappingIndices: number[];
   sortedIndices: number[];
-  variables?: Record<string, any>;
+  variables?: AnimationVariables;
   algorithmId: string;
   animationStep?: AnimationStep;
 }
@@ -724,7 +725,7 @@ const LongestCommonPrefixVisualization = ({ animationStep }: LongestCommonPrefix
       {/* Prefix display */}
       <div className="mt-4 flex items-center gap-2 bg-[#1f1f23] px-4 py-2 rounded-lg">
         <span className="text-gray-400 text-sm">prefix =</span>
-        <span className="text-[#22c55e] font-bold text-xl">"{prefix}"</span>
+        <span className="text-[#22c55e] font-bold text-xl">&quot;{prefix}&quot;</span>
       </div>
     </div>
   );
@@ -781,7 +782,7 @@ const ReverseWordsVisualization = ({ animationStep }: ReverseWordsVisualizationP
       {result && (
         <div className="mt-4 flex items-center gap-2 bg-[#1f1f23] px-4 py-2 rounded-lg">
           <span className="text-gray-400 text-sm">result =</span>
-          <span className="text-[#22c55e] font-bold text-lg">"{result}"</span>
+          <span className="text-[#22c55e] font-bold text-lg">&quot;{result}&quot;</span>
         </div>
       )}
     </div>
@@ -1034,7 +1035,6 @@ const BarChartVisualization = ({
 }: BarChartVisualizationProps) => {
   const { isDark } = useTheme();
   const isBuySellStock = algorithmId === 'best-time-to-buy-and-sell-stock';
-  const currentIndex = animationStep?.currentIndex ?? -1;
   const variables = animationStep?.variables;
 
   return (

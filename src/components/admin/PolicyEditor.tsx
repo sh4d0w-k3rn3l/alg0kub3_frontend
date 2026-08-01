@@ -9,10 +9,18 @@ import {
 } from 'lucide-react';
 
 interface PolicySection {
+  id: string;
   heading: string;
   body: string;
   bullets: string[];
 }
+
+const uid = (prefix = 'id') => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+
+const ensureSectionIds = (policy: Policy): Policy => ({
+  ...policy,
+  sections: (policy.sections || []).map(s => ({ ...s, id: s.id || uid('section') })),
+});
 
 interface Policy {
   slug: string;
@@ -28,32 +36,31 @@ const PolicyEditor = () => {
   const [selected, setSelected] = useState<Policy | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
-  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchPolicies = useCallback(async (signal?: AbortSignal) => {
     try {
       const res = await api.get<Policy[]>('/admin/policies', { signal });
       if (signal?.aborted) return;
-      setPolicies(res.data);
-      if (!selected && res.data.length > 0) setSelected(res.data[0]);
+      const normalized = res.data.map(ensureSectionIds);
+      setPolicies(normalized);
+      setSelected(prev => prev ?? normalized[0] ?? null);
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       handleApiError(err);
     }
     finally { if (!signal?.aborted) setLoading(false); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchPolicies(ac.signal);
+    (async () => { await fetchPolicies(ac.signal); })();
     return () => ac.abort();
   }, [fetchPolicies]);
 
   const handleSelectPolicy = (p: Policy) => {
-    setSelected({ ...p });
-    setExpandedIdx(null);
+    setSelected(ensureSectionIds({ ...p }));
+    setExpandedId(null);
   };
 
   const handleFieldChange = (field: string, value: string) => {
@@ -101,14 +108,15 @@ const PolicyEditor = () => {
   };
 
   const addSection = () => {
+    const newId = uid('section');
     setSelected((prev: Policy | null) => {
       if (!prev) return prev;
       return {
         ...prev,
-        sections: [...prev.sections, { heading: '', body: '', bullets: [] }],
+        sections: [...prev.sections, { id: newId, heading: '', body: '', bullets: [] }],
       };
     });
-    setExpandedIdx(prev => selected ? selected.sections.length : prev);
+    setExpandedId(newId);
   };
 
   const removeSection = async (idx: number) => {
@@ -118,6 +126,10 @@ const PolicyEditor = () => {
       const sections = [...prev.sections];
       sections.splice(idx, 1);
       return { ...prev, sections };
+    });
+    setExpandedId(prev => {
+      if (prev === null || !selected) return prev;
+      return selected.sections[idx]?.id === prev ? null : prev;
     });
   };
 
@@ -130,14 +142,17 @@ const PolicyEditor = () => {
       [sections[idx], sections[newIdx]] = [sections[newIdx], sections[idx]];
       return { ...prev, sections };
     });
-    setExpandedIdx((prev: number | null) => prev === idx ? idx + dir : prev);
   };
 
   const handleSave = async () => {
     if (!selected) return;
     setSaving(true);
     try {
-      await api.put(`/policies/${selected.slug}`, selected);
+      const payload = {
+        ...selected,
+        sections: selected.sections.map(s => ({ heading: s.heading, body: s.body, bullets: s.bullets })),
+      };
+      await api.put(`/policies/${selected.slug}`, payload);
       await fetchPolicies();
       showSuccess('Policy saved successfully!');
     } catch (err) { showError('Error saving policy'); handleApiError(err); }
@@ -151,7 +166,7 @@ const PolicyEditor = () => {
       await api.delete(`/policies/${selected.slug}`);
       await fetchPolicies();
       const res = await api.get<Policy>(`/policies/${selected.slug}`);
-      setSelected(res.data);
+      setSelected(ensureSectionIds(res.data));
     } catch (err) { handleApiError(err); }
   };
 
@@ -260,12 +275,12 @@ const PolicyEditor = () => {
 
                 {/* Sections */}
                 {selected.sections?.map((section: PolicySection, i: number) => (
-                  <div key={i} className="border border-[#2d333b] rounded-xl overflow-hidden" style={{ backgroundColor: '#161b22' }}>
+                  <div key={section.id} className="border border-[#2d333b] rounded-xl overflow-hidden" style={{ backgroundColor: '#161b22' }}>
                     {/* Section header - clickable */}
                     <div
                       data-testid={`section-toggle-${i}`}
-                      onClick={() => setExpandedIdx(expandedIdx === i ? null : i)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedIdx(expandedIdx === i ? null : i); } }}
+                      onClick={() => setExpandedId(expandedId === section.id ? null : section.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedId(expandedId === section.id ? null : section.id); } }}
                       role="button"
                       tabIndex={0}
                       className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-[#1c2128] transition-colors cursor-pointer"
@@ -279,11 +294,11 @@ const PolicyEditor = () => {
                         <button onClick={e => { e.stopPropagation(); moveSection(i, 1); }} className="p-1 text-[#484f58] hover:text-white" title="Move down"><ChevronDown size={14} /></button>
                         <button onClick={e => { e.stopPropagation(); removeSection(i); }} className="p-1 text-[#484f58] hover:text-red-400" title="Remove"><Trash2 size={14} /></button>
                       </div>
-                      {expandedIdx === i ? <ChevronUp size={14} className="text-[#8b949e]" /> : <ChevronDown size={14} className="text-[#8b949e]" />}
+                      {expandedId === section.id ? <ChevronUp size={14} className="text-[#8b949e]" /> : <ChevronDown size={14} className="text-[#8b949e]" />}
                     </div>
 
                     {/* Expanded content */}
-                    {expandedIdx === i && (
+                    {expandedId === section.id && (
                       <div className="px-5 pb-5 space-y-4 border-t border-[#2d333b]">
                         <div className="pt-4">
                           <label className="block text-xs text-[#8b949e] mb-1.5">Heading</label>

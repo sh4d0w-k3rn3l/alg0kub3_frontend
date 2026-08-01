@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
 import { showError, showSuccess, handleApiError, showConfirm } from '@/lib/toast';
 import { useAuth } from '@/context/AuthContext';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import BlockEditor from '../editor/BlockEditor';
@@ -91,8 +91,7 @@ const CourseDashboard = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchCourses(ac.signal);
+    (async () => { await fetchCourses(ac.signal); })();
     return () => ac.abort();
   }, [fetchCourses]);
 
@@ -473,8 +472,7 @@ const CourseDetail = ({ courseId }: { courseId: string }) => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchData(ac.signal);
+    (async () => { await fetchData(ac.signal); })();
     return () => ac.abort();
   }, [fetchData]);
 
@@ -549,13 +547,14 @@ const CourseDetail = ({ courseId }: { courseId: string }) => {
     } catch { showError('Error cloning section'); }
   };
 
-  const handleCloneLesson = async (e: React.MouseEvent, lessonId: string, _title: string) => {
+  const handleCloneLesson = async (e: React.MouseEvent, lessonId: string, title: string) => {
     e.stopPropagation();
     try {
       await api.post(`/lessons/${lessonId}/clone`);
       await fetchData();
       navigate.refresh();
-    } catch { showError('Error cloning lesson'); }
+      showSuccess(`Lesson "${title}" cloned successfully`);
+    } catch { showError(`Error cloning lesson "${title}"`); }
   };
 
   const handleMoveSection = async (sectionId: string, direction: string) => {
@@ -582,7 +581,7 @@ const CourseDetail = ({ courseId }: { courseId: string }) => {
     try {
       await api.put(`/admin/lessons/${lessonId}/access-type`, { access_type: newAccess });
       await fetchData();
-    } catch (err) {
+    } catch {
       // roll back optimistic update on failure
       setSections(prev => prev.map(s => ({
         ...s,
@@ -849,6 +848,45 @@ const BulkLessonCreator = ({ courseId }: { courseId: string }) => {
 // ============ Enhanced Lesson Editor with Block Editor ============
 interface LessonDetail { id: string; title: string; slug: string; content_blocks?: BlockItem[]; content?: string; section_id?: string; read_time?: number; status?: string; access_type?: string; source_pages?: { page: number; content_preview: string }[]; }
 interface BlockItem { id?: string; type: string; content?: unknown; tabs?: Record<string, unknown>[]; items?: (string | Record<string, unknown>)[]; rows?: string[][]; [key: string]: unknown; }
+interface EditorBlockLike {
+  id?: string;
+  type: string;
+  text?: string;
+  title?: string;
+  level?: number;
+  code?: string;
+  language?: string;
+  lineNumbers?: boolean;
+  runnable?: boolean;
+  expandable?: boolean;
+  highlight?: string;
+  url?: string;
+  alt?: string;
+  caption?: string;
+  variant?: string;
+  theme?: string;
+  videoId?: string;
+  startTime?: string;
+  autoplay?: boolean;
+  poster?: string;
+  controls?: boolean;
+  loop?: boolean;
+  muted?: boolean;
+  headerColor?: string;
+  headerTextColor?: string;
+  headers?: string[];
+  rows?: string[][];
+  ordered?: boolean;
+  icon?: string;
+  tabs?: { label: string; language?: string; code?: string; text?: string }[];
+  href?: string;
+}
+
+const stripBlockId = <T extends { id?: string }>(block: T): Omit<T, 'id'> => {
+  const { id, ...rest } = block;
+  void id;
+  return rest;
+};
 
 const LessonEditor = ({ lessonId }: { lessonId: string }) => {
   const navigate = useRouter();
@@ -881,7 +919,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
         const initialBlocks = res.data.content_blocks || [];
         setBlocks(initialBlocks);
         lastSavedRef.current = JSON.stringify({
-          blocks: initialBlocks.map(({ id, ...rest }: { id?: string }) => rest),
+          blocks: initialBlocks.map(stripBlockId),
           title: res.data.title,
           read_time: res.data.read_time,
         });
@@ -899,7 +937,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
   useEffect(() => {
     if (isInitialLoadRef.current || !lesson) return;
     const currentSnapshot = JSON.stringify({
-      blocks: blocks.map(({ id, ...rest }) => rest),
+      blocks: blocks.map(stripBlockId),
       title: lesson.title,
       read_time: lesson.read_time,
     });
@@ -913,7 +951,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
     autoSaveTimerRef.current = setTimeout(async () => {
       setSaveStatus('saving');
       try {
-        const cleanBlocks = blocks.map(({ id, ...rest }) => rest);
+        const cleanBlocks = blocks.map(stripBlockId);
         await api.put(`/lessons/${lessonId}`, {
           content_blocks: cleanBlocks,
           title: lesson.title,
@@ -1049,7 +1087,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
 
   // Export handlers
   const handleExportJSON = () => {
-    const cleanBlocks = blocks.map(({ id, ...rest }) => rest);
+    const cleanBlocks = blocks.map(stripBlockId);
     const exportData = {
       title: lesson?.title,
       slug: lesson?.slug,
@@ -1081,7 +1119,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
   };
 
   const handleCopyJSON = () => {
-    const cleanBlocks = blocks.map(({ id, ...rest }) => rest);
+    const cleanBlocks = blocks.map(stripBlockId);
     const exportData = {
       title: lesson?.title,
       content_blocks: cleanBlocks,
@@ -1102,7 +1140,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
     setSaving(true);
     setSaveStatus('saving');
     try {
-      const cleanBlocks = blocks.map(({ id, ...rest }) => rest);
+      const cleanBlocks = blocks.map(stripBlockId);
       await api.put(`/lessons/${lessonId}`, {
         content_blocks: cleanBlocks,
         title: lesson?.title,
@@ -1116,7 +1154,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
       });
       setSaveStatus('saved');
       navigate.refresh();
-    } catch (err) { 
+    } catch { 
       setSaveStatus('error');
     }
     finally { setSaving(false); }
@@ -1434,7 +1472,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
                 <h2 className="text-white text-lg font-bold">Export Lesson</h2>
                 <button onClick={() => setShowExport(false)} className="text-[#484f58] hover:text-white p-1"><X size={18} /></button>
               </div>
-              <p className="text-[#8b949e] text-sm mb-6">Export "{lesson.title}" in your preferred format.</p>
+              <p className="text-[#8b949e] text-sm mb-6">Export &quot;{lesson.title}&quot; in your preferred format.</p>
               
               <div className="space-y-3">
                 {/* JSON Export */}
@@ -1499,8 +1537,8 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
           {/* Block Editor */}
           <div className="border border-[#2d333b] rounded-2xl p-5 overflow-hidden" style={{ backgroundColor: '#161b22' }}>
             <BlockEditor
-              blocks={blocks as unknown as any[]}
-              onChange={(newBlocks: any[]) => setBlocks(newBlocks as unknown as BlockItem[])}
+              blocks={blocks as unknown as EditorBlockLike[]}
+              onChange={(newBlocks: EditorBlockLike[]) => setBlocks(newBlocks as unknown as BlockItem[])}
               onAiGenerate={handleGenerate}
               generating={generating}
               lessonId={lessonId}
@@ -1514,7 +1552,7 @@ const LessonEditor = ({ lessonId }: { lessonId: string }) => {
                 <Eye size={14} className="text-[#22c55e]" />
                 <span className="text-white text-sm font-medium">Live Preview</span>
               </div>
-              <EditorPreview blocks={blocks as unknown as any[]} title={lesson?.title ?? ''} readTime={lesson?.read_time ? String(lesson.read_time) : undefined} />
+              <EditorPreview blocks={blocks as unknown as EditorBlockLike[]} title={lesson?.title ?? ''} readTime={lesson?.read_time ? String(lesson.read_time) : undefined} />
             </div>
           )}
         </div>
@@ -1616,8 +1654,7 @@ const PricingEditor = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchPlans(ac.signal);
+    (async () => { await fetchPlans(ac.signal); })();
     return () => ac.abort();
   }, [fetchPlans]);
 
@@ -1812,8 +1849,7 @@ const LearningPathManager = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchData(ac.signal);
+    (async () => { await fetchData(ac.signal); })();
     return () => ac.abort();
   }, [fetchData]);
 
@@ -1904,7 +1940,7 @@ const LearningPathManager = () => {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  const handleDragEnd = async (event: { active: { id: string }; over: { id: string } | null }) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = paths.findIndex(p => p.id === active.id);
@@ -2155,7 +2191,7 @@ const LearningPathManager = () => {
             <p>No learning paths yet. Create one to group courses into guided tracks.</p>
           </div>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd as any}>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={paths.map(p => p.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-3">
                 {paths.map((path) => (
@@ -2196,8 +2232,7 @@ const CacheManager = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchStats(ac.signal);
+    (async () => { await fetchStats(ac.signal); })();
     return () => ac.abort();
   }, [fetchStats]);
 
@@ -2394,7 +2429,14 @@ const CacheManager = () => {
 };
 
 // ============ Admin Panel Router ============
-const ROUTE_MAP: Record<string, React.ComponentType<any>> = {
+interface AdminRouteProps {
+  courseId: string;
+  lessonId: string;
+  sectionId: string;
+}
+type AdminRouteComponent = React.ComponentType<AdminRouteProps>;
+
+const ROUTE_MAP: Record<string, AdminRouteComponent> = {
   '/dashboard': AdminDashboard,
   '/dashboard/users': UserManagement,
   '/dashboard/revenue': RevenueDashboard,
@@ -2431,7 +2473,7 @@ const ROUTE_MAP: Record<string, React.ComponentType<any>> = {
   '/cache': CacheManager,
 };
 
-function matchAdminRoute(pathname: string): { Component: React.ComponentType<any> | null; params: Record<string, string> } {
+function matchAdminRoute(pathname: string): { Component: AdminRouteComponent | null; params: Record<string, string> } {
   const p = pathname.replace(/^\/admin/, '') || '/';
 
   if (ROUTE_MAP[p]) {
@@ -2570,7 +2612,7 @@ const AdminPanel = () => {
           <Home size={13} /> Back to Site
         </button>
       </div>
-      <ActiveComponent {...(route.params as any)} />
+      <ActiveComponent {...route.params} />
     </div>
   );
 };

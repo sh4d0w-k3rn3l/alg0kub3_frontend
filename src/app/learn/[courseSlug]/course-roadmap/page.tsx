@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { handleApiError } from '@/lib/toast';
-import { ArrowLeft, Clock, BookOpen, ChevronDown, ChevronRight, Loader2, Map } from 'lucide-react';
+import { Clock, BookOpen, ChevronDown, ChevronRight, Loader2, Map, Code } from 'lucide-react';
+import { COURSE_ICONS } from '@/config/courseConfig';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 interface Lesson {
   id: string;
@@ -43,7 +45,7 @@ interface CoursePreview {
   first_lesson_slug?: string;
 }
 
-export default function CourseRoadmapPage() {
+function CourseRoadmapPage() {
   const params = useParams();
   const courseSlug = params?.courseSlug as string;
 
@@ -55,11 +57,18 @@ export default function CourseRoadmapPage() {
   const sectionRefs = useRef<Record<number, HTMLElement | null>>({});
   const [activeSection, setActiveSection] = useState<number>(0);
 
+  // Reset page state whenever the course slug changes (during render)
+  const [prevSlug, setPrevSlug] = useState(courseSlug);
+  if (courseSlug !== prevSlug) {
+    setPrevSlug(courseSlug);
+    setCourseData(null);
+    setLoading(true);
+    setError(null);
+  }
+
   useEffect(() => {
     if (!courseSlug) return;
     const ac = new AbortController();
-    setLoading(true);
-    setError(null);
 
     api.get<CoursePreview>(`/courses/${courseSlug}/preview`, { signal: ac.signal })
       .then((res) => {
@@ -86,22 +95,30 @@ export default function CourseRoadmapPage() {
   }, [courseSlug]);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const idx = Number(entry.target.getAttribute('data-section-idx'));
-            if (!isNaN(idx)) setActiveSection(idx);
-          }
-        }
-      },
-      { rootMargin: '-100px 0px -60% 0px', threshold: 0 }
-    );
-    for (const key of Object.keys(sectionRefs.current)) {
-      const el = sectionRefs.current[Number(key)];
-      if (el) observer.observe(el);
-    }
-    return () => observer.disconnect();
+    const curriculum = courseData?.curriculum || [];
+    let rafId = 0;
+    const updateActive = () => {
+      rafId = 0;
+      const topLine = 96;
+      let current = 0;
+      for (let i = 0; i < curriculum.length; i++) {
+        const el = sectionRefs.current[i];
+        if (!el) continue;
+        if (el.getBoundingClientRect().top <= topLine) current = i;
+        else break;
+      }
+      setActiveSection(current);
+    };
+    const onScroll = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(updateActive);
+    };
+    updateActive();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
   }, [courseData]);
 
   const toggleSection = (idx: number) => {
@@ -143,6 +160,7 @@ export default function CourseRoadmapPage() {
   }
 
   const { course, stats, curriculum } = courseData;
+  const CourseIcon = COURSE_ICONS[course.slug] || Code;
 
   return (
     <div className="min-h-screen bg-[#0a0a0b]">
@@ -204,10 +222,10 @@ export default function CourseRoadmapPage() {
         {/* Main Content */}
         <main className="flex-1 min-w-0">
           <div className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              {course.icon && (
-                <span className="text-2xl">{course.icon}</span>
-              )}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-11 h-11 rounded-xl bg-[#22c55e]/10 flex items-center justify-center shrink-0">
+                <CourseIcon className="w-6 h-6 text-[#22c55e]" />
+              </div>
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold text-white">{course.title} Roadmap</h1>
               </div>
@@ -245,7 +263,6 @@ export default function CourseRoadmapPage() {
               return (
                 <div
                   key={section.id}
-                  data-section-idx={idx}
                   ref={(el) => { sectionRefs.current[idx] = el; }}
                   className="scroll-mt-20"
                 >
@@ -331,5 +348,13 @@ export default function CourseRoadmapPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <ErrorBoundary fallbackMessage="Failed to load course roadmap. Please try refreshing.">
+      <CourseRoadmapPage />
+    </ErrorBoundary>
   );
 }

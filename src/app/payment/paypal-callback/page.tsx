@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, XCircle, Loader2, ArrowRight } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -13,7 +13,6 @@ const PayPalCallback = () => {
   const [status, setStatus] = useState<'processing' | 'success' | 'failed'>('processing');
   const captured = useRef(false);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (captured.current) return;
     captured.current = true;
@@ -29,14 +28,9 @@ const PayPalCallback = () => {
 
     const orderId = sessionStorage.getItem('paypal_order_id');
 
-    if (!orderId) {
-      setStatus('failed');
-      return;
-    }
-
     const pollStatus = async (attempts = 0): Promise<void> => {
       if (ac.signal.aborted) return;
-      if (attempts >= 15) {
+      if (attempts >= 15 || !orderId) {
         setStatus('failed');
         sessionStorage.removeItem('paypal_order_id');
         return;
@@ -67,7 +61,7 @@ const PayPalCallback = () => {
 
     const captureOrder = async (attempts = 0): Promise<void> => {
       if (ac.signal.aborted) return;
-      if (attempts >= 10) {
+      if (attempts >= 10 || !orderId) {
         setStatus('failed');
         sessionStorage.removeItem('paypal_order_id');
         return;
@@ -102,7 +96,6 @@ const PayPalCallback = () => {
       ac.abort();
       timers.forEach(clearTimeout);
     };
-  /* eslint-enable react-hooks/set-state-in-effect */
   }, [searchParams, refreshUser]);
 
   return (

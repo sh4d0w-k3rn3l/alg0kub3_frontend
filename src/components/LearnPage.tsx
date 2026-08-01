@@ -10,6 +10,52 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { useSettingsStore } from '@/store/settings';
 import { useCourseStore } from '@/store/courses';
 import { useUIStore } from '@/store/ui';
+import useMediaQuery from '@/hooks/useMediaQuery';
+
+interface LearnSectionLesson {
+  id?: number;
+  slug: string;
+  title: string;
+  access_type?: string;
+  completed?: boolean;
+}
+
+interface LearnSection {
+  id: number;
+  title: string;
+  icon?: string;
+  total?: number;
+  completed?: number;
+  lessons?: LearnSectionLesson[];
+}
+
+interface LearnBlock {
+  type: string;
+  text?: string;
+  level?: number;
+  code?: string;
+  language?: string;
+  runnable?: boolean;
+  title?: string;
+  url?: string;
+  alt?: string;
+  caption?: string;
+  videoId?: string;
+  [key: string]: unknown;
+}
+
+interface LearnLesson {
+  id?: string | number;
+  title?: string;
+  slug?: string;
+  section_id?: string;
+  section?: { title?: string };
+  content_blocks?: LearnBlock[];
+  completed?: boolean;
+  starred?: boolean;
+  next_lesson?: { slug: string; title: string };
+  prev_lesson?: { slug: string; title: string };
+}
 
 const Header = React.lazy(() => import('@/components/Header'));
 const Sidebar = React.lazy(() => import('@/components/Sidebar'));
@@ -59,37 +105,35 @@ export default function LearnPage() {
 
   // Wire Zustand stores
   const { fontSize, syntaxTheme, fontFamily, lineHeight, contentWidth, focusMode, setFontSize, setSyntaxTheme, setFontFamily, setLineHeight, setContentWidth, setFocusMode } = useSettingsStore();
-  const { courses: storeCourses, sections: storeSections, fetchCourses, loading: courseLoading } = useCourseStore();
-  const { sidebarOpen, setSidebarOpen, toggleSidebar } = useUIStore();
+  const { courses: storeCourses, fetchCourses } = useCourseStore();
+  const { sidebarOpen, setSidebarOpen } = useUIStore();
 
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [sections, setSections] = useState<any[]>([]);
-  const [currentLesson, setCurrentLesson] = useState<any>(null);
+  const [sections, setSections] = useState<LearnSection[]>([]);
+  const [currentLesson, setCurrentLesson] = useState<LearnLesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [tocItems, setTocItems] = useState<{ id: string; title: string }[]>([]);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isTablet, setIsTablet] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [askAIOpen, setAskAIOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileRightOpen, setMobileRightOpen] = useState(false);
-  const [courses, setCourses] = useState<any[]>([]);
   const [defaultSlug, setDefaultSlug] = useState<string | null>(null);
+
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1023px)');
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const [desktopClosed, setDesktopClosed] = useState(false);
+  const sidebarVisible = isDesktop ? !desktopClosed : sidebarOpen;
+  const toggleSidebar = () => { if (isDesktop) setDesktopClosed(c => !c); else setSidebarOpen(!sidebarOpen); };
 
   const activeCourse = courseSlug;
   const activeSlug: string | undefined = lessonSlug || defaultSlug || undefined;
-  const activeCourseTitle = courses.find(c => c.slug === activeCourse)?.title || '';
+  const activeCourseTitle = storeCourses.find(c => c.slug === activeCourse)?.title || '';
 
   useEffect(() => {
     fetchCourses();
   }, [fetchCourses]);
-
-  useEffect(() => {
-    if (storeCourses.length > 0) {
-      setCourses(storeCourses);
-    }
-  }, [storeCourses]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -109,23 +153,10 @@ export default function LearnPage() {
   }, []);
 
   useEffect(() => {
-    const w = window.innerWidth;
-    setIsMobile(w < 768);
-    setIsTablet(w >= 768 && w < 1024);
-    if (w >= 1024) setSidebarOpen(true);
-    else setSidebarOpen(false);
-    const handleResize = () => {
-      const w2 = window.innerWidth;
-      setIsMobile(w2 < 768);
-      setIsTablet(w2 >= 768 && w2 < 1024);
-      if (w2 >= 1024) setSidebarOpen(true);
-      else setSidebarOpen(false);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [setSidebarOpen]);
-
-  // Settings persist to localStorage via useSettingsStore setters
+    const handler = () => setIsFullScreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
 
   const toggleFullScreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -141,42 +172,64 @@ export default function LearnPage() {
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
-  const fetchSections = useCallback(async () => {
+  const fetchSections = useCallback(async (signal?: AbortSignal): Promise<LearnSection[] | null> => {
     try {
-      const res = await api.get<Record<string, any>>(`/sections?course_slug=${activeCourse}`);
-      const secs = res.data?.sections || res.data || [];
-      setSections(secs);
-      if (!lessonSlug && secs.length > 0 && secs[0].lessons?.length > 0) {
-        setDefaultSlug(secs[0].lessons[0].slug);
-      }
-    } catch (err) { handleApiError(err); }
-  }, [activeCourse, lessonSlug]);
+      const res = await api.get<{ sections?: LearnSection[] } | LearnSection[]>(`/sections?course_slug=${activeCourse}`, { cache: 'no-store', signal });
+      const payload = res.data;
+      if (Array.isArray(payload)) return payload;
+      return payload?.sections || [];
+    } catch (err) { handleApiError(err); return null; }
+  }, [activeCourse]);
 
-  const fetchLesson = useCallback(async (slug: string) => {
-    if (!slug) return;
+  const fetchLesson = useCallback(async (slug: string, signal?: AbortSignal): Promise<LearnLesson | null> => {
+    if (!slug) return null;
     try {
-      setLoading(true);
-      const res = await api.get<{ content_blocks?: any[] }>(`/lessons/${slug}`, { params: { course: activeCourse } });
-      setCurrentLesson(res.data);
+      const res = await api.get<LearnLesson>(`/lessons/${slug}`, { params: { course: activeCourse }, signal });
+      return res.data;
+    } catch (err) { handleApiError(err); return null; }
+  }, [activeCourse]);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      const secs = await fetchSections(ac.signal);
+      if (ac.signal.aborted || secs === null) return;
+      setSections(secs);
+      const firstLessons = secs[0]?.lessons;
+      if (!lessonSlug && secs.length > 0 && firstLessons && firstLessons.length > 0) {
+        setDefaultSlug(firstLessons[0].slug);
+      }
+    })();
+    return () => ac.abort();
+  }, [fetchSections, lessonSlug]);
+
+  useEffect(() => {
+    if (!activeSlug) return;
+    const ac = new AbortController();
+    (async () => {
+      const lesson = await fetchLesson(activeSlug, ac.signal);
+      if (ac.signal.aborted) return;
+      if (!lesson) { setCurrentLesson(null); setLoading(false); return; }
+      setCurrentLesson(lesson);
       const toc: { id: string; title: string }[] = [];
-      if (res.data.content_blocks) {
-        res.data.content_blocks.forEach((block: any) => {
+      if (lesson.content_blocks) {
+        lesson.content_blocks.forEach((block: LearnBlock) => {
           if (block.type === 'subheading' || (block.type === 'heading' && (block.level || 2) === 2)) {
-            const id = block.text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-            toc.push({ id, title: block.text });
+            const blockText = block.text || '';
+            const id = blockText.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            toc.push({ id, title: blockText });
           }
         });
       }
       setTocItems(toc);
-    } catch (err) { handleApiError(err); setCurrentLesson(null); }
-    finally { setLoading(false); }
-  }, [activeCourse]);
-
-  useEffect(() => { fetchSections(); }, [fetchSections]);
-  useEffect(() => { if (activeSlug) fetchLesson(activeSlug); }, [activeSlug, fetchLesson]);
+      setLoading(false);
+    })();
+    return () => ac.abort();
+  }, [activeSlug, fetchLesson]);
 
   const handleLessonClick = (slug: string) => {
     router.push(`/learn/${activeCourse}/${slug}`);
+    setLoading(true);
     const el = document.getElementById('main-content');
     if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
     if (isMobile || isTablet) setSidebarOpen(false);
@@ -189,8 +242,9 @@ export default function LearnPage() {
     if (!currentLesson || !activeSlug) return;
     try {
       const res = await api.put<{ completed: boolean }>(`/lessons/${activeSlug}/toggle-complete`, null, { params: { course: activeCourse } });
-      setCurrentLesson((prev: any) => ({ ...prev, completed: res.data.completed }));
-      fetchSections();
+      setCurrentLesson({ ...currentLesson, completed: res.data.completed });
+      const secs = await fetchSections();
+      if (secs) setSections(secs);
     } catch (err) { handleApiError(err); }
   };
 
@@ -198,7 +252,7 @@ export default function LearnPage() {
     if (!currentLesson || !activeSlug) return;
     try {
       const res = await api.put<{ starred: boolean }>(`/lessons/${activeSlug}/toggle-star`, null, { params: { course: activeCourse } });
-      setCurrentLesson((prev: any) => ({ ...prev, starred: res.data.starred }));
+      setCurrentLesson({ ...currentLesson, starred: res.data.starred });
     } catch (err) { handleApiError(err); }
   };
 
@@ -207,7 +261,7 @@ export default function LearnPage() {
   const activeFontFamily = FONT_FAMILIES[fontFamily] || FONT_FAMILIES.sans;
   const activeLineHeight = LINE_HEIGHTS[lineHeight] || LINE_HEIGHTS.default;
   const activeContentWidth = CONTENT_WIDTHS[contentWidth] || CONTENT_WIDTHS.default;
-  const showDesktopSidebar = !isMobile && !isTablet && sidebarOpen && !focusMode;
+  const showDesktopSidebar = sidebarVisible && !focusMode;
   const showDesktopRight = !isMobile && !isTablet && !focusMode;
   const leftOffset = showDesktopSidebar ? '280px' : '0';
   const rightOffset = showDesktopRight ? '280px' : '0';
@@ -217,11 +271,11 @@ export default function LearnPage() {
       {!focusMode && (
         <React.Suspense fallback={null}>
           <Header
-            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+            onToggleSidebar={toggleSidebar}
             isMobile={isMobile || isTablet}
             onToggleRight={() => setMobileRightOpen(!mobileRightOpen)}
             onOpenSearch={() => setSearchOpen(true)}
-            courses={courses}
+            courses={storeCourses}
             activeCourse={activeCourse}
           />
         </React.Suspense>
@@ -234,8 +288,8 @@ export default function LearnPage() {
       {!focusMode && (
         <React.Suspense fallback={null}>
           <Sidebar
-            isOpen={sidebarOpen && !focusMode}
-            onToggle={() => setSidebarOpen(!sidebarOpen)}
+            isOpen={sidebarVisible && !focusMode}
+            onToggle={toggleSidebar}
             sections={sections}
             activeSlug={activeSlug}
             onLessonClick={handleLessonClick}
@@ -320,8 +374,8 @@ export default function LearnPage() {
           onNavigate={handleLessonClick}
           onToggleComplete={handleToggleComplete}
           onToggleStar={handleToggleStar}
-          isCompleted={currentLesson?.completed}
-          isStarred={currentLesson?.starred}
+          isCompleted={currentLesson?.completed ?? false}
+          isStarred={currentLesson?.starred ?? false}
           onOpenNotes={() => setNotesOpen(true)}
           onOpenAskAI={() => setAskAIOpen(true)}
           fontSize={fontSize}

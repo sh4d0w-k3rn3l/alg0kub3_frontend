@@ -64,16 +64,15 @@ const D3Graph: React.FC<D3GraphProps> = ({
         label: n.label,
       }));
     } else {
+      type SimNode = { id: number; x?: number; y?: number; label?: string; vx: number; vy: number };
       const simNodes = graphNodes.map((n) => ({ ...n, vx: 0, vy: 0 }));
-      const simLinks = graphEdges.map(([s, t]) => ({ source: s, target: t })) as unknown as d3.SimulationLinkDatum<typeof simNodes[number]>[];
+      const simLinks = graphEdges.map(([s, t]) => ({ source: s, target: t }));
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const simulation = d3.forceSimulation(simNodes as any)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .force('link', d3.forceLink(simLinks as any).id((d: any) => d.id).distance(80))
-        .force('charge', d3.forceManyBody().strength(-300))
-        .force('center', d3.forceCenter(200, 160))
-        .force('collision', d3.forceCollide(35))
+      const simulation = d3.forceSimulation<SimNode>(simNodes)
+        .force('link', d3.forceLink<SimNode, typeof simLinks[number]>(simLinks).id((d) => d.id).distance(80))
+        .force('charge', d3.forceManyBody<SimNode>().strength(-300))
+        .force('center', d3.forceCenter<SimNode>(200, 160))
+        .force('collision', d3.forceCollide<SimNode>(35))
         .stop();
 
       for (let i = 0; i < 300; i++) simulation.tick();

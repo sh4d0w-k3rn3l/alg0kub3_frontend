@@ -9,7 +9,7 @@ import {
   Search, ChevronDown, Lock, Play,
   Code, MessageSquare, Users, PlayCircle, MapPin, ShoppingCart,
   CreditCard, Server, BarChart2, Clock, Cpu, Layers,
-  ChevronRight, ArrowUp, RotateCcw,
+  ChevronRight, ArrowUp,
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 
@@ -26,7 +26,22 @@ const DIFFICULTY_COLORS: Record<string, { text: string; bg: string }> = {
   'Hard': { text: '#f87171', bg: 'rgba(248,113,113,0.08)' },
 };
 
-const SectionHeader = ({ section, isOpen, onToggle }: { section: any; isOpen: boolean; onToggle: () => void }) => {
+interface SDProblem {
+  slug: string;
+  title: string;
+  difficulty: string;
+  free: boolean;
+}
+
+interface SDSection {
+  id: string;
+  title: string;
+  icon: string;
+  problem_count: number;
+  problems: SDProblem[];
+}
+
+const SectionHeader = ({ section, isOpen, onToggle }: { section: SDSection; isOpen: boolean; onToggle: () => void }) => {
   const Icon = ICON_MAP[section.icon] || Layers;
   return (
     <tr data-testid={`section-${section.id}`}
@@ -50,7 +65,7 @@ const SectionHeader = ({ section, isOpen, onToggle }: { section: any; isOpen: bo
   );
 };
 
-const ProblemRow = ({ problem, isPro, onStart, activeSession }: { problem: any; isPro: boolean; onStart: (slug: string) => void; activeSession: any }) => {
+const ProblemRow = ({ problem, isPro, onStart, activeSession }: { problem: SDProblem; isPro: boolean; onStart: (slug: string) => void; activeSession: unknown }) => {
   const diff = DIFFICULTY_COLORS[problem.difficulty] || DIFFICULTY_COLORS.Medium;
   const canAccess = problem.free || isPro;
   const inProgress = !!activeSession;
@@ -97,7 +112,7 @@ const ProblemRow = ({ problem, isPro, onStart, activeSession }: { problem: any; 
 };
 
 const SystemDesignPage = () => {
-  const [sections, setSections] = useState<any[]>([]);
+  const [sections, setSections] = useState<SDSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [diffFilter, setDiffFilter] = useState('All');
@@ -106,34 +121,45 @@ const SystemDesignPage = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [totalProblems, setTotalProblems] = useState(0);
   const [totalSections, setTotalSections] = useState(0);
-  const [userSessions, setUserSessions] = useState<Record<string, any>>({});
+  const [userSessions, setUserSessions] = useState<Record<string, unknown>>({});
   const { user } = useAuth();
   const router = useRouter();
   const isPro = user?.subscription_status === 'pro';
 
   useEffect(() => {
-    api.get<{ sections: any[]; total_problems: number; total_sections: number }>(`/system-design/sections`)
+    const ac = new AbortController();
+    api.get<{ sections: SDSection[]; total_problems: number; total_sections: number }>(`/system-design/sections`, { signal: ac.signal })
       .then(res => {
+        if (ac.signal.aborted) return;
         setSections(res.data.sections);
         setTotalProblems(res.data.total_problems);
         setTotalSections(res.data.total_sections);
         const open: Record<string, boolean> = {};
-        res.data.sections.forEach((s: any) => { open[s.id] = true; });
+        res.data.sections.forEach((s) => { open[s.id] = true; });
         setOpenSections(open);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => { if (!ac.signal.aborted) setLoading(false); });
+    return () => ac.abort();
+  }, []);
 
-    if (user) {
-      api.get<{ sessions: Record<string, any> }>(`/system-design/user-sessions`)
-        .then(res => setUserSessions(res.data.sessions || {}))
-        .catch(() => {});
-    }
+  useEffect(() => {
+    if (!user) return;
+    const ac = new AbortController();
+    api.get<{ sessions: Record<string, unknown> }>(`/system-design/user-sessions`, { signal: ac.signal })
+      .then(res => {
+        if (ac.signal.aborted) return;
+        setUserSessions(res.data.sessions || {});
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, [user]);
 
+  useEffect(() => {
     const onScroll = () => setShowScrollTop(window.scrollY > 400);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
-  }, [user]);
+  }, []);
 
   const toggleSection = (id: string) => {
     setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
@@ -159,7 +185,7 @@ const SystemDesignPage = () => {
 
   const filtered = useMemo(() => {
     return sections.map(s => {
-      const probs = s.problems.filter((p: any) => {
+      const probs = s.problems.filter((p) => {
         if (search && !p.title.toLowerCase().includes(search.toLowerCase())) return false;
         if (diffFilter !== 'All' && p.difficulty !== diffFilter) return false;
         if (accessFilter === 'Free' && !p.free) return false;
@@ -245,7 +271,7 @@ const SystemDesignPage = () => {
               {filtered.map(section => (
                 <React.Fragment key={section.id}>
                   <SectionHeader section={section} isOpen={openSections[section.id]} onToggle={() => toggleSection(section.id)} />
-                  {openSections[section.id] && section.problems.map((p: any) => (
+                  {openSections[section.id] && section.problems.map((p) => (
                     <ProblemRow key={p.slug} problem={p} isPro={isPro} onStart={handleStart} activeSession={userSessions[p.slug]} />
                   ))}
                 </React.Fragment>

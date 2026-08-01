@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Award, Download, Share2, CheckCircle, XCircle, Loader2, ArrowLeft, FileText, Image, ExternalLink, ShieldCheck, Linkedin } from 'lucide-react';
-import { api } from '@/lib/api';
+import { Award, Download, Share2, CheckCircle, XCircle, Loader2, FileText, Image as ImageIcon, ExternalLink, ShieldCheck, Linkedin } from 'lucide-react';
+import { api, ApiError } from '@/lib/api';
 import { showError } from '@/lib/toast';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
@@ -52,7 +52,7 @@ export const CertificateVerifyPage: FC = () => {
         if (ac.signal.aborted) return;
         setCert(res.data);
       } catch (err) {
-        if ((err as any)?.name === 'AbortError') return;
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         setNotFound(true);
       } finally {
         setLoading(false);
@@ -74,7 +74,7 @@ export const CertificateVerifyPage: FC = () => {
         <XCircle size={48} className="mx-auto mb-4 text-red-400" />
         <h1 className="text-xl font-bold mb-2" style={{ color: colors.text }}>Certificate Not Found</h1>
         <p className="text-sm mb-4" style={{ color: colors.textSecondary }}>
-          The verification ID "{verificationId}" does not match any issued certificate.
+          The verification ID &quot;{verificationId}&quot; does not match any issued certificate.
         </p>
         <Link href="/" className="text-sm font-medium" style={{ color: colors.green }}>Go to AlgoKube</Link>
       </div>
@@ -126,7 +126,7 @@ export const CertificateVerifyPage: FC = () => {
                   <FileText size={12} /> PDF
                 </a>
                 <a href={`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/certificates/download/${(cert as CertificateData).verification_id}/png`} data-testid="cert-download-png" className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium border transition-colors" style={{ borderColor: colors.border, color: colors.text }}>
-                  <Image size={12} /> PNG
+                  <ImageIcon size={12} /> PNG
                 </a>
               </div>
             </div>
@@ -185,7 +185,7 @@ export const CourseCertificateSection: FC<CourseCertificateSectionProps> = ({ co
   const sessionToken = user?.session_token;
 
   useEffect(() => {
-    if (!sessionToken || !courseSlug || !user) { setLoading(false); return; }
+    if (!sessionToken || !courseSlug || !user) return;
     const ac = new AbortController();
     const check = async () => {
       try {
@@ -196,7 +196,7 @@ export const CourseCertificateSection: FC<CourseCertificateSectionProps> = ({ co
         if (ac.signal.aborted) return;
         setData(res.data);
       } catch (err) {
-        if ((err as any)?.name === 'AbortError') return;
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         setData(null);
       } finally {
         setLoading(false);
@@ -220,7 +220,7 @@ export const CourseCertificateSection: FC<CourseCertificateSectionProps> = ({ co
         },
       }));
     } catch (err) {
-      showError((err as any)?.detail || (err as any)?.message || 'Failed to issue certificate');
+      showError(err instanceof ApiError ? err.detail : (err as Error)?.message || 'Failed to issue certificate');
     } finally {
       setIssuing(false);
     }
@@ -248,7 +248,7 @@ export const CourseCertificateSection: FC<CourseCertificateSectionProps> = ({ co
             <Download size={12} /> Download PDF
           </a>
           <a href={`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/certificates/download/${existing_certificate.verification_id}/png`} data-testid="cert-download-png-btn" className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium border" style={{ borderColor: colors.border, color: colors.text }}>
-            <Image size={12} /> Download PNG
+            <ImageIcon size={12} /> Download PNG
           </a>
           <Link href={`/certificate/${existing_certificate.verification_id}`} data-testid="cert-view-btn" className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium border" style={{ borderColor: colors.border, color: colors.text }}>
             <ExternalLink size={12} /> View & Share
@@ -342,7 +342,7 @@ const CertificatesPage: FC = () => {
   const sessionToken = user?.session_token;
 
   useEffect(() => {
-    if (!sessionToken || !user) { setLoading(false); return; }
+    if (!sessionToken || !user) return;
     const ac = new AbortController();
     const fetchCerts = async () => {
       try {
@@ -353,7 +353,7 @@ const CertificatesPage: FC = () => {
         if (ac.signal.aborted) return;
         setCerts(res.data.certificates || []);
       } catch (err) {
-        if ((err as any)?.name === 'AbortError') return;
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         setCerts([]);
       }
       finally { setLoading(false); }
@@ -362,7 +362,7 @@ const CertificatesPage: FC = () => {
     return () => ac.abort();
   }, [user, sessionToken]);
 
-  if (loading) return (
+  if (loading && sessionToken) return (
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: colors.bg }}>
       <Loader2 className="animate-spin" size={32} style={{ color: colors.green }} />
     </div>

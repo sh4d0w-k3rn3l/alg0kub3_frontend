@@ -101,9 +101,11 @@ const LLMUsageDashboard = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    Promise.all([loadStats(ac.signal), loadLogs(ac.signal), loadAlerts(ac.signal)]).finally(() => { if (!ac.signal.aborted) setLoading(false); });
+    (async () => {
+      setLoading(true);
+      await Promise.all([loadStats(ac.signal), loadLogs(ac.signal), loadAlerts(ac.signal)]);
+      if (!ac.signal.aborted) setLoading(false);
+    })();
     return () => ac.abort();
   }, [loadStats, loadLogs, loadAlerts]);
 
@@ -389,7 +391,7 @@ const LLMUsageDashboard = () => {
                     <YAxis tick={{ fontSize: 10, fill: '#484f58' }} allowDecimals={false} />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#161b22', border: '1px solid #2d333b', borderRadius: 8, fontSize: 12 }}
-                      formatter={((val: number, name: string) => [name === 'cost' ? fmtCost(val) : fmt(val), name === 'calls' ? 'Calls' : name === 'tokens' ? 'Tokens' : 'Cost'] as [string, string]) as any}
+                      formatter={(val, name) => [name === 'cost' ? fmtCost(Number(val)) : fmt(Number(val)), name === 'calls' ? 'Calls' : name === 'tokens' ? 'Tokens' : 'Cost'] as [string, string]}
                     />
                     <Area type="monotone" dataKey="calls" stroke="#3b82f6" fill="url(#usageG)" strokeWidth={2} />
                   </AreaChart>
@@ -414,7 +416,7 @@ const LLMUsageDashboard = () => {
                         </Pie>
                         <Tooltip
                           contentStyle={{ backgroundColor: '#161b22', border: '1px solid #2d333b', borderRadius: 8, fontSize: 12 }}
-                          formatter={((val: number) => [fmtCost(val), 'Cost'] as [string, string]) as any}
+                          formatter={(val) => [fmtCost(Number(val)), 'Cost'] as [string, string]}
                         />
                       </PieChart>
                     </ResponsiveContainer>
@@ -444,7 +446,7 @@ const LLMUsageDashboard = () => {
                     <YAxis dataKey="label" type="category" tick={{ fontSize: 10, fill: '#8b949e' }} width={120} />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#161b22', border: '1px solid #2d333b', borderRadius: 8, fontSize: 12 }}
-                      formatter={((val: number, name: string) => [name === 'cost' ? fmtCost(val) : fmt(val), name === 'calls' ? 'Calls' : 'Cost'] as [string, string]) as any}
+                      formatter={(val, name) => [name === 'cost' ? fmtCost(Number(val)) : fmt(Number(val)), name === 'calls' ? 'Calls' : 'Cost'] as [string, string]}
                     />
                     <Bar dataKey="calls" fill="#3b82f6" radius={[0, 4, 4, 0]} />
                   </BarChart>

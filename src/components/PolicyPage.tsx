@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
-import { Terminal, ArrowLeft, Loader2, FileText } from 'lucide-react';
+import { ArrowLeft, Loader2, FileText } from 'lucide-react';
 import { api } from '@/lib/api';
 import SEO from './SEO';
 import PageHeader from './PageHeader';
@@ -51,8 +51,6 @@ const PolicyPage = () => {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    setError(false);
     const ac = new AbortController();
     api.get<Policy>(`/policies/${slug}`, { signal: ac.signal })
       .then(res => {

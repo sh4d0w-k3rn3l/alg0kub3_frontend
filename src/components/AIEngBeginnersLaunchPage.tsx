@@ -347,7 +347,7 @@ const AIEngBeginnersLaunchPage = () => {
               </span>
             </div>
             <h2 className="text-2xl md:text-3xl font-bold mb-4" style={{ color: colors.text }}>
-              You'll ship real things, not just know definitions.
+              You&apos;ll ship real things, not just know definitions.
             </h2>
             <p className="text-base leading-relaxed" style={{ color: colors.textSecondary }}>
               Every lesson ends with a concrete outcome. No filler, no lecture slides — each topic has a

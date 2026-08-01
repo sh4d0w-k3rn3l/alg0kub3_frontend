@@ -10,9 +10,10 @@ import { Code, Sun, Moon, Mail, Lock, KeyRound, AlertCircle, Loader2, ArrowLeft 
 
 type Step = 'email' | 'code';
 
-function getErrorMessage(err: { message?: string; longMessage?: string } | null): string {
+function getErrorMessage(err: unknown): string {
   if (!err) return 'Something went wrong. Please try again.';
-  return err.longMessage || err.message || 'Something went wrong. Please try again.';
+  const e = err as { message?: string; longMessage?: string };
+  return e.longMessage || e.message || 'Something went wrong. Please try again.';
 }
 
 const ForgotPasswordPage: React.FC = () => {
@@ -45,8 +46,8 @@ const ForgotPasswordPage: React.FC = () => {
       const sendRes = await signIn.resetPasswordEmailCode.sendCode();
       if (sendRes.error) { setError(getErrorMessage(sendRes.error)); setLoading(false); return; }
       setStep('code');
-    } catch (err: any) {
-      setError(err.message || 'Failed to send reset code.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -80,8 +81,8 @@ const ForgotPasswordPage: React.FC = () => {
       if (finalizeErr) {
         setError('Password reset succeeded but failed to sign in. Please try logging in.');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to reset password.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

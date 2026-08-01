@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import {
-  ArrowLeft, Trophy, Target, Clock, Flame, TrendingUp, Code2, Layers,
+  ArrowLeft, Trophy, Target, Clock, Flame, TrendingUp, Layers,
   CheckCircle, AlertCircle, Loader2, BarChart3, Calendar, Zap,
-  ArrowRight, Award, GitBranch,
+  ArrowRight, GitBranch,
 } from 'lucide-react';
 
 const DIFF_COLORS: Record<string, string> = { Easy: '#4ade80', Medium: '#fbbf24', Hard: '#f87171' };

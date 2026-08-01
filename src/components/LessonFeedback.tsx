@@ -36,45 +36,65 @@ const LessonFeedback: React.FC<LessonFeedbackProps> = ({ lessonSlug }) => {
 
   const anonId = getAnonId();
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    if (!lessonSlug) return;
+  const load = useCallback(async (signal?: AbortSignal): Promise<{ up: number; down: number; my_rating: number | null } | null> => {
+    if (!lessonSlug) return null;
     try {
       const params = user ? undefined : { anon_id: anonId };
       const r = await api.get<{ up: number; down: number; my_rating: number | null }>(`/lessons/${lessonSlug}/feedback-summary`, {
         params,
         signal,
+        cache: 'no-store',
       });
-      if (signal?.aborted) return;
-      setSummary(r.data);
-      setPicked(r.data.my_rating);
+      if (signal?.aborted) return null;
+      return r.data;
     } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') return;
+      if (err instanceof DOMException && err.name === 'AbortError') return null;
+      return null;
     }
   }, [lessonSlug, user, anonId]);
 
-  useEffect(() => {
-    const ac = new AbortController();
-    load(ac.signal);
-    return () => ac.abort();
-  }, [load]);
-
-  useEffect(() => {
+  const [prevLessonSlug, setPrevLessonSlug] = useState(lessonSlug);
+  if (prevLessonSlug !== lessonSlug) {
+    setPrevLessonSlug(lessonSlug);
     setShowComment(false);
     setComment('');
     setThanks(false);
-  }, [lessonSlug]);
+  }
+
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      const data = await load(ac.signal);
+      if (ac.signal.aborted || !data) return;
+      setSummary(data);
+      setPicked(data.my_rating);
+    })();
+    return () => ac.abort();
+  }, [load]);
 
   const submit = async (rating: number, commentText = '') => {
     if (!lessonSlug || submitting) return;
     setSubmitting(true);
     const prev = picked;
     setPicked(rating);
+    if (prev === null) {
+      setSummary((s) => ({
+        ...s,
+        my_rating: rating,
+        up: s.up + (rating >= 4 ? 1 : 0),
+        down: s.down + (rating <= 2 ? 1 : 0),
+      }));
+    }
     try {
       await api.post(
         `/lessons/${lessonSlug}/feedback`,
         { rating, comment: commentText },
       );
-      await load();
+      const data = await load();
+      if (data) {
+        setSummary(data);
+        setPicked(data.my_rating);
+      }
       if (rating <= 2 && !commentText) {
         setShowComment(true);
       } else {
@@ -83,6 +103,14 @@ const LessonFeedback: React.FC<LessonFeedbackProps> = ({ lessonSlug }) => {
       }
     } catch {
       setPicked(prev);
+      if (prev === null) {
+        setSummary((s) => ({
+          ...s,
+          my_rating: null,
+          up: Math.max(0, s.up - (rating >= 4 ? 1 : 0)),
+          down: Math.max(0, s.down - (rating <= 2 ? 1 : 0)),
+        }));
+      }
     } finally {
       setSubmitting(false);
     }

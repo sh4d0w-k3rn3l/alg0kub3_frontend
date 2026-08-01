@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
 import { showError, handleApiError } from '@/lib/toast';
@@ -59,8 +60,7 @@ const UserManagement = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchUsers(ac.signal);
+    (async () => { await fetchUsers(ac.signal); })();
     return () => ac.abort();
   }, [fetchUsers]);
 
@@ -178,7 +178,7 @@ const UserManagement = () => {
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-3">
                               {u.picture ? (
-                                <img src={u.picture} alt="" className="w-8 h-8 rounded-full" />
+                                <Image src={u.picture} alt="" width={32} height={32} className="w-8 h-8 rounded-full" />
                               ) : (
                                 <div className="w-8 h-8 rounded-full bg-[#2d333b] flex items-center justify-center">
                                   <User size={14} className="text-[#8b949e]" />
@@ -232,7 +232,7 @@ const UserManagement = () => {
                 <>
                   <div className="flex items-center gap-3 mb-4">
                     {selectedUser.picture ? (
-                      <img src={selectedUser.picture} alt="" className="w-12 h-12 rounded-full" />
+                      <Image src={selectedUser.picture} alt="" width={48} height={48} className="w-12 h-12 rounded-full" />
                     ) : (
                       <div className="w-12 h-12 rounded-full bg-[#2d333b] flex items-center justify-center">
                         <User size={20} className="text-[#8b949e]" />

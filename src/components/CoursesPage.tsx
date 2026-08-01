@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { FC } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import SEO from '@/components/SEO';
 import PageHeader from '@/components/PageHeader';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BookOpen, Code, Database, Zap, Globe, Tag, Sun, Moon,
-  LogIn, User, Brain, Sparkles, ArrowRight, ChevronRight,
-  Layers, Server, Cpu, Clock, Route, Lock,
-  Terminal, Braces, Search, Star, FileText,
-  Target, Menu, X, LayoutGrid, List, ChevronDown,
+  BookOpen, Code,
+  ArrowRight,
+  Layers, Clock, Lock,
+  Search, Star,
+  LayoutGrid, List, ChevronDown,
   Users, GraduationCap,
 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -243,10 +243,8 @@ const CoursesPage: FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('popular');
   const [viewMode, setViewMode] = useState('grid');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
-  const isGridInView = useInView(gridRef, { once: true, margin: '-40px' });
 
   useEffect(() => {
     const ac = new AbortController();
@@ -411,7 +409,7 @@ const CoursesPage: FC = () => {
             <div className="flex items-center justify-between mb-6">
               <p className="text-xs" style={{ color: t.textMut }}>
                 {activeCourses.length} course{activeCourses.length !== 1 ? 's' : ''} found
-                {searchQuery && <span> for "<span style={{ color: t.text }}>{searchQuery}</span>"</span>}
+                {searchQuery && <span> for &quot;<span style={{ color: t.text }}>{searchQuery}</span>&quot;</span>}
                 {activeCategory !== 'All' && <span> in <span style={{ color: t.primary }}>{activeCategory}</span></span>}
               </p>
               {searchQuery && (

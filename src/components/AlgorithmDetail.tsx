@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Bookmark } from 'lucide-react';
@@ -19,6 +19,83 @@ import {
   getInputPresets
 } from '@/components/algorithm';
 
+interface AnimationStep {
+  array: number[];
+  comparing: number[];
+  swapping: number[];
+  sorted: number[];
+  highlightedLines: number[];
+  description?: string;
+}
+
+const computeAnimationInput = (
+  algorithmId: string,
+  presets: Record<string, number[] | Record<string, unknown>>,
+  selectedPreset: string,
+  isCustomMode: boolean,
+  customInput: string
+): { currentArray: number[]; steps: AnimationStep[] } => {
+  const STRING_ALGORITHMS = ['is-subsequence', 'valid-palindrome', 'longest-common-prefix', 'reverse-words'];
+  const isStringAlgorithm = STRING_ALGORITHMS.includes(algorithmId);
+  const SINGLE_VALUE_ALGORITHMS = ['counting-bits'];
+  const isSingleValueAlgorithm = SINGLE_VALUE_ALGORITHMS.includes(algorithmId);
+
+  let initialInput: number[] | Record<string, unknown> = [];
+  if (isCustomMode && customInput) {
+    if (isStringAlgorithm) {
+      if (customInput.includes('=')) {
+        const parts = customInput.split(',').map(p => p.trim());
+        const obj: Record<string, unknown> = {};
+        parts.forEach(part => {
+          const [key, value] = part.split('=').map(s => s.trim());
+          if (key === 'strs') {
+            obj[key] = value.replace(/[\[\]"']/g, '').split(';').map(s => s.trim());
+          } else {
+            obj[key] = value;
+          }
+        });
+        initialInput = obj;
+      } else {
+        initialInput = { s: customInput };
+      }
+    } else if (isSingleValueAlgorithm) {
+      if (customInput.includes('=')) {
+        const [, value] = customInput.split('=').map(s => s.trim());
+        initialInput = { n: parseInt(value) || 5 };
+      } else {
+        initialInput = { n: parseInt(customInput.trim()) || 5 };
+      }
+    } else {
+      initialInput = customInput.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+    }
+  } else {
+    initialInput = presets[selectedPreset] || presets[Object.keys(presets)[0]];
+    if (!initialInput) {
+      if (isStringAlgorithm) {
+        initialInput = { s: "example" };
+      } else if (isSingleValueAlgorithm) {
+        initialInput = { n: 5 };
+      } else {
+        initialInput = [64, 34, 25, 12, 22, 11, 90];
+      }
+    }
+  }
+
+  if (!isStringAlgorithm && !isSingleValueAlgorithm && (!Array.isArray(initialInput) || initialInput.length === 0)) {
+    initialInput = [64, 34, 25, 12, 22, 11, 90];
+  }
+
+  let currentArray: number[] = [];
+  if (Array.isArray(initialInput)) {
+    currentArray = [...initialInput];
+  } else if (isSingleValueAlgorithm) {
+    const n = (initialInput as Record<string, number>).n || 5;
+    currentArray = new Array(n + 1).fill(0);
+  }
+  const steps = generateAnimationSteps(algorithmId, (isStringAlgorithm || isSingleValueAlgorithm) ? initialInput : [...(initialInput as unknown[])]) as AnimationStep[];
+  return { currentArray, steps };
+};
+
 const AlgorithmDetail = () => {
   const params = useParams();
   const algorithmId = (params?.algorithmId as string) || '';
@@ -34,123 +111,46 @@ const AlgorithmDetail = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  interface AnimationStep {
-    array: number[];
-    comparing: number[];
-    swapping: number[];
-    sorted: number[];
-    highlightedLines: number[];
-    description?: string;
-  }
-  const [animationSteps, setAnimationSteps] = useState<AnimationStep[]>([]);
-  const [currentArray, setCurrentArray] = useState<number[]>([]);
-  const [highlightedIndices, setHighlightedIndices] = useState<number[]>([]);
-  const [swappingIndices, setSwappingIndices] = useState<number[]>([]);
-  const [sortedIndices, setSortedIndices] = useState<number[]>([]);
-  const [highlightedLines, setHighlightedLines] = useState<number[]>([]);
 
   const animationRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef<number | null>(null);
 
-  const presets = getInputPresets(algorithmId, algorithm?.category);
+  const presets = useMemo(() => getInputPresets(algorithmId, algorithm?.category), [algorithmId, algorithm?.category]);
   const presetNames = Object.keys(presets);
   const code = getAlgorithmCode(algorithmId, algorithm?.title || 'Algorithm');
 
-  useEffect(() => {
-    const newPresets = getInputPresets(algorithmId);
-    const firstPresetName = Object.keys(newPresets)[0];
-    /* eslint-disable react-hooks/set-state-in-effect */
+  // Reset preset selection and playback when the algorithm changes
+  const [prevAlgorithmId, setPrevAlgorithmId] = useState(algorithmId);
+  if (algorithmId !== prevAlgorithmId) {
+    setPrevAlgorithmId(algorithmId);
+    const firstPresetName = Object.keys(getInputPresets(algorithmId))[0];
     setSelectedPreset(firstPresetName);
     setIsCustomMode(false);
     setCurrentStep(0);
     setIsPlaying(false);
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [algorithmId]);
+  }
 
-  useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
-    const STRING_ALGORITHMS = ['is-subsequence', 'valid-palindrome', 'longest-common-prefix', 'reverse-words'];
-    const isStringAlgorithm = STRING_ALGORITHMS.includes(algorithmId);
-    const SINGLE_VALUE_ALGORITHMS = ['counting-bits'];
-    const isSingleValueAlgorithm = SINGLE_VALUE_ALGORITHMS.includes(algorithmId);
-
-    let initialInput: number[] | Record<string, unknown> = [];
-    if (isCustomMode && customInput) {
-      if (isStringAlgorithm) {
-        if (customInput.includes('=')) {
-          const parts = customInput.split(',').map(p => p.trim());
-          const obj: Record<string, unknown> = {};
-          parts.forEach(part => {
-            const [key, value] = part.split('=').map(s => s.trim());
-            if (key === 'strs') {
-              obj[key] = value.replace(/[\[\]"']/g, '').split(';').map(s => s.trim());
-            } else {
-              obj[key] = value;
-            }
-          });
-          initialInput = obj;
-        } else {
-          initialInput = { s: customInput };
-        }
-      } else if (isSingleValueAlgorithm) {
-        if (customInput.includes('=')) {
-          const [, value] = customInput.split('=').map(s => s.trim());
-          initialInput = { n: parseInt(value) || 5 };
-        } else {
-          initialInput = { n: parseInt(customInput.trim()) || 5 };
-        }
-      } else {
-        initialInput = customInput.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-      }
-    } else {
-      initialInput = presets[selectedPreset] || presets[Object.keys(presets)[0]];
-      if (!initialInput) {
-        if (isStringAlgorithm) {
-          initialInput = { s: "example" };
-        } else if (isSingleValueAlgorithm) {
-          initialInput = { n: 5 };
-        } else {
-          initialInput = [64, 34, 25, 12, 22, 11, 90];
-        }
-      }
-    }
-
-    if (!isStringAlgorithm && !isSingleValueAlgorithm && (!Array.isArray(initialInput) || initialInput.length === 0)) {
-      initialInput = [64, 34, 25, 12, 22, 11, 90];
-    }
-
-    if (Array.isArray(initialInput)) {
-      setCurrentArray([...initialInput]);
-    } else if (isSingleValueAlgorithm) {
-      const n = (initialInput as Record<string, number>).n || 5;
-      setCurrentArray(new Array(n + 1).fill(0));
-    }
-    const steps = generateAnimationSteps(algorithmId, (isStringAlgorithm || isSingleValueAlgorithm) ? initialInput : [...(initialInput as unknown[])]);
-    setAnimationSteps(steps);
+  // Reset playback whenever the animation inputs change
+  const inputKey = `${algorithmId}|${selectedPreset}|${isCustomMode}|${customInput}`;
+  const [prevInputKey, setPrevInputKey] = useState(inputKey);
+  if (inputKey !== prevInputKey) {
+    setPrevInputKey(inputKey);
     setCurrentStep(0);
-    setHighlightedIndices([]);
-    setSwappingIndices([]);
-    setSortedIndices([]);
-    setHighlightedLines([]);
     setIsPlaying(false);
-    /* eslint-enable react-hooks/set-state-in-effect */
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [algorithmId, selectedPreset, isCustomMode, customInput]);
+  }
 
-  useEffect(() => {
-    if (animationSteps.length > 0 && currentStep < animationSteps.length) {
-      const step = animationSteps[currentStep];
-      if (step) {
-        /* eslint-disable react-hooks/set-state-in-effect */
-        if (step.array) setCurrentArray(step.array);
-        setHighlightedIndices(step.comparing || []);
-        setSwappingIndices(step.swapping || []);
-        setSortedIndices(step.sorted || []);
-        setHighlightedLines(step.highlightedLines || []);
-        /* eslint-enable react-hooks/set-state-in-effect */
-      }
-    }
-  }, [currentStep, animationSteps]);
+  const animationResult = useMemo(
+    () => computeAnimationInput(algorithmId, presets, selectedPreset, isCustomMode, customInput),
+    [algorithmId, presets, selectedPreset, isCustomMode, customInput]
+  );
+  const animationSteps = animationResult.steps;
+
+  const stepData = animationSteps[currentStep];
+  const currentArray = stepData?.array ?? animationResult.currentArray;
+  const highlightedIndices = stepData?.comparing || [];
+  const swappingIndices = stepData?.swapping || [];
+  const sortedIndices = stepData?.sorted || [];
+  const highlightedLines = stepData?.highlightedLines || [];
 
   useEffect(() => {
     if (isPlaying && currentStep < animationSteps.length - 1) {
@@ -158,8 +158,7 @@ const AlgorithmDetail = () => {
         setCurrentStep(prev => prev + 1);
       }, 800 / speed);
     } else if (currentStep >= animationSteps.length - 1) {
-      /* eslint-disable-next-line react-hooks/set-state-in-effect */
-      setIsPlaying(false);
+      animationRef.current = setTimeout(() => setIsPlaying(false), 0);
     }
 
     return () => {

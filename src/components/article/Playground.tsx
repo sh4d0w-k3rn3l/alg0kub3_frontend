@@ -30,6 +30,12 @@ interface RunResult {
 
 type RunResults = Record<number, RunResult>;
 
+interface MonacoEditorHandle {
+  getValue?: () => string;
+  setValue?: (value: string) => void;
+  focus?: () => void;
+}
+
 const LANG_META: Record<string, LangMeta> = {
   python:     { label: 'Python',     syntax: 'python',     icon: '🐍' },
   javascript: { label: 'JavaScript', syntax: 'javascript', icon: 'JS' },
@@ -87,16 +93,17 @@ const Playground = ({
     return starter_code[lang] || starter_code[Object.keys(starter_code)[0]] || '';
   });
 
-  // Reset code when language changes
-  useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
+  // Reset code when language or lesson changes
+  const [prevStorageKey, setPrevStorageKey] = useState<string>(storageKey);
+  if (storageKey !== prevStorageKey) {
+    setPrevStorageKey(storageKey);
+    let nextCode = starter_code[lang] || '';
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved) { setCode(saved); return; }
+      if (saved) nextCode = saved;
     } catch {}
-    setCode(starter_code[lang] || '');
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [lang, storageKey, starter_code]);
+    setCode(nextCode);
+  }
 
   // Persist code on change (debounced)
   useEffect(() => {
@@ -128,7 +135,7 @@ const Playground = ({
     return () => clearInterval(id);
   }, [timer, timerRunning]);
 
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<MonacoEditorHandle | null>(null);
   const langPickerRef = useRef<HTMLDivElement>(null);
 
   // Close language picker on outside click

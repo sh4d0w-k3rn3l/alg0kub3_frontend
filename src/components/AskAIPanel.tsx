@@ -34,10 +34,12 @@ const AskAIPanel = ({ isOpen, onClose, lessonSlug, lessonTitle }: AskAIPanelProp
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  useEffect(() => {
+  const [prevLessonSlug, setPrevLessonSlug] = useState(lessonSlug);
+  if (prevLessonSlug !== lessonSlug) {
+    setPrevLessonSlug(lessonSlug);
     setMessages([]);
     setSessionId('');
-  }, [lessonSlug]);
+  }
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;

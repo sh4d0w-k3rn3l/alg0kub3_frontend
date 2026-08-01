@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import type { FC } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Code, Layers, Cpu, Database, Server, BookOpen, ArrowRight, Search,
-  Star, Users, Sparkles, ChevronRight, Briefcase, GraduationCap, Brackets,
+  Star, Users, ChevronRight, Briefcase, GraduationCap, Brackets,
 } from 'lucide-react';
 import { COURSE_ICONS, COURSE_COLORS } from '@/config/courseConfig';
 
@@ -32,33 +32,31 @@ const CAT_ACCENT: Record<string, string> = {
 const CAT_ORDER = ['Data Structures & Algorithms', 'Programming Languages', 'AI & Machine Learning', 'Interview Prep', 'DevOps', 'Data & Databases', 'Other'];
 
 interface CourseItem {
-  id: string;
+  id?: string;
   slug: string;
   title: string;
   description?: string;
   category?: string;
-  lesson_count: number;
+  lesson_count?: number;
   difficulty?: string;
   is_new?: boolean;
   social_proof?: {
-    rating: number;
-    enrollments: number;
+    rating?: number;
+    enrollments?: number;
   };
 }
 
 interface CoursesMegaMenuProps {
   courses: CourseItem[];
   isDark: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: any;
   navigate: (path: string) => void;
   onClose: () => void;
 }
 
-const CoursesMegaMenu: FC<CoursesMegaMenuProps> = ({ courses, isDark, t, navigate, onClose }) => {
+const CoursesMegaMenu: FC<CoursesMegaMenuProps> = ({ courses, isDark, navigate, onClose }) => {
   const grouped = useMemo(() => {
     const g: Record<string, CourseItem[]> = {};
-    (courses || []).filter(c => c.lesson_count > 0).forEach(c => {
+    (courses || []).filter(c => (c.lesson_count || 0) > 0).forEach(c => {
       const cat = c.category || 'Other';
       if (!g[cat]) g[cat] = [];
       g[cat].push(c);
@@ -73,27 +71,22 @@ const CoursesMegaMenu: FC<CoursesMegaMenuProps> = ({ courses, isDark, t, navigat
   const [activeCat, setActiveCat] = useState(sortedCategories[0] || '');
   const [search, setSearch] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (sortedCategories.length && !sortedCategories.includes(activeCat)) {
-      setActiveCat(sortedCategories[0]);
-    }
-  }, [sortedCategories, activeCat]);
+  const effectiveActiveCat = sortedCategories.includes(activeCat) ? activeCat : (sortedCategories[0] || '');
 
   const activeCourses = useMemo(() => {
-    const list = grouped[activeCat] || [];
+    const list = grouped[effectiveActiveCat] || [];
     if (!search.trim()) return list;
     const q = search.toLowerCase();
     return list.filter(c =>
       c.title.toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q)
     );
-  }, [grouped, activeCat, search]);
+  }, [grouped, effectiveActiveCat, search]);
 
   const featured = activeCourses[0];
   const rest = activeCourses.slice(1);
   const totalCourses = Object.values(grouped).reduce((s, a) => s + a.length, 0);
   const totalLessons = Object.values(grouped).flat().reduce((s, c) => s + (c.lesson_count || 0), 0);
-  const accent = CAT_ACCENT[activeCat] || '#6b7280';
+  const accent = CAT_ACCENT[effectiveActiveCat] || '#6b7280';
 
   const bg = isDark ? 'rgba(8,8,8,0.92)' : 'rgba(255,255,255,0.95)';
   const sidebarBg = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
@@ -245,7 +238,7 @@ const CoursesMegaMenu: FC<CoursesMegaMenuProps> = ({ courses, isDark, t, navigat
           {sortedCategories.map((cat) => {
             const CatIcon = CAT_ICONS[cat] || Layers;
             const catAccent = CAT_ACCENT[cat] || '#6b7280';
-            const isActive = cat === activeCat;
+            const isActive = cat === effectiveActiveCat;
             const count = grouped[cat]?.length || 0;
             return (
               <button
@@ -306,7 +299,7 @@ const CoursesMegaMenu: FC<CoursesMegaMenuProps> = ({ courses, isDark, t, navigat
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', minHeight: 0 }}>
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeCat + search}
+              key={effectiveActiveCat + search}
               initial={{ opacity: 0, x: 8 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
@@ -367,7 +360,7 @@ const CoursesMegaMenu: FC<CoursesMegaMenuProps> = ({ courses, isDark, t, navigat
                     </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: textMuted }}>
-                        <BookOpen size={10} /> {featured.lesson_count} lessons
+                        <BookOpen size={10} /> {featured.lesson_count || 0} lessons
                       </span>
                       {(featured.social_proof?.rating ?? 0) > 0 && (
                         <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#f59e0b' }}>
@@ -431,7 +424,7 @@ const CoursesMegaMenu: FC<CoursesMegaMenuProps> = ({ courses, isDark, t, navigat
                             {course.title}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
-                            <span style={{ fontSize: 10, color: textMuted }}>{course.lesson_count} lessons</span>
+                            <span style={{ fontSize: 10, color: textMuted }}>{course.lesson_count || 0} lessons</span>
                             {(course.social_proof?.rating ?? 0) > 0 && (
                               <span style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 10, color: '#f59e0b' }}>
                                 <Star size={8} fill="#f59e0b" /> {course.social_proof?.rating}
@@ -450,7 +443,7 @@ const CoursesMegaMenu: FC<CoursesMegaMenuProps> = ({ courses, isDark, t, navigat
                 </div>
               ) : search.trim() ? (
                 <div style={{ textAlign: 'center', padding: '40px 20px', color: textMuted, fontSize: 13 }}>
-                  No courses match "{search}" in {activeCat}
+                  No courses match &quot;{search}&quot; in {effectiveActiveCat}
                 </div>
               ) : null}
             </motion.div>

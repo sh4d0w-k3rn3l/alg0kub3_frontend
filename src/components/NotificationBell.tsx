@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
-import { Bell, Check, CheckCheck, MessageCircle, Award, Flame, Megaphone, ExternalLink, Loader2 } from 'lucide-react';
+import { Bell, CheckCheck, MessageCircle, Award, Flame, Megaphone, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 
 interface NotifIconConfig {
@@ -30,6 +30,8 @@ interface Notification {
   link?: string;
 }
 
+const authHeaders = undefined;
+
 const timeAgo = (dateStr: string): string => {
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
   if (diff < 60) return 'just now';
@@ -49,46 +51,61 @@ const NotificationBell = () => {
   const [loading, setLoading] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
-  const authHeaders = undefined;
-
-  const fetchUnread = useCallback(async (signal?: AbortSignal) => {
-    if (!user) return;
+  const fetchUnread = useCallback(async (signal?: AbortSignal): Promise<number> => {
+    if (!user) return 0;
     try {
       const res = await api.get<{ unread: number }>('/notifications/unread-count', { headers: authHeaders, signal });
-      if (signal?.aborted) return;
-      setUnread(res.data.unread || 0);
+      return res.data.unread || 0;
     } catch (err) {
-      if ((err as any)?.name === 'AbortError') return;
+      if (err instanceof DOMException && err.name === 'AbortError') throw err;
+      return 0;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const fetchNotifications = useCallback(async (signal?: AbortSignal) => {
-    if (!user) return;
-    setLoading(true);
+  const fetchNotifications = useCallback(async (signal?: AbortSignal): Promise<{ notifications: Notification[]; unread: number } | null> => {
+    if (!user) return null;
     try {
       const res = await api.get<{ notifications: Notification[]; unread: number }>('/notifications?limit=15', { headers: authHeaders, signal });
-      if (signal?.aborted) return;
-      setNotifications(res.data.notifications || []);
-      setUnread(res.data.unread || 0);
+      if (signal?.aborted) return null;
+      return res.data;
     } catch (err) {
-      if ((err as any)?.name === 'AbortError') return;
+      if (err instanceof DOMException && err.name === 'AbortError') throw err;
+      return null;
     }
-    setLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   useEffect(() => {
     const ac = new AbortController();
-    fetchUnread(ac.signal);
-    const interval = setInterval(() => fetchUnread(ac.signal), 30000);
+    const tick = async () => {
+      try {
+        const u = await fetchUnread(ac.signal);
+        if (!ac.signal.aborted) setUnread(u);
+      } catch {
+        if (ac.signal.aborted) return;
+      }
+    };
+    void tick();
+    const interval = setInterval(tick, 30000);
     return () => { clearInterval(interval); ac.abort(); };
   }, [fetchUnread]);
 
   useEffect(() => {
     if (!open) return;
     const ac = new AbortController();
-    fetchNotifications(ac.signal);
+    (async () => {
+      try {
+        const data = await fetchNotifications(ac.signal);
+        if (ac.signal.aborted) return;
+        if (data) {
+          setNotifications(data.notifications || []);
+          setUnread(data.unread || 0);
+        }
+      } catch {
+        if (ac.signal.aborted) return;
+      } finally {
+        if (!ac.signal.aborted) setLoading(false);
+      }
+    })();
     return () => ac.abort();
   }, [open, fetchNotifications]);
 
@@ -130,7 +147,7 @@ const NotificationBell = () => {
     <div ref={panelRef} className="relative">
       <button
         data-testid="notification-bell"
-        onClick={() => setOpen(!open)}
+        onClick={() => { setOpen(!open); if (!open) setLoading(true); }}
         className="relative p-2 rounded-lg transition-colors"
         style={{ color: colors.textSecondary }}
         onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.backgroundColor = colors.hoverBg}

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { ChevronRight, ChevronDown, Info, AlertTriangle, Lightbulb, AlertCircle, Youtube, Play, GitBranch } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -189,6 +190,7 @@ const parseStartTime = (time: string): number => {
 };
 
 interface EditorBlock {
+  id?: string;
   type: string;
   text?: string;
   title?: string;
@@ -368,7 +370,7 @@ const PreviewBlock = ({ block }: { block: EditorBlock }) => {
   if (block.type === 'image') {
     return (
       <div className="mb-4">
-        {block.url ? <img src={block.url} alt={block.alt || ''} className="max-w-full rounded-lg border border-[#2d333b]" /> : <div className="h-32 bg-[#161b22] border border-[#2d333b] rounded-lg flex items-center justify-center text-[#484f58] text-sm">No image</div>}
+        {block.url ? <Image src={block.url} alt={block.alt || ''} width={1200} height={675} unoptimized className="max-w-full rounded-lg border border-[#2d333b]" /> : <div className="h-32 bg-[#161b22] border border-[#2d333b] rounded-lg flex items-center justify-center text-[#484f58] text-sm">No image</div>}
         {block.caption && <p className="text-[#484f58] text-xs text-center mt-2">{block.caption}</p>}
       </div>
     );
@@ -498,7 +500,7 @@ const EditorPreview = ({ blocks, title, readTime }: { blocks: EditorBlock[]; tit
     <div className="prose-invert">
       <h1 className="text-white text-2xl font-bold mb-2">{title || 'Untitled'}</h1>
       {readTime && <span className="text-[#484f58] text-xs mb-6 block">{readTime}</span>}
-      {blocks.map((block: EditorBlock, idx: number) => <PreviewBlock key={idx} block={block} />)}
+      {blocks.map((block: EditorBlock, idx: number) => <PreviewBlock key={block.id ?? idx} block={block} />)}
       {blocks.length === 0 && <p className="text-[#484f58] text-sm">No content yet. Start adding blocks in the editor.</p>}
     </div>
   );

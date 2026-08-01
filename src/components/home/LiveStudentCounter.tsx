@@ -22,9 +22,17 @@ const injectStyles = () => {
   document.head.appendChild(s);
 };
 
+interface LiveCounterConfig {
+  enabled?: boolean;
+  base_count?: number;
+  min_count?: number;
+  label?: string;
+  drift_range?: number;
+}
+
 const LiveStudentCounter = () => {
   const { isDark } = useTheme();
-  const [config, setConfig] = useState<{ enabled?: boolean; base_count?: number; min_count?: number; label?: string; drift_range?: number } | null>(null);
+  const [config, setConfig] = useState<LiveCounterConfig | null>(null);
   const [count, setCount] = useState<number>(0);
   const [ticked, setTicked] = useState<boolean>(false);
   const target = useRef(0);
@@ -36,7 +44,7 @@ const LiveStudentCounter = () => {
   /* Fetch config from API */
   useEffect(() => {
     const ac = new AbortController();
-    api.get<any>('/homepage-settings/live-counter', { signal: ac.signal })
+    api.get<LiveCounterConfig>('/homepage-settings/live-counter', { signal: ac.signal })
       .then(res => {
         if (ac.signal.aborted) return;
         const data = res.data;

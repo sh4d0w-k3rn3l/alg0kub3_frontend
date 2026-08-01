@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import Editor from '@monaco-editor/react';
 import {
-  Play, Copy, Check, Loader2, RotateCcw, Terminal, ChevronDown, ChevronRight,
-  Sun, Moon, Trash2, Clock, Code2, Maximize2, Minimize2,
+  Play, Copy, Check, Loader2, RotateCcw, Terminal,
+  Sun, Moon, Trash2, Clock, Code2,
 } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 
@@ -167,8 +167,12 @@ ORDER BY total_spent DESC`,
 
 const LANG_ORDER = ['python','javascript','typescript','java','c','cpp','go','rust','ruby','php','perl','bash','sql'];
 
+interface MonacoEditorHandle {
+  focus?: () => void;
+}
+
 const PlaygroundPage = () => {
-  const { isDark, toggleTheme, colors } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
   const router = useRouter();
 
   const [lang, setLang] = useState('python');
@@ -180,10 +184,10 @@ const PlaygroundPage = () => {
   const [running, setRunning] = useState(false);
   const [execTime, setExecTime] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<MonacoEditorHandle | null>(null);
   const langRef = useRef<HTMLDivElement | null>(null);
 
+  const [, setLangOpen] = useState(false);
   const meta = LANG_META[lang];
 
   useEffect(() => {

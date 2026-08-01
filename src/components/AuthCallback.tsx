@@ -25,10 +25,11 @@ const AuthCallback = () => {
           signUpFallbackRedirectUrl: '/dashboard',
           transferable: true,
         });
-      } catch (err: any) {
-        const msg = err?.errors?.[0]?.longMessage
-          || err?.errors?.[0]?.message
-          || err?.message
+      } catch (err: unknown) {
+        const e = err as { errors?: { longMessage?: string; message?: string }[]; message?: string } | null;
+        const msg = e?.errors?.[0]?.longMessage
+          || e?.errors?.[0]?.message
+          || e?.message
           || 'Authentication failed. Please try signing in again.';
         setError(msg);
       }

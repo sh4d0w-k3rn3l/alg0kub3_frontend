@@ -912,6 +912,12 @@ const ArrayWalkthrough = ({ title, steps = [], isDark = true, bare = false, link
   const [viewMode, setViewMode] = useState('animation'); // 'animation' | 'list'
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [prevViewMode, setPrevViewMode] = useState(viewMode);
+  if (viewMode !== prevViewMode) {
+    setPrevViewMode(viewMode);
+    if (viewMode === 'list') setPlaying(false);
+  }
+
   const total = steps.length;
   const step: WalkthroughFrame = steps[idx] || {};
 
@@ -943,14 +949,6 @@ const ArrayWalkthrough = ({ title, steps = [], isDark = true, bare = false, link
     }, Math.max(200, 1200 / speed));
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [viewMode, playing, idx, speed, total]);
-
-  // Stop playback when switching to list view.
-  useEffect(() => {
-    if (viewMode === 'list') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPlaying(false);
-    }
-  }, [viewMode]);
 
   const hasPlayback = total > 1 && viewMode === 'animation';
   const hasToggle = total > 1;

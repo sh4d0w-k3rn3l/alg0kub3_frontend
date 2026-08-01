@@ -12,7 +12,7 @@ const PaymentSuccess: React.FC = () => {
   const { refreshUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState('checking');
+  const [status, setStatus] = useState<'checking' | 'success' | 'error' | 'timeout' | 'expired'>(() => searchParams?.get('session_id') ? 'checking' : 'error');
   const polled = useRef(false);
 
   useEffect(() => {
@@ -22,9 +22,15 @@ const PaymentSuccess: React.FC = () => {
     const ac = new AbortController();
     const sessionId = searchParams?.get('session_id');
     if (!sessionId) {
-      setStatus('error');
       return;
     }
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    const schedule = (fn: () => void, delay: number) => {
+      const id = setTimeout(fn, delay);
+      timers.push(id);
+      return id;
+    };
 
     const pollStatus = async (attempts = 0) => {
       if (ac.signal.aborted) return;
@@ -44,15 +50,18 @@ const PaymentSuccess: React.FC = () => {
           setStatus('expired');
           return;
         }
-        setTimeout(() => pollStatus(attempts + 1), 2000);
+        schedule(() => pollStatus(attempts + 1), 2000);
       } catch (err) {
-        if ((err as any)?.name === 'AbortError') return;
-        setTimeout(() => pollStatus(attempts + 1), 2000);
+        if (err && typeof err === 'object' && (err as { name?: string }).name === 'AbortError') return;
+        schedule(() => pollStatus(attempts + 1), 2000);
       }
     };
 
     pollStatus();
-    return () => ac.abort();
+    return () => {
+      ac.abort();
+      timers.forEach(clearTimeout);
+    };
   }, [searchParams, refreshUser]);
 
   return (

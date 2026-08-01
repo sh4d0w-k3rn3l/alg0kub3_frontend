@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "img.clerk.com" },
+      { protocol: "https", hostname: "*.googleusercontent.com" },
+      { protocol: "https", hostname: "*.githubusercontent.com" },
       { protocol: "https", hostname: "*.algokube.dev" },
       { protocol: "https", hostname: "*.algokube.com" },
       { protocol: "https", hostname: "*.algokube.in" },

@@ -89,29 +89,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return headers;
   }, [getToken, clerkUser]);
 
-  // Build initial user from Clerk, then fetch subscription from backend
+  // Sync the derived user state whenever the Clerk identity changes (during render)
+  const [prevClerkId, setPrevClerkId] = useState<string | null>(null);
+  if ((clerkUser?.id ?? null) !== prevClerkId) {
+    setPrevClerkId(clerkUser?.id ?? null);
+    if (clerkUser) {
+      setUser({
+        id: clerkUser.id,
+        user_id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress,
+        name: clerkUser.fullName || clerkUser.username || undefined,
+        picture: clerkUser.imageUrl,
+        role: (clerkUser.publicMetadata as Record<string, unknown>)?.role as string || 'user',
+        subscription_status: 'free',
+        subscription_expires: undefined,
+      });
+    } else {
+      setUser(null);
+    }
+  }
+
+  // Reset subscription-fetch guard and PostHog identity on sign-out
   useEffect(() => {
     if (!clerkUser) {
-      setUser(null);
       fetched.current = false;
       phReset();
-      return;
     }
-    const clerkMapped: User = {
-      id: clerkUser.id,
-      user_id: clerkUser.id,
-      email: clerkUser.primaryEmailAddress?.emailAddress,
-      name: clerkUser.fullName || clerkUser.username || undefined,
-      picture: clerkUser.imageUrl,
-      role: (clerkUser.publicMetadata as Record<string, unknown>)?.role as string || 'user',
-      subscription_status: 'free',
-      subscription_expires: undefined,
-    };
-    setUser(clerkMapped);
+  }, [clerkUser]);
+
+  // Send identity to PostHog whenever the signed-in user changes
+  useEffect(() => {
+    if (!clerkUser) return;
+    const role = (clerkUser.publicMetadata as Record<string, unknown>)?.role as string | undefined;
     phIdentify(clerkUser.id, {
-      ...(clerkMapped.email && { email: clerkMapped.email }),
-      ...(clerkMapped.name && { name: clerkMapped.name }),
-      ...(clerkMapped.role && { role: clerkMapped.role }),
+      ...(clerkUser.primaryEmailAddress?.emailAddress && { email: clerkUser.primaryEmailAddress.emailAddress }),
+      ...(clerkUser.fullName && { name: clerkUser.fullName }),
+      ...(role && { role }),
     });
   }, [clerkUser]);
 

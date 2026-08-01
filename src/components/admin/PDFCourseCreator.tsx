@@ -37,7 +37,6 @@ const slugify = (s: string) =>
 // Step 1 — Upload + Generate outline
 // ───────────────────────────────────────────────────────────────
 interface UploadStatus { pdf_id: string | null; num_pages: number; filename: string; preview: string; }
-interface SectionOutline { title: string; summary?: string; page_start: number; page_end: number; lessons?: SectionOutline[]; }
 const StepUpload = ({ onOutlineReady }: { onOutlineReady: (pdfId: string, outline: Record<string, unknown>, filename: string) => void; }) => {
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({ pdf_id: null, num_pages: 0, filename: '', preview: '' });
   const [uploading, setUploading] = useState<boolean>(false);
@@ -514,16 +513,27 @@ const StepProgress = ({ courseInfo, onDone }: { courseInfo: Record<string, unkno
 
   useEffect(() => {
     const ac = new AbortController();
+    let timerId: ReturnType<typeof setTimeout> | null = null;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 120;
+    const TERMINAL_STATUSES = new Set(['complete', 'partial', 'failed']);
     const tick = async () => {
+      if (ac.signal.aborted) return;
       const s = await poll(ac.signal);
       if (ac.signal.aborted) return;
-      if (s !== 'complete') setTimeout(tick, 3000);
+      attempts += 1;
+      if (!TERMINAL_STATUSES.has(s as string) && attempts < MAX_ATTEMPTS) {
+        timerId = setTimeout(tick, 3000);
+      }
     };
     tick();
-    return () => ac.abort();
+    return () => {
+      if (timerId) clearTimeout(timerId);
+      ac.abort();
+    };
   }, [poll]);
 
-  const isDone = status.status === 'complete';
+  const isDone = status.status === 'complete' || status.status === 'partial';
 
   return (
     <div className="max-w-2xl mx-auto">

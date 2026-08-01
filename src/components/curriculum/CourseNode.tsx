@@ -16,7 +16,7 @@ interface CourseNodeProps {
   isDark: boolean;
 }
 
-const CourseNode = ({ course, trackColor, difficulty, status, onClick, t, isDark }: CourseNodeProps) => {
+const CourseNode = ({ course, trackColor, difficulty, status, onClick, t }: CourseNodeProps) => {
   const Icon = COURSE_ICONS[course.slug] || BookOpen;
   const accent = COURSE_COLORS[course.slug] || trackColor;
   const sp = course.social_proof || {};

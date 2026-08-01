@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { MessageCircle, Send, ChevronDown, ChevronUp, Trash2, Reply, Loader2 } from 'lucide-react';
@@ -46,7 +47,7 @@ const timeAgo = (dateStr: string): string => {
 };
 
 const Avatar: React.FC<{ name?: string; picture?: string; size?: number }> = ({ name, picture, size = 32 }) => {
-  if (picture) return <img src={picture} alt="" className="rounded-full flex-shrink-0" style={{ width: size, height: size }} />;
+  if (picture) return <Image src={picture} alt="" width={size} height={size} className="rounded-full flex-shrink-0" style={{ width: size, height: size }} />;
   return (
     <div className="rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold" style={{ width: size, height: size, backgroundColor: '#22c55e30', color: '#22c55e' }}>
       {(name || '?')[0].toUpperCase()}
@@ -166,22 +167,28 @@ const LessonDiscussions: React.FC<LessonDiscussionsProps> = ({ lessonSlug, cours
   const token = null;
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
 
-  const fetchComments = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const res = await api.get<{ comments: Comment[]; total: number }>(`/lessons/${lessonSlug}/discussions`, { params: { course: courseSlug }, signal });
-      if (signal?.aborted) return;
-      setComments(res.data.comments || []);
-      setTotal(res.data.total || 0);
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') return;
-    }
-    finally { setLoading(false); }
+  const fetchComments = useCallback(async (signal?: AbortSignal): Promise<{ comments: Comment[]; total: number }> => {
+    const res = await api.get<{ comments: Comment[]; total: number }>(`/lessons/${lessonSlug}/discussions`, { params: { course: courseSlug }, signal, cache: 'no-store' });
+    return res.data;
   }, [lessonSlug, courseSlug]);
 
   useEffect(() => {
     if (!lessonSlug) return;
     const ac = new AbortController();
-    fetchComments(ac.signal);
+    (async () => {
+      try {
+        const { comments, total } = await fetchComments(ac.signal);
+        if (ac.signal.aborted) return;
+        setComments(comments);
+        setTotal(total);
+      } catch {
+        if (ac.signal.aborted) return;
+        setComments([]);
+        setTotal(0);
+      } finally {
+        if (!ac.signal.aborted) setLoading(false);
+      }
+    })();
     return () => ac.abort();
   }, [lessonSlug, fetchComments]);
 
@@ -191,7 +198,9 @@ const LessonDiscussions: React.FC<LessonDiscussionsProps> = ({ lessonSlug, cours
     try {
       await api.post(`/lessons/${lessonSlug}/discussions`, { content: newComment.trim() }, { headers: authHeaders, params: { course: courseSlug } });
       setNewComment('');
-      await fetchComments();
+      const d = await fetchComments();
+      setComments(d.comments);
+      setTotal(d.total);
     } catch (err) {
       showError(err instanceof ApiError ? err.detail : (err as Error)?.message || 'Failed to post comment');
     } finally {
@@ -202,7 +211,9 @@ const LessonDiscussions: React.FC<LessonDiscussionsProps> = ({ lessonSlug, cours
   const handleReply = async (parentId: string, content: string) => {
     try {
       await api.post(`/lessons/${lessonSlug}/discussions`, { content, parent_id: parentId }, { headers: authHeaders, params: { course: courseSlug } });
-      await fetchComments();
+      const d = await fetchComments();
+      setComments(d.comments);
+      setTotal(d.total);
     } catch (err) {
       showError(err instanceof ApiError ? err.detail : (err as Error)?.message || 'Failed to post reply');
     }
@@ -212,7 +223,9 @@ const LessonDiscussions: React.FC<LessonDiscussionsProps> = ({ lessonSlug, cours
     if (!(await showConfirm('Delete this comment?'))) return;
     try {
       await api.delete(`/discussions/${commentId}`, { headers: authHeaders });
-      await fetchComments();
+      const d = await fetchComments();
+      setComments(d.comments);
+      setTotal(d.total);
     } catch { /* ignore */ }
   };
 

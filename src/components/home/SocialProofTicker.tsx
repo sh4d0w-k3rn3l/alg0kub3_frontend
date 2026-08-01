@@ -4,6 +4,12 @@ import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { X, CheckCircle, BookOpen } from 'lucide-react';
 
+interface TickerCourse {
+  slug: string;
+  title: string;
+  lesson_count?: number;
+}
+
 /* ── Realistic mock data pools ── */
 const FIRST_NAMES = [
   'Alex', 'Priya', 'Marcus', 'Yuki', 'Sarah', 'David', 'Mei',
@@ -37,10 +43,21 @@ const pickWeighted = <T extends { weight: number },>(items: T[]): T => {
   return pool[Math.floor(Math.random() * pool.length)];
 };
 
-const SocialProofTicker = ({ courses = [] }: { courses?: any[] }) => {
+interface SocialProofNotification {
+  id: number;
+  name: string;
+  location: string;
+  action: string;
+  course: string;
+  courseSlug: string;
+  time: string;
+  avatarColor: string;
+}
+
+const SocialProofTicker = ({ courses = [] }: { courses?: TickerCourse[] }) => {
   const navigate = useRouter();
   const { isDark } = useTheme();
-  const [notification, setNotification] = useState<any>(null);
+  const [notification, setNotification] = useState<SocialProofNotification | null>(null);
   const [visible, setVisible] = useState<boolean>(false);
   const [dismissed, setDismissed] = useState<boolean>(false);
   const [paused, setPaused] = useState<boolean>(false);
@@ -49,10 +66,10 @@ const SocialProofTicker = ({ courses = [] }: { courses?: any[] }) => {
   const countRef = useRef(0);
 
   /* Course names to display — prefer courses with lessons */
-  const coursePool = useRef<any[]>([]);
+  const coursePool = useRef<TickerCourse[]>([]);
   useEffect(() => {
     if (courses.length > 0) {
-      const withLessons = courses.filter(c => c.lesson_count > 0);
+      const withLessons = courses.filter(c => (c.lesson_count ?? 0) > 0);
       coursePool.current = withLessons.length > 0 ? withLessons : courses;
     }
   }, [courses]);

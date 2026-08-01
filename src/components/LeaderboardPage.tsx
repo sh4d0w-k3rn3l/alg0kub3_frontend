@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { handleApiError } from '@/lib/toast';
@@ -13,15 +14,27 @@ const RANK_STYLES: Record<number, { bg: string; border: string; icon: React.Comp
   3: { bg: 'bg-[#cd7f32]/10', border: 'border-[#cd7f32]/30', icon: Medal, color: '#cd7f32' },
 };
 
+interface LeaderboardEntry {
+  rank: number;
+  user_id: string;
+  picture?: string | null;
+  name?: string | null;
+  badges?: number;
+  xp?: number;
+}
+
+interface LeaderboardData {
+  leaderboard: LeaderboardEntry[];
+}
+
 const LeaderboardPage = () => {
-  const [data, setData] = useState<Record<string, any> | null>(null);
+  const [data, setData] = useState<LeaderboardData | null>(null);
   const [period, setPeriod] = useState('all');
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    setLoading(true);
-    api.get<Record<string, any>>(`/gamification/leaderboard?period=${period}`)
+    api.get<LeaderboardData>(`/gamification/leaderboard?period=${period}`)
       .then(res => setData(res.data))
       .catch(handleApiError)
       .finally(() => setLoading(false));
@@ -59,7 +72,7 @@ const LeaderboardPage = () => {
           <div className="flex justify-center py-16"><Loader2 size={28} className="text-[#22c55e] animate-spin" /></div>
         ) : (
           <div className="space-y-2">
-            {(data?.leaderboard || []).map((entry: any, i: number) => {
+            {(data?.leaderboard || []).map((entry) => {
               const rankStyle = RANK_STYLES[entry.rank];
               const RankIcon = rankStyle?.icon;
               return (
@@ -82,7 +95,7 @@ const LeaderboardPage = () => {
                   </div>
 
                   {entry.picture ? (
-                    <img src={entry.picture} alt="" className="w-10 h-10 rounded-full shrink-0" />
+                    <Image src={entry.picture} alt="" width={40} height={40} className="w-10 h-10 rounded-full shrink-0" />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-[#2d333b] flex items-center justify-center shrink-0">
                       <User size={16} className="text-[#8b949e]" />

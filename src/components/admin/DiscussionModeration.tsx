@@ -19,6 +19,7 @@ const DiscussionModeration = () => {
   const [lessonFilter, setLessonFilter] = useState<string>('');
   const [stats, setStats] = useState<Record<string, unknown> | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [now, setNow] = useState<number>(() => Date.now());
   const limit = 20;
 
   const fetchComments = useCallback(async (signal?: AbortSignal) => {
@@ -51,16 +52,19 @@ const DiscussionModeration = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchComments(ac.signal);
+    (async () => { await fetchComments(ac.signal); })();
     return () => ac.abort();
   }, [fetchComments]);
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchStats(ac.signal);
+    (async () => { await fetchStats(ac.signal); })();
     return () => ac.abort();
   }, [fetchStats]);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (!(await showConfirm('Delete this comment and all its replies?'))) return;
@@ -80,14 +84,12 @@ const DiscussionModeration = () => {
   };
 
   const totalPages = Math.ceil(total / limit);
-  /* eslint-disable react-hooks/purity */
   const timeAgo = (d: string) => {
-    const diff = (Date.now() - new Date(d).getTime()) / 1000;
+    const diff = (now - new Date(d).getTime()) / 1000;
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     return new Date(d).toLocaleDateString();
   };
-  /* eslint-enable react-hooks/purity */
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: '#0d1117' }}>

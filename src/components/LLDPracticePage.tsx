@@ -24,7 +24,24 @@ const DIFFICULTY_COLORS: Record<string, { text: string; bg: string }> = {
   'Hard': { text: '#f87171', bg: 'rgba(248,113,113,0.08)' },
 };
 
-const SectionHeader = ({ section, isOpen, onToggle }: { section: any; isOpen: boolean; onToggle: () => void }) => {
+interface LLDProblem {
+  slug: string;
+  title: string;
+  difficulty: string;
+  free: boolean;
+  has_learn?: boolean;
+  has_simulation?: boolean;
+}
+
+interface LLDSection {
+  id: string;
+  title: string;
+  icon: string;
+  problem_count: number;
+  problems: LLDProblem[];
+}
+
+const SectionHeader = ({ section, isOpen, onToggle }: { section: LLDSection; isOpen: boolean; onToggle: () => void }) => {
   const Icon = ICON_MAP[section.icon] || Layers;
   return (
     <tr data-testid={`lld-section-${section.id}`}
@@ -48,7 +65,7 @@ const SectionHeader = ({ section, isOpen, onToggle }: { section: any; isOpen: bo
   );
 };
 
-const ProblemRow = ({ problem, isPro, onStart, activeSession }: { problem: any; isPro: boolean; onStart: (slug: string) => void; activeSession: any }) => {
+const ProblemRow = ({ problem, isPro, onStart, activeSession }: { problem: LLDProblem; isPro: boolean; onStart: (slug: string) => void; activeSession: unknown }) => {
   const diff = DIFFICULTY_COLORS[problem.difficulty] || DIFFICULTY_COLORS.Medium;
   const canAccess = problem.free || isPro;
   const inProgress = !!activeSession;
@@ -109,7 +126,7 @@ const ProblemRow = ({ problem, isPro, onStart, activeSession }: { problem: any; 
 };
 
 const LLDPracticePage = () => {
-  const [sections, setSections] = useState<any[]>([]);
+  const [sections, setSections] = useState<LLDSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [diffFilter, setDiffFilter] = useState('All');
@@ -118,34 +135,45 @@ const LLDPracticePage = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [totalProblems, setTotalProblems] = useState(0);
   const [totalSections, setTotalSections] = useState(0);
-  const [userSessions, setUserSessions] = useState<Record<string, any>>({});
+  const [userSessions, setUserSessions] = useState<Record<string, unknown>>({});
   const { user } = useAuth();
   const router = useRouter();
   const isPro = user?.subscription_status === 'pro';
 
   useEffect(() => {
-    api.get<{ sections: any[]; total_problems: number; total_sections: number }>(`/lld/sections`)
+    const ac = new AbortController();
+    api.get<{ sections: LLDSection[]; total_problems: number; total_sections: number }>(`/lld/sections`, { signal: ac.signal })
       .then(res => {
+        if (ac.signal.aborted) return;
         setSections(res.data.sections);
         setTotalProblems(res.data.total_problems);
         setTotalSections(res.data.total_sections);
         const open: Record<string, boolean> = {};
-        res.data.sections.forEach((s: any) => { open[s.id] = true; });
+        res.data.sections.forEach((s) => { open[s.id] = true; });
         setOpenSections(open);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => { if (!ac.signal.aborted) setLoading(false); });
+    return () => ac.abort();
+  }, []);
 
-    if (user) {
-      api.get<{ sessions: Record<string, any> }>(`/lld/user-sessions`)
-        .then(res => setUserSessions(res.data.sessions || {}))
-        .catch(() => {});
-    }
+  useEffect(() => {
+    if (!user) return;
+    const ac = new AbortController();
+    api.get<{ sessions: Record<string, unknown> }>(`/lld/user-sessions`, { signal: ac.signal })
+      .then(res => {
+        if (ac.signal.aborted) return;
+        setUserSessions(res.data.sessions || {});
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, [user]);
 
+  useEffect(() => {
     const onScroll = () => setShowScrollTop(window.scrollY > 400);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
-  }, [user]);
+  }, []);
 
   const toggleSection = (id: string) => setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
   const collapseAll = () => { const o: Record<string, boolean> = {}; sections.forEach(s => { o[s.id] = false; }); setOpenSections(o); };
@@ -155,7 +183,7 @@ const LLDPracticePage = () => {
 
   const filtered = useMemo(() => {
     return sections.map(s => {
-      const probs = s.problems.filter((p: any) => {
+      const probs = s.problems.filter((p) => {
         if (search && !p.title.toLowerCase().includes(search.toLowerCase())) return false;
         if (diffFilter !== 'All' && p.difficulty !== diffFilter) return false;
         if (accessFilter === 'Free' && !p.free) return false;
@@ -243,7 +271,7 @@ const LLDPracticePage = () => {
               {filtered.map(section => (
                 <React.Fragment key={section.id}>
                   <SectionHeader section={section} isOpen={openSections[section.id]} onToggle={() => toggleSection(section.id)} />
-                  {openSections[section.id] && section.problems.map((p: any) => (
+                  {openSections[section.id] && section.problems.map((p) => (
                     <ProblemRow key={p.slug} problem={p} isPro={isPro} onStart={handleStart} activeSession={userSessions[p.slug]} />
                   ))}
                 </React.Fragment>

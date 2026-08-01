@@ -22,29 +22,62 @@ const TIER_COLORS: Record<string, { bg: string; border: string; text: string }> 
   gold: { bg: '#f59e0b18', border: '#f59e0b40', text: '#f59e0b' },
 };
 
+interface BadgeItem {
+  badge_id: string;
+  name: string;
+  description?: string;
+  tier: string;
+  icon: string;
+  category?: string;
+  earned: boolean;
+  awarded_at?: string;
+}
+
+interface ProfileStats {
+  lessons?: number;
+  quizzes_passed?: number;
+  certificates?: number;
+  code_runs?: number;
+}
+
+interface ProfileData {
+  xp: number;
+  rank: number;
+  badges_earned: number;
+  badges_total: number;
+  all_badges: BadgeItem[];
+  new_badges?: BadgeItem[];
+  stats?: ProfileStats;
+}
+
 const BadgesPage = () => {
-  const [profile, setProfile] = useState<Record<string, any> | null>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [newBadges, setNewBadges] = useState<any[]>([]);
+  const [newBadges, setNewBadges] = useState<BadgeItem[]>([]);
   const router = useRouter();
 
   useEffect(() => {
     const ac = new AbortController();
-    api.get<Record<string, any>>('/gamification/profile', { signal: ac.signal })
+    let timerId: ReturnType<typeof setTimeout> | null = null;
+    api.get<ProfileData>('/gamification/profile', { signal: ac.signal })
       .then(res => {
         if (ac.signal.aborted) return;
         setProfile(res.data);
-        if (res.data.new_badges?.length > 0) {
-          setNewBadges(res.data.new_badges);
-          setTimeout(() => setNewBadges([]), 5000);
+        const newB = res.data.new_badges;
+        if (newB && newB.length > 0) {
+          setNewBadges(newB);
+          timerId = setTimeout(() => setNewBadges([]), 5000);
         }
       })
       .catch((err) => {
-        if ((err as any)?.name === 'AbortError') return;
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         handleApiError(err);
       })
-      .finally(() => setLoading(false));
-    return () => ac.abort();
+      .finally(() => { if (!ac.signal.aborted) setLoading(false); });
+    return () => {
+      if (timerId) clearTimeout(timerId);
+      ac.abort();
+    };
   }, []);
 
   if (loading) return <div className="flex items-center justify-center py-32" style={{ backgroundColor: '#0d1117' }}><Loader2 size={28} className="text-[#22c55e] animate-spin" /></div>;
@@ -60,16 +93,16 @@ const BadgesPage = () => {
     );
   }
 
-  const earned = (profile.all_badges || []).filter((b: any) => b.earned);
-  const locked = (profile.all_badges || []).filter((b: any) => !b.earned);
-  const stats = profile.stats || {};
+  const earned = (profile.all_badges || []).filter((b: BadgeItem) => b.earned);
+  const locked = (profile.all_badges || []).filter((b: BadgeItem) => !b.earned);
+  const stats: ProfileStats = profile.stats || {};
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#0d1117' }}>
       <PageHeader />
       {newBadges.length > 0 && (
         <div className="fixed top-4 right-4 z-50 space-y-2">
-          {newBadges.map((b: any, i: number) => (
+          {newBadges.map((b: BadgeItem, i: number) => (
             <div key={i} className="flex items-center gap-3 bg-[#161b22] border border-[#f59e0b]/40 rounded-xl px-4 py-3 shadow-xl animate-bounce">
               <Trophy size={18} className="text-[#f59e0b]" />
               <div>
@@ -129,7 +162,7 @@ const BadgesPage = () => {
         <div className="mb-8">
           <h2 className="text-lg font-bold text-white mb-4">Earned ({earned.length})</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {earned.map((b: any) => {
+            {earned.map((b: BadgeItem) => {
               const tier = TIER_COLORS[b.tier] || TIER_COLORS.bronze;
               const Icon = ICON_MAP[b.icon] || Star;
               return (
@@ -155,7 +188,7 @@ const BadgesPage = () => {
           <div>
             <h2 className="text-lg font-bold text-white mb-4">Locked ({locked.length})</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {locked.map((b: any) => (
+              {locked.map((b: BadgeItem) => (
                 <div
                   key={b.badge_id}
                   data-testid={`badge-locked-${b.badge_id}`}

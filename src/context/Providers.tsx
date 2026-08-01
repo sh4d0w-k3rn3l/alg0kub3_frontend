@@ -8,6 +8,7 @@ import { LanguagePrefProvider } from './LanguagePrefContext';
 import { PostHogProvider } from '@/components/PostHogProvider';
 import { Toaster } from 'sonner';
 import { useSettingsStore } from '@/store/settings';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 function HydrateStores({ children }: { children: ReactNode }) {
   useEffect(() => {
@@ -19,26 +20,28 @@ function HydrateStores({ children }: { children: ReactNode }) {
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <PostHogProvider>
-      <ClerkProvider>
-        <AuthProvider>
-          <HydrateStores>
-            <ThemeProvider>
-              <LanguagePrefProvider>
-                <div id="clerk-captcha" style={{ display: 'none' }} />
-                {children}
-                <Toaster
-                  position="bottom-right"
-                  richColors
-                  closeButton
-                  toastOptions={{
-                    duration: 4000,
-                  }}
-                />
-              </LanguagePrefProvider>
-            </ThemeProvider>
-          </HydrateStores>
-        </AuthProvider>
-      </ClerkProvider>
+      <ErrorBoundary fallbackMessage="Authentication service unavailable. Please try refreshing.">
+        <ClerkProvider>
+          <AuthProvider>
+            <HydrateStores>
+              <ThemeProvider>
+                <LanguagePrefProvider>
+                  <div id="clerk-captcha" style={{ display: 'none' }} />
+                  {children}
+                  <Toaster
+                    position="bottom-right"
+                    richColors
+                    closeButton
+                    toastOptions={{
+                      duration: 4000,
+                    }}
+                  />
+                </LanguagePrefProvider>
+              </ThemeProvider>
+            </HydrateStores>
+          </AuthProvider>
+        </ClerkProvider>
+      </ErrorBoundary>
     </PostHogProvider>
   );
 }

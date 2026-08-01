@@ -88,6 +88,12 @@ const UserSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
+  const [prevUser, setPrevUser] = useState(user);
+  if (user && user !== prevUser) {
+    setPrevUser(user);
+    setName(user.name || '');
+  }
+
   const fetchSettings = useCallback(async (signal?: AbortSignal) => {
     try {
       const [prefsRes, onbRes] = await Promise.all([
@@ -107,10 +113,11 @@ const UserSettings = () => {
   useEffect(() => {
     if (authLoading) return;
     if (!user) { router.push('/login'); return; }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setName(user.name || '');
     const ac = new AbortController();
-    fetchSettings(ac.signal);
+    const load = async () => {
+      await fetchSettings(ac.signal);
+    };
+    void load();
     return () => ac.abort();
   }, [user, authLoading, router, fetchSettings]);
 

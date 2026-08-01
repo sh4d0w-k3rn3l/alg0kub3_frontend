@@ -1,5 +1,6 @@
 'use client';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, createElement } from 'react';
+import Image from 'next/image';
 import Editor from '@monaco-editor/react';
 import mermaid from 'mermaid';
 import {
@@ -22,7 +23,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Copy, GripVertical,
   Type, Hash, Code, AlertCircle, AlertTriangle, Info, Lightbulb,
-  ChevronRight, CreditCard, ListOrdered, List, Table2, Quote, Image,
+  ChevronRight, CreditCard, ListOrdered, List, Table2, Quote, Image as ImageIcon,
   Minus, Layers, LayoutGrid, Sparkles, Loader2, X, Search, Check,
   Youtube, Video, Play, GitBranch, RefreshCw, Upload
 } from 'lucide-react';
@@ -97,7 +98,7 @@ const BLOCK_TYPES = [
   { type: 'list', label: 'Bullet List', icon: List, description: 'Unordered list', category: 'Lists', shortcut: 'ul' },
   { type: 'ordered_list', label: 'Numbered List', icon: ListOrdered, description: 'Ordered list', category: 'Lists', shortcut: 'ol' },
   { type: 'table', label: 'Table', icon: Table2, description: 'Data table', category: 'Data', shortcut: 'table' },
-  { type: 'image', label: 'Image', icon: Image, description: 'Image with caption', category: 'Media', shortcut: 'img' },
+  { type: 'image', label: 'Image', icon: ImageIcon, description: 'Image with caption', category: 'Media', shortcut: 'img' },
   { type: 'youtube', label: 'YouTube', icon: Youtube, description: 'Embed YouTube video', category: 'Media', shortcut: 'yt' },
   { type: 'vimeo', label: 'Vimeo', icon: Video, description: 'Embed Vimeo video', category: 'Media', shortcut: 'vim' },
   { type: 'loom', label: 'Loom', icon: Video, description: 'Embed Loom recording', category: 'Media', shortcut: 'loom' },
@@ -153,6 +154,12 @@ const SlashMenu = ({ isOpen, position, onSelect, onClose, searchTerm }: {
 }) => {
   const [filter, setFilter] = useState<string>('');
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [prevOpen, setPrevOpen] = useState(isOpen);
+  if (isOpen !== prevOpen) {
+    setPrevOpen(isOpen);
+    setFilter('');
+    setSelectedIndex(0);
+  }
   const menuRef = useRef<HTMLDivElement>(null);
   const term = searchTerm || filter;
 
@@ -164,10 +171,6 @@ const SlashMenu = ({ isOpen, position, onSelect, onClose, searchTerm }: {
   ), [term]);
 
   const categories = useMemo(() => [...new Set(filtered.map(b => b.category))], [filtered]);
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => { setFilter(''); setSelectedIndex(0); }, [isOpen]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!isOpen) return;
@@ -694,7 +697,7 @@ const ImageEditor = ({ block, onChange }: { block: EditorBlock; onChange: (block
 
       {block.url && (
         <div className="rounded-lg border border-[#2d333b] overflow-hidden">
-          <img src={block.url} alt={block.alt || ''} className="max-h-[250px] w-full object-contain bg-[#0d1117]" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+          <Image src={block.url} alt={block.alt || ''} width={1200} height={675} unoptimized className="max-h-[250px] w-full object-contain bg-[#0d1117]" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
         </div>
       )}
     </div>
@@ -842,24 +845,19 @@ const MermaidEditor = ({ block, onChange }: { block: EditorBlock; onChange: (blo
     }
   }, [block.code, themeConfig]);
 
-  // Debounced re-render only when code or theme changes
+  // Debounced re-render only when code or theme changes (initial render is immediate)
   const codeRef = useRef(block.code);
   const themeRef = useRef(currentTheme);
+  const firstRender = useRef(true);
   useEffect(() => {
-    if (codeRef.current === block.code && themeRef.current === currentTheme) return;
+    const isFirst = firstRender.current;
+    firstRender.current = false;
+    if (!isFirst && codeRef.current === block.code && themeRef.current === currentTheme) return;
     codeRef.current = block.code;
     themeRef.current = currentTheme;
-    const timer = setTimeout(renderDiagram, 500);
+    const timer = setTimeout(renderDiagram, isFirst ? 0 : 500);
     return () => clearTimeout(timer);
   }, [block.code, currentTheme, renderDiagram]);
-
-  // Initial render
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    renderDiagram();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleApplyPalette = (palette: { name: string; classes: { name: string; fill: string; stroke: string; text: string }[] }) => {
     const code = block.code || '';
@@ -1467,6 +1465,9 @@ function getBlockColor(block: EditorBlock) {
   return '#22c55e';
 }
 
+const BlockTypeIcon = ({ block, color }: { block: EditorBlock; color: string }) =>
+  createElement(getBlockIcon(block), { size: 12, style: { color } });
+
 // ========== SORTABLE BLOCK WRAPPER ==========
 const SortableBlock = ({ block, idx, blocksLength, updateBlock, removeBlock, moveBlock, duplicateBlock, openSlashMenu, onAiBlockAssist }: {
   block: EditorBlock;
@@ -1482,7 +1483,6 @@ const SortableBlock = ({ block, idx, blocksLength, updateBlock, removeBlock, mov
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id ?? '' });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   const blockColor = getBlockColor(block);
-  const BlockIcon = getBlockIcon(block);
 
   return (
     <div ref={setNodeRef} style={style} data-testid={`block-${idx}`} className={`group border rounded-xl overflow-hidden transition-all ${isDragging ? 'shadow-2xl ring-2 ring-[#22c55e]/50' : 'hover:border-[#484f58]'}`} {...attributes} data-block-index={idx}>
@@ -1494,7 +1494,7 @@ const SortableBlock = ({ block, idx, blocksLength, updateBlock, removeBlock, mov
               <GripVertical size={14} className="text-[#484f58]" />
             </div>
             <div className="flex items-center gap-2 px-2 py-1 rounded-md" style={{ backgroundColor: blockColor + '15' }}>
-              <BlockIcon size={12} style={{ color: blockColor }} />
+              <BlockTypeIcon block={block} color={blockColor} />
               <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: blockColor }}>{getBlockLabel(block)}</span>
             </div>
           </div>
@@ -1534,32 +1534,20 @@ const BlockEditor = ({ blocks: initialBlocks, onChange, onAiGenerate, generating
   lessonId?: string;
 }) => {
   const [blocks, setBlocks] = useState(() => ensureBlockIds(initialBlocks || []));
+  const [prevBlocksKey, setPrevBlocksKey] = useState(() => initialBlocks.map(b => b.id).join(','));
   const [slashOpen, setSlashOpen] = useState<boolean>(false);
   const [slashPosition, setSlashPosition] = useState({ top: 0, left: 0 });
   const [insertIndex, setInsertIndex] = useState(-1);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [aiAssisting, setAiAssisting] = useState<any>(null); // block index being AI-assisted
+  const [, setAiAssisting] = useState<number | null>(null); // block index being AI-assisted
   const containerRef = useRef<HTMLDivElement>(null);
-  const isInitialMount = useRef(true);
   const pendingOnChange = useRef<EditorBlock[] | null>(null);
 
   // Sync blocks from parent only when initialBlocks changes (not on internal updates)
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    // Only sync from parent if it's a genuine external change
-    const currentIds = blocks.map(b => b.id).join(',');
-    const newBlocks = ensureBlockIds(initialBlocks || []);
-    const newIds = newBlocks.map(b => b.id).join(',');
-    if (currentIds !== newIds) {
-      setBlocks(newBlocks);
-    }
-  /* eslint-enable react-hooks/set-state-in-effect */
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialBlocks]);
+  const nextBlocksKey = initialBlocks.map(b => b.id).join(',');
+  if (nextBlocksKey !== prevBlocksKey) {
+    setPrevBlocksKey(nextBlocksKey);
+    setBlocks(ensureBlockIds(initialBlocks || []));
+  }
 
   // Handle onChange after state updates (avoids setState during render)
   useEffect(() => {
@@ -1650,11 +1638,11 @@ const BlockEditor = ({ blocks: initialBlocks, onChange, onAiGenerate, generating
         body: JSON.stringify({ action, block_index: blockIndex, block_text: blockText }),
       });
       if (!res.ok) throw new Error('AI assist failed');
-      const data = await res.json();
+      const data = (await res.json()) as { blocks?: EditorBlock[] };
       if (data.blocks && data.blocks.length > 0) {
         setBlocks(prev => {
           const nb = [...prev];
-          const newBlocks = data.blocks.map((b: any) => ({
+          const newBlocks = data.blocks!.map((b) => ({
             ...b,
             id: `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           }));

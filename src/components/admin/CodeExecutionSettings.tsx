@@ -50,8 +50,7 @@ const CodeExecutionSettings = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load(ac.signal);
+    (async () => { await load(ac.signal); })();
     return () => ac.abort();
   }, [load]);
 

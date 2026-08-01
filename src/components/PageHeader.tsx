@@ -1,18 +1,19 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BookOpen, Code, Sun, Moon, LogIn, User, ArrowRight, ChevronRight,
+  BookOpen, Code, Sun, Moon, LogIn, User, ChevronRight,
   Layers, Terminal, Menu, X, Trophy, Gift, Target,
   Server, Braces, ChevronDown, Flame, Zap, LogOut, LayoutDashboard, Settings,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { COURSE_ICONS, COURSE_COLORS, CATEGORY_META } from '@/config/courseConfig';
+import { COURSE_COLORS } from '@/config/courseConfig';
 import NotificationBell from './NotificationBell';
 import CoursesMegaMenu from './CoursesMegaMenu';
 import { WHATS_NEW_FALLBACK, KIND_META, relativeTime, fetchWhatsNew } from '@/config/whatsNew';
@@ -67,10 +68,15 @@ const PageHeader = () => {
   const courseSlug = (pathParts[1] === 'course' || pathParts[1] === 'learn') ? pathParts[2] : null;
   const accent = (courseSlug && COURSE_COLORS[courseSlug]) || t.primary;
 
-  const [courses, setCourses] = useState<Course[]>([]);
-  const { sidebarOpen, setSidebarOpen, coursesOpen, setCoursesOpen, practiceOpen, setPracticeOpen, moreOpen, setMoreOpen, toggleSidebar } = useUIStore();
+  const { coursesOpen, setCoursesOpen, practiceOpen, setPracticeOpen, moreOpen, setMoreOpen } = useUIStore();
   const { courses: storeCourses, fetchCourses } = useCourseStore();
+  const courses = storeCourses.filter((x: Course) => (x.lesson_count || 0) > 0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
+    setMobileOpen(false);
+  }
   const [streak, setStreak] = useState<StreakData | null>(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const [whatsNew, setWhatsNew] = useState(WHATS_NEW_FALLBACK);
@@ -91,12 +97,6 @@ const PageHeader = () => {
   }, [fetchCourses]);
 
   useEffect(() => {
-    if (storeCourses.length > 0) {
-      setCourses(storeCourses.filter((x: Course) => (x.lesson_count || 0) > 0));
-    }
-  }, [storeCourses]);
-
-  useEffect(() => {
     if (!user) return;
     const token = null;
     if (!token) return;
@@ -107,7 +107,7 @@ const PageHeader = () => {
         setStreak(r.data);
       })
       .catch((err) => {
-        if ((err as any)?.name === 'AbortError') return;
+        if (err && typeof err === 'object' && (err as { name?: string }).name === 'AbortError') return;
       });
     return () => ac.abort();
   }, [user]);
@@ -134,12 +134,10 @@ const PageHeader = () => {
     return () => ac.abort();
   }, []);
 
-  useEffect(() => { setMobileOpen(false); }, [pathname]);
-
-  const navTo = useCallback((action: (() => void) | undefined) => {
+  const navTo = (action: (() => void) | undefined) => {
     setMobileOpen(false);
     if (typeof action === 'function') action();
-  }, []);
+  };
 
   const grouped: Record<string, Course[]> = {};
   courses.forEach(c => {
@@ -210,9 +208,8 @@ const PageHeader = () => {
                 zIndex: 9999,
               }}>
               <CoursesMegaMenu
-                courses={courses as any}
+                courses={courses}
                 isDark={isDark}
-                t={t}
                 navigate={(path: string) => router.push(path)}
                 onClose={() => setCoursesOpen(false)}
               />
@@ -378,7 +375,7 @@ const PageHeader = () => {
                 onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.boxShadow = `0 0 20px ${accent}40`; }}
                 onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.boxShadow = 'none'; }}
               >
-                {user.picture ? <img src={user.picture} alt="" className="w-5 h-5 rounded-full" /> : <User size={14} />}
+                {user.picture ? <Image src={user.picture} alt="" width={20} height={20} className="w-5 h-5 rounded-full" /> : <User size={14} />}
                 <span className="hidden lg:inline">{user.name?.split(' ')[0] || 'Dashboard'}</span>
                 <ChevronDown size={11} className={`transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -450,7 +447,7 @@ const PageHeader = () => {
                     <button onClick={() => navTo(() => router.push('/dashboard'))}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
                       style={{ backgroundColor: `${accent}15`, color: accent }}>
-                      {user.picture ? <img src={user.picture} alt="" className="w-6 h-6 rounded-full" /> : <User size={16} />}
+                      {user.picture ? <Image src={user.picture} alt="" width={24} height={24} className="w-6 h-6 rounded-full" /> : <User size={16} />}
                       Dashboard
                     </button>
                     <button onClick={() => navTo(() => router.push('/settings'))}

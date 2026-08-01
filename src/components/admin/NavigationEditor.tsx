@@ -372,8 +372,7 @@ const NavigationEditor = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load(area, ac.signal);
+    (async () => { await load(area, ac.signal); })();
     return () => ac.abort();
   }, [area, load]);
 

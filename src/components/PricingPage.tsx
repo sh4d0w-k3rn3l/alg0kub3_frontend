@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import PageHeader from './PageHeader';
@@ -101,10 +101,14 @@ const useCountdown = (targetDate?: string): TimeLeft => {
 };
 
 const useSocialProof = (base?: number, drift?: number): number => {
-  const [count, setCount] = useState(base || 0);
+  const [count, setCount] = useState(() => (base ? base + Math.floor(Math.random() * (drift || 5)) : 0));
+  const [prevBase, setPrevBase] = useState(base);
+  if (base !== prevBase) {
+    setPrevBase(base);
+    if (base) setCount(base + ((base * 7) % (drift || 5)));
+  }
   useEffect(() => {
     if (!base) return;
-    setCount(base + Math.floor(Math.random() * (drift || 5)));
     const interval = setInterval(() => {
       const d = drift || 5;
       setCount(prev => {
@@ -138,18 +142,18 @@ const PricingPage = () => {
   const [promo, setPromo] = useState<PromoData | null>(null);
   const [abVariant, setAbVariant] = useState<string | null>(null);
   const [pppDismissed, setPppDismissed] = useState(() => typeof window !== 'undefined' ? localStorage.getItem(PPP_DISMISS_KEY) === 'true' : false);
-  const visitorId = useRef(getVisitorId()).current;
+  const [visitorId] = useState(() => getVisitorId());
   const impressionSent = useRef(false);
 
   useEffect(() => {
     const ac = new AbortController();
-    api.get<Record<string, any>>(`/pricing/geo`, { signal: ac.signal })
+    api.get<GeoData>(`/pricing/geo`, { signal: ac.signal })
       .then(r => {
         if (ac.signal.aborted) return;
-        setGeo(r.data as GeoData); setPlans((r.data as any).plans || []);
+        setGeo(r.data); setPlans(r.data.plans || []);
       })
       .catch((err) => {
-        if ((err as any)?.name === 'AbortError') return;
+        if (err && typeof err === 'object' && (err as { name?: string }).name === 'AbortError') return;
         api.get<Plan[]>(`/plans`, { signal: ac.signal }).then(r => {
           if (ac.signal.aborted) return;
           setPlans(r.data);
@@ -169,7 +173,7 @@ const PricingPage = () => {
         }
       })
       .catch((err) => {
-        if ((err as any)?.name === 'AbortError') return;
+        if (err && typeof err === 'object' && (err as { name?: string }).name === 'AbortError') return;
       });
     return () => ac.abort();
   }, []);
@@ -189,27 +193,6 @@ const PricingPage = () => {
   const dismissPpp = () => {
     setPppDismissed(true);
     localStorage.setItem(PPP_DISMISS_KEY, 'true');
-  };
-
-  const handleSubscribe = async (planId: string) => {
-    if (!user) { login(); return; }
-    setLoading(planId);
-    if (abVariant && planId === 'pro_lifetime') {
-      api.post(`/pricing/ab-impression`, { variant: abVariant, event: 'conversion', visitor_id: visitorId }).catch(() => {});
-    }
-    try {
-      const res = await api.post<{ url: string }>(`/checkout/create`, {
-        plan_id: planId,
-        origin_url: window.location.origin,
-        country_code: geo?.country_code || '',
-        ab_variant: abVariant || '',
-        visitor_id: visitorId,
-      });
-      window.location.href = res.data.url;
-    } catch (err) {
-      handleApiError(err);
-      setLoading(null);
-    }
   };
 
   const handlePhonePeSubscribe = async (planId: string) => {

@@ -176,13 +176,11 @@ const HomePage: React.FC = () => {
     fetchCourses();
   }, [fetchCourses]);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (storeCourses.length > 0) {
-      setCourses(storeCourses as unknown as Course[]);
-    }
-  }, [storeCourses]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const [prevStoreCourses, setPrevStoreCourses] = useState<Course[]>(storeCourses as unknown as Course[]);
+  if ((storeCourses as unknown as Course[]) !== prevStoreCourses && storeCourses.length > 0) {
+    setPrevStoreCourses(storeCourses as unknown as Course[]);
+    setCourses(storeCourses as unknown as Course[]);
+  }
 
   useEffect(() => {
     const ac = new AbortController();
@@ -204,9 +202,14 @@ const HomePage: React.FC = () => {
     return () => ac.abort();
   }, []);
 
+  const [prevUser, setPrevUser] = useState(user);
+  if (user !== prevUser) {
+    setPrevUser(user);
+    setContinueData(null);
+  }
+
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!user) { setContinueData(null); return; }
+    if (!user) return;
     const ac = new AbortController();
     const fetchContinue = async () => {
       try {

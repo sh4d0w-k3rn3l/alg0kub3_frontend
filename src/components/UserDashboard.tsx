@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
-import { Code, BookOpen, ArrowRight, Sun, Moon, LogOut, Zap, Trophy, Layers, Award, Play, Bookmark } from 'lucide-react';
+import { BookOpen, ArrowRight, Zap, Trophy, Layers, Award, Play, Bookmark } from 'lucide-react';
 import { api } from '@/lib/api';
 import ActivityHeatmap from './ActivityHeatmap';
 import PageHeader from './PageHeader';
@@ -50,8 +51,8 @@ interface DashboardData {
 }
 
 const UserDashboard = () => {
-  const { colors, isDark, toggleTheme } = useTheme();
-  const { user, logout, isSubscribed, loading: authLoading } = useAuth();
+  const { colors, isDark } = useTheme();
+  const { user, isSubscribed, loading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
@@ -114,7 +115,7 @@ const UserDashboard = () => {
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex items-center gap-4 mb-8">
           {currentUser.picture ? (
-            <img src={currentUser.picture} alt="" className="w-14 h-14 rounded-full" />
+            <Image src={currentUser.picture} alt="" width={56} height={56} className="w-14 h-14 rounded-full" />
           ) : (
             <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold" style={{ backgroundColor: colors.green, color: '#fff' }}>
               {currentUser.name?.[0] || '?'}

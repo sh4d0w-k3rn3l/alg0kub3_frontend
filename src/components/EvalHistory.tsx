@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { History, ChevronDown, ChevronRight, CheckCircle, XCircle, ArrowUp, ArrowDown, Minus, TrendingUp } from 'lucide-react';
+import { History, ChevronDown, ChevronRight, ArrowUp, ArrowDown, Minus, TrendingUp } from 'lucide-react';
 
 interface SchemaSnapshot {
   storages?: { key: string; name: string; tag: string; tables?: { name: string; columns?: { name: string }[]; indexes?: { name: string }[] }[]; collections?: { name: string }[]; patterns?: unknown[]; topics?: { name: string }[]; indices?: { name: string }[] }[];
@@ -166,8 +166,6 @@ const EvalHistory: React.FC<EvalHistoryProps> = ({ history }) => {
 
   if (!history || history.length < 1) return null;
 
-  const latest = history[history.length - 1];
-  const maxScore = Math.max(...history.map(h => h.score));
   const scoreTrend = history.length >= 2
     ? history[history.length - 1].score - history[history.length - 2].score
     : 0;

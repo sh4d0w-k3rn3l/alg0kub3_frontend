@@ -80,7 +80,7 @@ const QuizComponent = ({ sectionId, sectionTitle }: QuizComponentProps) => {
   const { colors } = useTheme();
   const { user } = useAuth();
   const [quiz, setQuiz] = useState<QuizData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [started, setStarted] = useState(false);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number | string | null>>({});
@@ -90,35 +90,41 @@ const QuizComponent = ({ sectionId, sectionTitle }: QuizComponentProps) => {
   const [userBest, setUserBest] = useState<UserBest | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const loadQuiz = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
-    setError(null);
+  const loadQuiz = useCallback(async (signal?: AbortSignal): Promise<{ status: number; data?: QuizData & { user_best?: UserBest } } | null> => {
     try {
       const res = await api.get<QuizData & { user_best?: UserBest }>(`/quizzes/section/${sectionId}`, {
         headers: user?.token ? { Authorization: `Bearer ${user.token}` } : {} as Record<string, string>,
         signal,
       });
-      if (signal?.aborted) return;
-      setQuiz(res.data);
-      if (res.data.user_best) setUserBest(res.data.user_best);
-      const initAnswers: Record<number, null> = {};
-      (res.data.questions || []).forEach((q: QuizQuestion) => { initAnswers[q.id] = null; });
-      setAnswers(initAnswers);
+      if (signal?.aborted) return null;
+      return { status: res.status, data: res.data };
     } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') return;
+      if (err instanceof DOMException && err.name === 'AbortError') return null;
       const apiErr = err as { status?: number };
-      if (apiErr.status === 404) {
-        setError('no_quiz');
-      } else {
-        setError('load_error');
-      }
-    } finally {
-      setLoading(false);
+      return { status: apiErr.status ?? 0 };
     }
   }, [sectionId, user]);
 
+  const applyQuizResult = (result: { status: number; data?: QuizData & { user_best?: UserBest } }) => {
+    if (result.status === 404) { setError('no_quiz'); return; }
+    if (!result.data) { setError('load_error'); return; }
+    setError(null);
+    setQuiz(result.data);
+    if (result.data.user_best) setUserBest(result.data.user_best);
+    const initAnswers: Record<number, null> = {};
+    (result.data.questions || []).forEach((q: QuizQuestion) => { initAnswers[q.id] = null; });
+    setAnswers(initAnswers);
+  };
+
+  const refreshQuiz = async () => {
+    setLoading(true);
+    const result = await loadQuiz();
+    if (result) applyQuizResult(result);
+    setLoading(false);
+  };
+
   const handleStart = () => {
-    if (!quiz) loadQuiz();
+    if (!quiz) void refreshQuiz();
     setStarted(true);
     setSubmitted(false);
     setResult(null);
@@ -133,7 +139,12 @@ const QuizComponent = ({ sectionId, sectionTitle }: QuizComponentProps) => {
   useEffect(() => {
     if (!sectionId) return;
     const ac = new AbortController();
-    loadQuiz(ac.signal);
+    (async () => {
+      const result = await loadQuiz(ac.signal);
+      if (ac.signal.aborted || !result) return;
+      applyQuizResult(result);
+      setLoading(false);
+    })();
     return () => ac.abort();
   }, [sectionId, loadQuiz]);
 
@@ -234,7 +245,7 @@ const QuizComponent = ({ sectionId, sectionTitle }: QuizComponentProps) => {
     return (
       <div className="mt-10 mb-4 rounded-xl p-6" style={{ border: `1px solid ${colors.border}`, backgroundColor: colors.bgCard }}>
         <p className="text-sm" style={{ color: colors.textSecondary }}>Quiz could not be loaded.</p>
-        <button onClick={() => { setStarted(false); loadQuiz(); }} className="mt-3 text-sm underline" style={{ color: colors.green }}>Retry</button>
+        <button onClick={() => { setStarted(false); void refreshQuiz(); }} className="mt-3 text-sm underline" style={{ color: colors.green }}>Retry</button>
       </div>
     );
   }
@@ -278,7 +289,7 @@ const QuizComponent = ({ sectionId, sectionTitle }: QuizComponentProps) => {
                       <p style={{ color: r.is_correct ? '#22c55e' : '#ef4444' }}>
                         Your answer: {r.user_answer || '(empty)'}
                       </p>
-                      {!r.is_correct && r.expected_keywords?.length! > 0 && (
+                      {!r.is_correct && (r.expected_keywords?.length ?? 0) > 0 && (
                         <p style={{ color: colors.textMuted }}>Expected keywords: {r.expected_keywords?.join(', ')}</p>
                       )}
                     </div>

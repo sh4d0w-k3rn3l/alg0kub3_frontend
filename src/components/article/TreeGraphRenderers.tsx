@@ -94,8 +94,6 @@ interface IntervalFrame {
   pointers?: PointerDef[];
 }
 
-type Frame = BinaryTreeFrame & TrieFrame & GraphFrame & IntervalFrame;
-
 interface Position {
   x: number;
   y: number;

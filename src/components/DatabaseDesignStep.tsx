@@ -273,7 +273,7 @@ const SqlTable: React.FC<SqlTableProps> = ({ table, index, onUpdate, onRemove })
           </div>
         ))}
         {table.columns.length === 0 && (
-          <p className="text-[11px] text-[#484f58] text-center py-2">Click "Add Column" to start defining columns</p>
+          <p className="text-[11px] text-[#484f58] text-center py-2">Click &quot;Add Column&quot; to start defining columns</p>
         )}
       </div>
 

@@ -9,8 +9,7 @@ import {
 } from 'lucide-react';
 
 interface QuizQuestion { type: string; question: string; options: string[]; correct_answer: number; expected_keywords: string[]; code_snippet: string; explanation: string; difficulty: string; points: number; }
-type QuizData = { id: string; title: string; description: string; passing_score: number; questions: QuizQuestion[]; }; // eslint-disable-line @typescript-eslint/no-unused-vars
-interface QuizMap { [sectionId: string]: QuizData; }
+type QuizData = { id: string; title: string; description: string; passing_score: number; questions: QuizQuestion[]; };
 
 const TYPE_OPTIONS = [
   { value: 'mcq', label: 'Multiple Choice', icon: HelpCircle },
@@ -93,14 +92,12 @@ const QuizManager = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchCourses(ac.signal);
+    (async () => { await fetchCourses(ac.signal); })();
     return () => ac.abort();
   }, [fetchCourses]);
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (selectedCourse) fetchSections(ac.signal);
+    (async () => { if (selectedCourse) await fetchSections(ac.signal); })();
     return () => ac.abort();
   }, [selectedCourse, fetchSections]);
 

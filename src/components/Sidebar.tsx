@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { ChevronUp, ChevronDown, Search, SlidersHorizontal, FileText, Code, Type, GitBranch, List, Braces, BookOpen, CircleDot, ChevronLeft, Package, File, AlertTriangle, Box, Layers, Repeat, AtSign, Brackets, Zap, Calendar, Calculator, HardDrive, Database, Globe, CheckSquare, Archive, Tag, Activity, Network, TrendingUp, Layout, Star, Wifi, Cpu, Folder, Lock, Brain, BarChart3, Rocket, Link as LinkIcon, Wrench, Users, Monitor, Terminal, Shield, MessageCircle, Clock, Settings, Map } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
@@ -54,7 +54,7 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; style?: React
 
 const Sidebar = ({ isOpen, onToggle, sections = [], activeSlug, onLessonClick, totalLessons, isMobile, courseSlug, courseTitle }: SidebarProps) => {
   const { colors } = useTheme();
-  const { user, isSubscribed } = useAuth();
+  const { isSubscribed } = useAuth();
   const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>(() => {
     const activeSection = sections.find(s => s.lessons?.some(l => l.slug === activeSlug));
     const initial: Record<number, boolean> = {};
@@ -63,13 +63,7 @@ const Sidebar = ({ isOpen, onToggle, sections = [], activeSlug, onLessonClick, t
     return initial;
   });
   const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    const activeSection = sections.find(s => s.lessons?.some(l => l.slug === activeSlug));
-    if (activeSection) {
-      setExpandedSections(prev => ({ ...prev, [activeSection.id]: true }));
-    }
-  }, [activeSlug, sections]);
+  const activeSectionId = sections.find(s => s.lessons?.some(l => l.slug === activeSlug))?.id;
 
   const toggleSection = (sectionId: number) => {
     setExpandedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
@@ -121,7 +115,7 @@ const Sidebar = ({ isOpen, onToggle, sections = [], activeSlug, onLessonClick, t
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {filteredSections.map((section) => {
           const IconComp = iconMap[section.icon || ''] || FileText;
-          const isExpanded = expandedSections[section.id];
+          const isExpanded = expandedSections[section.id] || section.id === activeSectionId;
           return (
             <div key={section.id}>
               <button

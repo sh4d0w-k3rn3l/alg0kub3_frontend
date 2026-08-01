@@ -13,22 +13,23 @@ const PhonePeCallback = () => {
   const [status, setStatus] = useState<'processing' | 'success' | 'failed'>('processing');
   const checked = useRef(false);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (checked.current) return;
     checked.current = true;
 
     const ac = new AbortController();
     const merchantTransactionId = searchParams?.get('merchantTransactionId');
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
-    if (!merchantTransactionId) {
-      setStatus('failed');
-      return;
-    }
+    const schedule = (fn: () => void, delay: number) => {
+      const id = setTimeout(fn, delay);
+      timers.push(id);
+      return id;
+    };
 
     const checkStatus = async (attempts = 0) => {
       if (ac.signal.aborted) return;
-      if (attempts >= 20) {
+      if (attempts >= 20 || !merchantTransactionId) {
         setStatus('failed');
         return;
       }
@@ -48,15 +49,17 @@ const PhonePeCallback = () => {
           setStatus('failed');
           return;
         }
-        setTimeout(() => checkStatus(attempts + 1), 1500);
+        schedule(() => checkStatus(attempts + 1), 1500);
       } catch {
-        setTimeout(() => checkStatus(attempts + 1), 1500);
+        schedule(() => checkStatus(attempts + 1), 1500);
       }
     };
 
     checkStatus();
-    return () => ac.abort();
-  /* eslint-enable react-hooks/set-state-in-effect */
+    return () => {
+      ac.abort();
+      timers.forEach(clearTimeout);
+    };
   }, [searchParams, refreshUser]);
 
   return (

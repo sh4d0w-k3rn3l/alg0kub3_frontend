@@ -19,6 +19,12 @@ const GoogleIcon = () => (
 
 type SignUpStep = 'form' | 'verify';
 
+function getErrorMessage(err: unknown): string {
+  if (!err || typeof err !== 'object') return 'Something went wrong. Please try again.';
+  const e = err as { errors?: { message?: string }[]; message?: string };
+  return e.errors?.[0]?.message || e.message || 'Something went wrong. Please try again.';
+}
+
 const SignUpPage: React.FC = () => {
   const { colors, isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
@@ -118,9 +124,8 @@ const SignUpPage: React.FC = () => {
         }
         setStep('verify');
       }
-    } catch (err: any) {
-      const msg = err.errors?.[0]?.message || err.message || 'Sign up failed. Please try again.';
-      setError(msg);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -157,8 +162,8 @@ const SignUpPage: React.FC = () => {
       } else {
         setError('Verification succeeded but sign-up not complete. Please try again.');
       }
-    } catch (err: any) {
-      setError(err.message || 'Verification failed');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -28,7 +29,35 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: 
 
 const CATEGORY_LABELS: Record<string, string> = { course: 'Learning', quiz: 'Quizzes', code: 'Coding', community: 'Community' };
 
-const BadgeCard = ({ badge, index }: { badge: any; index: number }) => {
+interface BadgeItem {
+  badge_id: string;
+  name: string;
+  description?: string;
+  tier: string;
+  icon: string;
+  category: string;
+  earned: boolean;
+  awarded_at?: string;
+}
+
+interface ProfileStats {
+  lessons?: number;
+  quizzes_passed?: number;
+  certificates?: number;
+  quiz_streak?: number;
+  code_runs?: number;
+}
+
+interface ProfileData {
+  xp: number;
+  rank: number;
+  badges_earned: number;
+  badges_total: number;
+  all_badges: BadgeItem[];
+  stats: ProfileStats;
+}
+
+const BadgeCard = ({ badge, index }: { badge: BadgeItem; index: number }) => {
   const tier = TIER_CONFIG[badge.tier] || TIER_CONFIG.bronze;
   const Icon = ICON_MAP[badge.icon] || Award;
   const earned = badge.earned;
@@ -100,7 +129,7 @@ const StatCard = ({ icon: Icon, label, value, color }: { icon: React.ComponentTy
 );
 
 const MyProfilePage = () => {
-  const [data, setData] = useState<Record<string, any> | null>(null);
+  const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
   const { user } = useAuth();
@@ -109,7 +138,7 @@ const MyProfilePage = () => {
   useEffect(() => {
     if (!user) { router.push('/login'); return; }
     const ac = new AbortController();
-    api.get<Record<string, any>>(`/gamification/profile`, { signal: ac.signal })
+    api.get<ProfileData>(`/gamification/profile`, { signal: ac.signal })
       .then(res => {
         if (ac.signal.aborted) return;
         setData(res.data);
@@ -118,7 +147,7 @@ const MyProfilePage = () => {
         if (err instanceof DOMException && err.name === 'AbortError') return;
         router.push('/login');
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!ac.signal.aborted) setLoading(false); });
     return () => ac.abort();
   }, [user, router]);
 
@@ -139,7 +168,7 @@ const MyProfilePage = () => {
   const categories = ['all', ...Object.keys(CATEGORY_LABELS)];
   const filtered = activeCategory === 'all'
     ? all_badges
-    : all_badges.filter((b: any) => b.category === activeCategory);
+    : all_badges.filter((b: BadgeItem) => b.category === activeCategory);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#0d1117' }}>
@@ -171,7 +200,7 @@ const MyProfilePage = () => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             <div className="flex items-center gap-4">
               {user?.picture ? (
-                <img src={user.picture} alt="" className="w-16 h-16 rounded-full border-2 border-[#22c55e]/30" />
+                <Image src={user.picture} alt="" width={64} height={64} className="w-16 h-16 rounded-full border-2 border-[#22c55e]/30" />
               ) : (
                 <div className="w-16 h-16 rounded-full bg-[#22c55e]/10 border-2 border-[#22c55e]/30 flex items-center justify-center">
                   <span className="text-2xl font-bold text-[#22c55e]">{user?.name?.[0] || '?'}</span>
@@ -238,13 +267,13 @@ const MyProfilePage = () => {
                     : 'text-[#8b949e] hover:text-[#c9d1d9] bg-[#161b22] border border-[#2d333b]'
                 }`}
               >
-                {cat === 'all' ? `All (${all_badges.length})` : `${CATEGORY_LABELS[cat]} (${all_badges.filter((b: any) => b.category === cat).length})`}
+                {cat === 'all' ? `All (${all_badges.length})` : `${CATEGORY_LABELS[cat]} (${all_badges.filter((b: BadgeItem) => b.category === cat).length})`}
               </button>
             ))}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {filtered.sort((a: any, b: any) => (b.earned ? 1 : 0) - (a.earned ? 1 : 0)).map((badge: any, i: number) => (
+            {filtered.sort((a: BadgeItem, b: BadgeItem) => (b.earned ? 1 : 0) - (a.earned ? 1 : 0)).map((badge: BadgeItem, i: number) => (
               <BadgeCard key={badge.badge_id} badge={badge} index={i} />
             ))}
           </div>

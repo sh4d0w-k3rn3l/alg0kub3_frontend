@@ -169,7 +169,7 @@ const LinkPopover = ({ editor, onClose }: { editor: Editor | null; onClose: () =
 
 const RichTextEditor = ({ value, onChange, placeholder = 'Start typing...' }: { value: string; onChange: (html: string) => void; placeholder?: string }) => {
   const [showLink, setShowLink] = useState<boolean>(false);
-  const initialContent = useRef<string>(value || '');
+  const [initialContent] = useState<string>(() => value || '');
   const isUpdatingRef = useRef<boolean>(false);
 
   const editor = useEditor({
@@ -195,7 +195,7 @@ const RichTextEditor = ({ value, onChange, placeholder = 'Start typing...' }: { 
       Highlight.configure({ multicolor: true }),
       Placeholder.configure({ placeholder }),
     ],
-    content: initialContent.current || '',
+    content: initialContent || '',
     editorProps: {
       attributes: {
         class: 'prose prose-invert max-w-none text-sm text-[#c9d1d9] leading-relaxed outline-none min-h-[60px] px-0 py-0',

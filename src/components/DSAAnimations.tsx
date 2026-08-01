@@ -7,6 +7,14 @@ import Header from '@/components/DSAHeader';
 import AlgorithmCard from '@/components/AlgorithmCard';
 import { algorithms, categories, difficulties } from '@/data/mockData';
 
+interface Algorithm {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: string;
+}
+
 const DSAAnimations = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
@@ -16,7 +24,7 @@ const DSAAnimations = () => {
   const [showBookmarked, setShowBookmarked] = useState(false);
 
   const filteredAlgorithms = useMemo(() => {
-    return algorithms.filter((algo: any) => {
+    return algorithms.filter((algo: Algorithm) => {
       const matchesSearch = algo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         algo.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === 'All Categories' || algo.category === selectedCategory;
@@ -26,8 +34,8 @@ const DSAAnimations = () => {
   }, [searchQuery, selectedCategory, selectedDifficulty]);
 
   const groupedAlgorithms = useMemo(() => {
-    const groups: Record<string, any[]> = {};
-    filteredAlgorithms.forEach((algo: any) => {
+    const groups: Record<string, Algorithm[]> = {};
+    filteredAlgorithms.forEach((algo: Algorithm) => {
       if (!groups[algo.category]) {
         groups[algo.category] = [];
       }
@@ -187,7 +195,7 @@ const DSAAnimations = () => {
               <section key={category}>
                 <h2 className="text-xl font-semibold text-white mb-4">{category}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {algos.map((algo: any) => (
+                  {algos.map((algo: Algorithm) => (
                     <AlgorithmCard key={algo.id} algorithm={algo} />
                   ))}
                 </div>

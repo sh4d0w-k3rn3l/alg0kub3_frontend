@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -11,19 +12,36 @@ import { COURSE_ICONS, COURSE_COLORS } from '@/config/courseConfig';
 import CoursesMegaMenu from '../CoursesMegaMenu';
 import { WHATS_NEW_FALLBACK, KIND_META, relativeTime, fetchWhatsNew } from '@/config/whatsNew';
 import { fetchNavigation, HEADER_FALLBACK, visible } from '@/config/navigation';
-import type { NavigationConfig } from '@/types';
+import type { NavigationConfig, User as AuthUser } from '@/types';
 
-const NAV_ICONS: Record<string, React.ComponentType<any>> = { Code, Server, Braces, Target };
+interface ThemeTokens {
+  borderSubtle: string;
+  primary: string;
+  text: string;
+  textSec: string;
+  textMut: string;
+  surfaceHi: string;
+  border: string;
+  glow: string;
+}
+
+interface HeaderCourse {
+  slug: string;
+  title: string;
+  lesson_count?: number;
+}
+
+const NAV_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>> = { Code, Server, Braces, Target };
 
 interface HomeHeaderProps {
-  t: any;
+  t: ThemeTokens;
   isDark: boolean;
   toggleTheme: () => void;
-  user: any;
+  user: AuthUser | null;
   login: () => void;
   navigate: (url: string) => void;
-  courses: any[];
-  categories: any[];
+  courses: HeaderCourse[];
+  categories: string[];
 }
 
 const HomeHeader = ({ t, isDark, toggleTheme, user, login, navigate, courses }: HomeHeaderProps) => {
@@ -129,7 +147,6 @@ const HomeHeader = ({ t, isDark, toggleTheme, user, login, navigate, courses }: 
               <CoursesMegaMenu
                 courses={courses}
                 isDark={isDark}
-                t={t}
                 navigate={navigate}
                 onClose={() => setCoursesOpen(false)}
               />
@@ -271,7 +288,7 @@ const HomeHeader = ({ t, isDark, toggleTheme, user, login, navigate, courses }: 
               style={{ backgroundColor: t.primary, color: '#052e16' }}
               onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 0 20px ${t.glow}`; }}
               onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}>
-              {user.picture ? <img src={user.picture} alt="" className="w-5 h-5 rounded-full" /> : <User size={14} />}
+              {user.picture ? <Image src={user.picture} alt="" width={20} height={20} className="w-5 h-5 rounded-full" /> : <User size={14} />}
               Dashboard
             </button>
           ) : (
@@ -301,7 +318,7 @@ const HomeHeader = ({ t, isDark, toggleTheme, user, login, navigate, courses }: 
                   <button data-testid="mobile-dashboard-btn" onClick={() => navTo(() => navigate('/dashboard'))}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors"
                     style={{ backgroundColor: `${t.primary}15`, color: t.primary }}>
-                    {user.picture ? <img src={user.picture} alt="" className="w-6 h-6 rounded-full" /> : <User size={16} />}
+                    {user.picture ? <Image src={user.picture} alt="" width={24} height={24} className="w-6 h-6 rounded-full" /> : <User size={16} />}
                     Dashboard
                   </button>
                 ) : (
@@ -329,11 +346,11 @@ const HomeHeader = ({ t, isDark, toggleTheme, user, login, navigate, courses }: 
               ))}
               <div className="pt-3 border-t mt-2" style={{ borderColor: t.borderSubtle }}>
                 <p className="px-3 text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: t.textMut }}>Popular Courses</p>
-                {courses.filter(c => c.lesson_count > 0).slice(0, 6).map(course => {
+                {courses.filter((c): c is HeaderCourse & { lesson_count: number } => (c.lesson_count ?? 0) > 0).slice(0, 6).map(course => {
                   const Icon = COURSE_ICONS[course.slug] || Code;
                   const color = COURSE_COLORS[course.slug] || t.primary;
                   return (
-                    <button key={course.id} data-testid={`mobile-course-${course.slug}`} onClick={() => navTo(() => navigate(`/course/${course.slug}`))}
+                    <button key={course.slug} data-testid={`mobile-course-${course.slug}`} onClick={() => navTo(() => navigate(`/course/${course.slug}`))}
                       className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors"
                       onMouseEnter={e => { e.currentTarget.style.backgroundColor = t.surfaceHi; }}
                       onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}>

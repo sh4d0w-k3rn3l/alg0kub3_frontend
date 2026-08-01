@@ -9,10 +9,10 @@ import SEO from '@/components/SEO';
 import PageHeader from '@/components/PageHeader';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BookOpen, Code, Database, Zap, Globe, Tag, Brain, Sparkles,
-  ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Clock, Layers,
+  BookOpen, Code, Database, Zap, Globe, Brain,
+  ArrowRight, ChevronDown, ChevronUp, Clock, Layers,
   Play, Lock, CheckCircle2, FileText, Terminal, Users, Cpu,
-  Route, Sun, Moon, Star, Award, BarChart3, Braces, Monitor,
+  Star, Award, BarChart3, Monitor,
   Rocket, Link, Wrench, GitBranch, TrendingUp, Box, Repeat, Package, Target,
 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -90,7 +90,7 @@ const CoursePreviewPage: FC = () => {
   const params = useParams();
   const courseSlug = (params?.courseSlug as string) || '';
   const router = useRouter();
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { colors, isDark } = useTheme();
   const { user, isSubscribed } = useAuth();
   const [data, setData] = useState<CoursePreviewData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -98,7 +98,6 @@ const CoursePreviewPage: FC = () => {
   const [allExpanded, setAllExpanded] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
     const ac = new AbortController();
     api.get<CoursePreviewData>(`/courses/${courseSlug}/preview`, { signal: ac.signal })
       .then(res => {
@@ -333,7 +332,7 @@ const CoursePreviewPage: FC = () => {
       >
         <div className="max-w-[1280px] mx-auto px-6 lg:px-8 py-16">
           <motion.h2 variants={fadeUp} className="text-xl sm:text-2xl font-extrabold tracking-tight mb-8" style={{ color: t.text }}>
-            What you'll learn
+            What you&apos;ll learn
           </motion.h2>
           <motion.div variants={stagger} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {curriculum.map((section) => {
@@ -523,7 +522,7 @@ const CoursePreviewPage: FC = () => {
             Ready to master {course.title.split(' ')[0]}?
           </h2>
           <p className="text-sm mb-8 max-w-md mx-auto" style={{ color: t.textSecondary }}>
-            {stats.total_lessons} lessons · {stats.total_sections} sections · ~{stats.estimated_hours}h to complete. Start free, upgrade when you're ready.
+            {stats.total_lessons} lessons · {stats.total_sections} sections · ~{stats.estimated_hours}h to complete. Start free, upgrade when you&apos;re ready.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <button

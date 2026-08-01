@@ -99,11 +99,9 @@ const ApiMonitoring = () => {
 
   useEffect(() => {
     const ac = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchData(undefined, ac.signal);
+    (async () => { await fetchData(undefined, ac.signal); })();
     return () => ac.abort();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hours]);
+  }, [fetchData]);
 
   useEffect(() => {
     const ac = new AbortController();

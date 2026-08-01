@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState, Fragment, type ChangeEvent } from 'react';
+import { useEffect, useState, Fragment, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { handleApiError } from '@/lib/toast';
@@ -75,8 +75,13 @@ const STEPS = [
 ];
 
 // ============ Step 1: Define Course ============
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const StepDefine = ({ form, setForm, onNext, generating, categories }: any) => {
+const StepDefine = ({ form, setForm, onNext, generating, categories }: {
+  form: CourseForm;
+  setForm: Dispatch<SetStateAction<CourseForm>>;
+  onNext: () => void;
+  generating: boolean;
+  categories: string[];
+}) => {
   const [creatingNew, setCreatingNew] = useState<boolean>(false);
   const [newCategoryName, setNewCategoryName] = useState<string>('');
 
@@ -86,14 +91,14 @@ const StepDefine = ({ form, setForm, onNext, generating, categories }: any) => {
       setNewCategoryName('');
     } else {
       setCreatingNew(false);
-      setForm((p: Record<string, unknown>) => ({ ...p, category: e.target.value }));
+      setForm((p: CourseForm) => ({ ...p, category: e.target.value }));
     }
   };
 
   const confirmNewCategory = () => {
     const trimmed = newCategoryName.trim();
     if (trimmed) {
-      setForm((p: Record<string, unknown>) => ({ ...p, category: trimmed }));
+      setForm((p: CourseForm) => ({ ...p, category: trimmed }));
       setCreatingNew(false);
     }
   };
@@ -257,8 +262,14 @@ const StepDefine = ({ form, setForm, onNext, generating, categories }: any) => {
 };
 
 // ============ Step 2: Review Outline ============
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const StepOutline = ({ outline, setOutline, onBack, onNext, onRegenerate, generating }: any) => {
+const StepOutline = ({ outline, setOutline, onBack, onNext, onRegenerate, generating }: {
+  outline: CourseOutline;
+  setOutline: Dispatch<SetStateAction<CourseOutline | null>>;
+  onBack: () => void;
+  onNext: () => void;
+  onRegenerate: () => void;
+  generating: boolean;
+}) => {
   const [editingSection, setEditingSection] = useState<number | null>(null);
   const [editingLesson, setEditingLesson] = useState<string | null>(null);
 
@@ -276,7 +287,7 @@ const StepOutline = ({ outline, setOutline, onBack, onNext, onRegenerate, genera
   };
 
   const removeSection = (sIdx: number) => {
-    const updated = { ...outline, sections: outline.sections.filter((_: Record<string, unknown>, i: number) => i !== sIdx) };
+    const updated = { ...outline, sections: outline.sections.filter((_: CourseSection, i: number) => i !== sIdx) };
     setOutline(updated);
   };
 
@@ -339,12 +350,12 @@ const StepOutline = ({ outline, setOutline, onBack, onNext, onRegenerate, genera
         <input
           data-testid="ai-outline-title"
           value={outline.title || ''}
-          onChange={(e) => setOutline((prev: CourseOutline | null) => ({ ...prev, title: e.target.value }))}
+          onChange={(e) => setOutline((prev: CourseOutline | null) => ({ ...(prev || { sections: [] }), title: e.target.value }))}
           className="w-full bg-transparent text-white font-bold text-lg outline-none mb-2"
         />
         <textarea
           value={outline.description || ''}
-          onChange={(e) => setOutline((prev: CourseOutline | null) => ({ ...prev, description: e.target.value }))}
+          onChange={(e) => setOutline((prev: CourseOutline | null) => ({ ...(prev || { sections: [] }), description: e.target.value }))}
           className="w-full bg-transparent text-[#8b949e] text-sm outline-none resize-none"
           rows={2}
         />
@@ -441,31 +452,41 @@ const StepOutline = ({ outline, setOutline, onBack, onNext, onRegenerate, genera
 };
 
 // ============ Step 3: Generation Progress ============
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const StepGenerate = ({ courseId, onDone }: any) => {
+const StepGenerate = ({ courseId, onDone }: { courseId: string | null; onDone: (action: string) => void }) => {
   const [status, setStatus] = useState<GenerationStatus | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!courseId) return;
     const ac = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let attempts = 0;
+    let consecutiveErrors = 0;
+    const MAX_ATTEMPTS = 200;
+    const MAX_CONSECUTIVE_ERRORS = 3;
     const poll = async () => {
+      if (ac.signal.aborted) return;
       try {
         const res = await api.get<GenerationStatus>(`/ai/generation-status/${courseId}`, { signal: ac.signal });
         if (ac.signal.aborted) return;
+        consecutiveErrors = 0;
+        attempts += 1;
         setStatus(res.data);
-        if (res.data.status === 'complete') {
-          if (intervalRef.current) clearInterval(intervalRef.current);
+        if (res.data.status !== 'complete' && attempts < MAX_ATTEMPTS) {
+          timer = setTimeout(poll, 3000);
         }
       } catch (err: unknown) {
         if ((err as DOMException)?.name === 'AbortError') return;
-        handleApiError(err);
+        consecutiveErrors += 1;
+        attempts += 1;
+        if (consecutiveErrors === 1) handleApiError(err);
+        if (consecutiveErrors < MAX_CONSECUTIVE_ERRORS && attempts < MAX_ATTEMPTS) {
+          timer = setTimeout(poll, 3000);
+        }
       }
     };
     poll();
-    intervalRef.current = setInterval(poll, 3000);
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timer) clearTimeout(timer);
       ac.abort();
     };
   }, [courseId]);

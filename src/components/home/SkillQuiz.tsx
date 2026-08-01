@@ -8,6 +8,27 @@ import {
 } from 'lucide-react';
 import { COURSE_ICONS, COURSE_COLORS } from '@/config/courseConfig';
 
+interface ThemeTokens {
+  bg: string;
+  surface: string;
+  surfaceHi: string;
+  border: string;
+  borderSubtle: string;
+  text: string;
+  textSec: string;
+  textMut: string;
+  primary: string;
+  purple: string;
+  glow: string;
+}
+
+interface SkillCourse {
+  id: number;
+  slug: string;
+  title: string;
+  lesson_count: number;
+}
+
 const QUIZ_STEPS = [
   {
     id: 'level',
@@ -77,12 +98,12 @@ const fadeUp = { hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0, transi
 const stagger = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
 
 interface SkillQuizProps {
-  t: any;
+  t: ThemeTokens;
   isDark: boolean;
-  courses: any[];
-  learningPaths: any[];
+  courses: SkillCourse[];
+  learningPaths: { slug: string }[];
   navigate: (url: string) => void;
-  onCourseClick: (course: any) => void;
+  onCourseClick: (course: SkillCourse) => void;
 }
 
 const SkillQuiz = ({ t, isDark, courses, learningPaths, navigate, onCourseClick }: SkillQuizProps) => {
@@ -106,7 +127,7 @@ const SkillQuiz = ({ t, isDark, courses, learningPaths, navigate, onCourseClick 
   const recPath = learningPaths.find(lp => lp.slug === recommendation.path);
   const recCourses = recommendation.courses
     .map(slug => courses.find(c => c.slug === slug))
-    .filter(Boolean)
+    .filter((c): c is SkillCourse => !!c)
     .slice(0, 3);
 
   const levelLabel = ({ beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' } as Record<string, string>)[answers.level] || '';

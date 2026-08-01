@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { showError, showConfirm } from '@/lib/toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import HighLevelDesignStep from '@/components/HighLevelDesignStep';
 import DatabaseDesignStep from '@/components/DatabaseDesignStep';
 import EvalHistory from '@/components/EvalHistory';
@@ -18,8 +18,8 @@ import {
 
 interface StepData { id: string; status: string; title?: string; description?: string; tips?: Record<string, unknown>[]; score?: number; [key: string]: unknown }
 interface SessionData { session_id?: string; steps?: StepData[]; experience_level?: string; answers?: Record<string, unknown>; final_evaluation?: Record<string, unknown>; timer_started_at?: string; examples?: Record<string, unknown>; guidelines?: Record<string, unknown>; passed?: boolean; problem_title?: string; difficulty?: string; [key: string]: unknown }
-interface FeedbackData { status?: string; categories?: Record<string, unknown>[]; did_well?: string[]; improve?: string[]; score?: number; [key: string]: unknown }
 interface FinalEvalData { overall_score?: number; passed?: boolean; summary?: string; did_well?: string[]; categories?: Record<string, { score?: number; feedback?: Record<string, unknown>[] }>; status?: string; [key: string]: unknown }
+interface EvalHistoryEntry { attempt: number; score: number; timestamp: string; schema_snapshot?: Record<string, unknown>; feedback?: Record<string, unknown> }
 
 const STEP_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = { target: Target, gauge: Gauge, ruler: Ruler, route: Route, shield: Shield, layers: Layers, arrows: ArrowRight, table: Table2, key: Key, zap: Zap, refresh: RefreshCw, database: Database, 'bar-chart': BarChart2 };
 
@@ -402,7 +402,6 @@ const SystemDesignPractice = () => {
         // Restore active step from session progress
         const steps = res.data.steps || [];
         const firstIncomplete = steps.find((s: StepData) => s.status === 'active' || s.status === 'locked');
-        const lastDone = [...steps].reverse().find((s: StepData) => ['passed', 'skipped', 'failed'].includes(s.status));
         if (firstIncomplete) {
           setActiveStep(firstIncomplete.id);
         } else if (steps.every((s: StepData) => ['passed', 'skipped', 'failed'].includes(s.status))) {
@@ -658,7 +657,7 @@ const SystemDesignPractice = () => {
 
                   {/* Feedback */}
                   <FeedbackPanel step={step} />
-                  <EvalHistory history={step.eval_history as any[]} />
+                  <EvalHistory history={step.eval_history as EvalHistoryEntry[]} />
 
                   {/* Action Buttons */}
                   {step.status !== 'locked' && (

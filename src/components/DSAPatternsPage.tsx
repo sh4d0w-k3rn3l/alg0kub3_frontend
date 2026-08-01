@@ -58,7 +58,7 @@ const DSAPatternsPage = () => {
 
         <div className="rounded-xl border border-[#22c55e]/20 bg-[#22c55e]/5 p-6 text-center">
           <h3 className="text-lg font-bold text-white mb-2">Get notified when it launches</h3>
-          <p className="text-sm text-[#8b949e] mb-4">We're building 80+ curated problems across 8 pattern categories with visual explanations.</p>
+          <p className="text-sm text-[#8b949e] mb-4">We&apos;re building 80+ curated problems across 8 pattern categories with visual explanations.</p>
           <div className="flex items-center justify-center gap-2">
             <input data-testid="dsa-notify-email" type="email" placeholder="Your email address"
               className="bg-[#0d1117] border border-[#2d333b] rounded-lg px-4 py-2 text-sm text-[#c9d1d9] outline-none focus:border-[#22c55e] placeholder-[#484f58] w-64" />

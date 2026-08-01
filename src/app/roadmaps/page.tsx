@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { handleApiError } from '@/lib/toast';
-import { Map, BookOpen, Clock, ChevronRight, Loader2, ArrowLeft } from 'lucide-react';
+import { Map, BookOpen, ChevronRight, Loader2 } from 'lucide-react';
 
 interface Course {
   id: string;

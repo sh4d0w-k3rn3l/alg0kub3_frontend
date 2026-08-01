@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, X, FileText, ArrowRight, Loader2, BookOpen, Layers } from 'lucide-react';
+import { Search, FileText, ArrowRight, Loader2, BookOpen, Layers } from 'lucide-react';
 import { api } from '@/lib/api';
 import { handleApiError } from '@/lib/toast';
 import { useTheme } from '@/context/ThemeContext';
@@ -17,6 +17,11 @@ interface SearchResult {
   read_time?: string;
 }
 
+interface CourseBriefSearch {
+  lesson_count?: number;
+  [key: string]: unknown;
+}
+
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -24,7 +29,7 @@ interface SearchModalProps {
   courseSlug?: string;
 }
 
-const SearchModal = ({ isOpen, onClose, onNavigate, courseSlug }: SearchModalProps) => {
+const SearchModal = ({ isOpen, onClose, onNavigate }: SearchModalProps) => {
   const { colors } = useTheme();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -34,23 +39,30 @@ const SearchModal = ({ isOpen, onClose, onNavigate, courseSlug }: SearchModalPro
   const inputRef = useRef<HTMLInputElement | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
     if (isOpen) {
       setQuery('');
       setResults([]);
       setSelectedIdx(0);
-      setTimeout(() => inputRef.current?.focus(), 100);
     }
+  }
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const t = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(t);
   }, [isOpen]);
 
   useEffect(() => {
     const ac = new AbortController();
-    api.get<{ courses: any[] } | any[]>('/courses', { signal: ac.signal, cache: 'no-store' }).then(r => {
+    api.get<{ courses: CourseBriefSearch[] } | CourseBriefSearch[]>('/courses', { signal: ac.signal, cache: 'no-store' }).then(r => {
       if (ac.signal.aborted) return;
       const courses = 'courses' in r.data ? r.data.courses : r.data || [];
-      setTotalLessons(courses.reduce((a: number, c: { lesson_count?: number }) => a + (c.lesson_count || 0), 0));
+      setTotalLessons(courses.reduce((a: number, c: CourseBriefSearch) => a + (c.lesson_count || 0), 0));
     }).catch((err) => {
-      if ((err as any)?.name === 'AbortError') return;
+      if (err instanceof DOMException && err.name === 'AbortError') return;
     });
     return () => ac.abort();
   }, []);
@@ -68,15 +80,15 @@ const SearchModal = ({ isOpen, onClose, onNavigate, courseSlug }: SearchModalPro
   const searchAbortRef = useRef<AbortController | null>(null);
 
   const search = useCallback(async (signal?: AbortSignal) => {
-    if ((signal as any)?.aborted) return;
+    if (signal?.aborted) return;
     setLoading(true);
     try {
-      const res = await api.get<{ results: any[] }>(`/search?q=${encodeURIComponent(query)}&limit=15`, { signal });
+      const res = await api.get<{ results: SearchResult[] }>(`/search?q=${encodeURIComponent(query)}&limit=15`, { signal });
       if (signal?.aborted) return;
       setResults(res.data.results || []);
       setSelectedIdx(0);
     } catch (err) {
-      if ((err as any)?.name === 'AbortError') return;
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       handleApiError(err);
     } finally {
       setLoading(false);

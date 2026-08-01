@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { showError } from '@/lib/toast';
+import { useAuth } from '@/context/AuthContext';
 
 const TABS = [
   { key: 'chat', label: 'Chat', icon: Sparkles },
@@ -497,7 +498,22 @@ interface AITutorPanelProps {
 
 const AITutorPanel = ({ isOpen, onClose, lessonSlug, lessonTitle, courseSlug }: AITutorPanelProps) => {
   const [activeTab, setActiveTab] = useState('chat');
-  const sessionToken = '';
+  const { getAuthHeaders } = useAuth();
+  const [sessionToken, setSessionToken] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    getAuthHeaders()
+      .then((headers) => {
+        if (cancelled) return;
+        const auth = headers.Authorization || '';
+        setSessionToken(auth.replace(/^Bearer\s+/i, ''));
+      })
+      .catch(() => {
+        if (!cancelled) setSessionToken('');
+      });
+    return () => { cancelled = true; };
+  }, [getAuthHeaders]);
 
   const panelKey = `${isOpen}|${lessonSlug}`;
   const [prevPanelKey, setPrevPanelKey] = useState(panelKey);
@@ -537,10 +553,18 @@ const AITutorPanel = ({ isOpen, onClose, lessonSlug, lessonTitle, courseSlug }: 
         </div>
 
         <div className="flex-1" style={{ minHeight: '300px', maxHeight: '55vh', display: 'flex', flexDirection: 'column' }}>
-          {activeTab === 'chat' && <ChatTab lessonSlug={lessonSlug} courseSlug={courseSlug} sessionToken={sessionToken} />}
-          {activeTab === 'quiz' && <QuizTab lessonSlug={lessonSlug} courseSlug={courseSlug} lessonTitle={lessonTitle} sessionToken={sessionToken} />}
-          {activeTab === 'flashcards' && <FlashcardsTab lessonSlug={lessonSlug} courseSlug={courseSlug} lessonTitle={lessonTitle} sessionToken={sessionToken} />}
-          {activeTab === 'interview' && <InterviewTab lessonSlug={lessonSlug} courseSlug={courseSlug} lessonTitle={lessonTitle} sessionToken={sessionToken} />}
+          <div className={activeTab === 'chat' ? 'flex-1 flex flex-col' : 'hidden'} style={{ minHeight: 0, overflow: 'auto' }}>
+            <ChatTab lessonSlug={lessonSlug} courseSlug={courseSlug} sessionToken={sessionToken} />
+          </div>
+          <div className={activeTab === 'quiz' ? 'flex-1 flex flex-col' : 'hidden'} style={{ minHeight: 0, overflow: 'auto' }}>
+            <QuizTab lessonSlug={lessonSlug} courseSlug={courseSlug} lessonTitle={lessonTitle} sessionToken={sessionToken} />
+          </div>
+          <div className={activeTab === 'flashcards' ? 'flex-1 flex flex-col' : 'hidden'} style={{ minHeight: 0, overflow: 'auto' }}>
+            <FlashcardsTab lessonSlug={lessonSlug} courseSlug={courseSlug} lessonTitle={lessonTitle} sessionToken={sessionToken} />
+          </div>
+          <div className={activeTab === 'interview' ? 'flex-1 flex flex-col' : 'hidden'} style={{ minHeight: 0, overflow: 'auto' }}>
+            <InterviewTab lessonSlug={lessonSlug} courseSlug={courseSlug} lessonTitle={lessonTitle} sessionToken={sessionToken} />
+          </div>
         </div>
       </div>
     </div>

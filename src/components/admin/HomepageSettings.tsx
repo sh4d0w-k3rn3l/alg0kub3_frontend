@@ -20,12 +20,10 @@ const ACCENT_PRESETS = [
 const HomepageSettings = () => {
   const navigate = useRouter();
 
-  const [counterConfig, setCounterConfig] = useState<Record<string, unknown> | null>(null);
   const [bannerConfig, setBannerConfig] = useState<Record<string, unknown> | null>(null);
   const [promoConfig, setPromoConfig] = useState<Record<string, unknown> | null>(null);
   const [abResults, setAbResults] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [savingCounter, setSavingCounter] = useState<boolean>(false);
   const [savingBanner, setSavingBanner] = useState<boolean>(false);
   const [savingPromo, setSavingPromo] = useState<boolean>(false);
   const [resettingAb, setResettingAb] = useState<boolean>(false);
@@ -39,38 +37,23 @@ const HomepageSettings = () => {
   useEffect(() => {
     const ac = new AbortController();
     Promise.all([
-      api.get<Record<string, unknown>>('/homepage-settings/live-counter', { signal: ac.signal }).then(r => r.data).catch(() => ({
-        enabled: true, base_count: 127, min_count: 40, label: 'learning now', drift_range: 5,
-      })),
       api.get<Record<string, unknown>>('/homepage-settings/flash-banner', { signal: ac.signal }).then(r => r.data).catch(() => ({
         enabled: false, title: 'Limited Time Offer', subtitle: 'Get 40% off annual Pro plan',
         end_date: '', accent_color: '#f59e0b', link_url: '/pricing', link_text: 'Claim Offer',
       })),
       api.get<Record<string, unknown>>('/pricing/lifetime-promo', { signal: ac.signal }).then(r => r.data).catch(() => ({
         enabled: false, promo_price: 149, label: 'Launch Special', end_date: '',
-        social_proof_base: 42, social_proof_drift: 8,
         ab_enabled: false, variant_a: { price: 149, label: 'Launch Special' }, variant_b: { price: 159, label: 'Early Bird' }, ab_split: 50,
       })),
       api.get<Record<string, unknown>>('/admin/ab-results', { signal: ac.signal }).then(r => r.data).catch(() => null),
-    ]).then(([counter, banner, promo, ab]) => {
+    ]).then(([banner, promo, ab]) => {
       if (ac.signal.aborted) return;
-      setCounterConfig(counter);
       setBannerConfig(banner);
       setPromoConfig(promo);
       setAbResults(ab);
     }).finally(() => { if (!ac.signal.aborted) setLoading(false); });
     return () => ac.abort();
   }, []);
-
-  const saveCounter = async () => {
-    setSavingCounter(true);
-    try {
-      const res = await api.put<Record<string, unknown>>('/homepage-settings/live-counter', counterConfig);
-      setCounterConfig(res.data);
-      showToast('Live counter saved');
-    } catch { showToast('Failed to save', 'error'); }
-    finally { setSavingCounter(false); }
-  };
 
   const saveBanner = async () => {
     setSavingBanner(true);
@@ -82,7 +65,6 @@ const HomepageSettings = () => {
     finally { setSavingBanner(false); }
   };
 
-  const uc = (key: string, val: unknown) => setCounterConfig((p: Record<string, unknown> | null) => ({ ...p, [key]: val }));
   const ub = (key: string, val: unknown) => setBannerConfig((p: Record<string, unknown> | null) => ({ ...p, [key]: val }));
   const up = (key: string, val: unknown) => setPromoConfig((p: Record<string, unknown> | null) => ({ ...p, [key]: val }));
 
@@ -138,80 +120,11 @@ const HomepageSettings = () => {
               <Activity size={24} className="text-[#22c55e]" />
               Homepage Settings
             </h1>
-            <p className="text-sm text-[#8b949e] mt-1">Configure live counter and flash banner</p>
+            <p className="text-sm text-[#8b949e] mt-1">Configure flash banner and lifetime promo</p>
           </div>
         </div>
 
         <div className="space-y-6">
-          {/* ═══ LIVE COUNTER ═══ */}
-          <div className="border border-[#2d333b] rounded-xl overflow-hidden bg-[#161b22]">
-            <div className="p-5 border-b border-[#2d333b] flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-semibold text-[#c9d1d9] flex items-center gap-2">
-                  <Activity size={16} className="text-[#22c55e]" />
-                  Live Student Counter
-                </h2>
-                <p className="text-xs text-[#8b949e] mt-1">Pulsing counter in the hero section</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  data-testid="toggle-counter-enabled"
-                  onClick={() => uc('enabled', !counterConfig?.enabled)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                    counterConfig?.enabled ? 'bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/30' : 'bg-[#484f58]/10 text-[#8b949e] border-[#484f58]/30'
-                  }`}
-                >
-                  {counterConfig?.enabled ? <Eye size={13} /> : <EyeOff size={13} />}
-                  {counterConfig?.enabled ? 'Visible' : 'Hidden'}
-                </button>
-                <button
-                  data-testid="save-counter-btn"
-                  onClick={saveCounter}
-                  disabled={savingCounter}
-                  className="flex items-center gap-1.5 bg-[#22c55e] hover:bg-[#16a34a] disabled:opacity-50 text-black font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors"
-                >
-                  {savingCounter ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                  Save
-                </button>
-              </div>
-            </div>
-
-            <div className="p-5 space-y-5">
-              {/* Preview */}
-              <div className="flex items-center gap-3 p-3 rounded-xl border border-[#2d333b] bg-[#0d1117]">
-                <span className="text-[10px] text-[#484f58] uppercase tracking-wider font-semibold w-14 shrink-0">Preview</span>
-                <div className="flex-1 flex justify-center">
-                  {counterConfig?.enabled ? (
-                    <span data-testid="counter-preview" className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest"
-                      style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)', fontFamily: "'JetBrains Mono', monospace" }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#22c55e', boxShadow: '0 0 6px rgba(34,197,94,0.5)' }} />
-                      <span style={{ color: '#22c55e' }}>{(counterConfig?.base_count as number)}<span style={{ color: '#8b949e', marginLeft: 4 }}>{(counterConfig?.label as string)}</span></span>
-                    </span>
-                  ) : <span className="text-sm text-[#484f58] italic">Hidden</span>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Base Count" help="Starting number">
-                  <input data-testid="input-base-count" type="number" min={1} value={(counterConfig?.base_count as number) ?? 0}
-                    onChange={e => uc('base_count', Math.max(1, parseInt(e.target.value) || 1))} className="input-field" />
-                </Field>
-                <Field label="Min Count" help="Floor value">
-                  <input data-testid="input-min-count" type="number" min={1} value={(counterConfig?.min_count as number) ?? 0}
-                    onChange={e => uc('min_count', Math.max(1, parseInt(e.target.value) || 1))} className="input-field" />
-                </Field>
-                <Field label="Drift Range" help="Max change per cycle (1-20)">
-                  <input data-testid="input-drift-range" type="number" min={1} max={20} value={(counterConfig?.drift_range as number) ?? 5}
-                    onChange={e => uc('drift_range', Math.max(1, Math.min(20, parseInt(e.target.value) || 5)))} className="input-field" />
-                </Field>
-                <Field label="Label" help="Text after the number">
-                  <input data-testid="input-label" type="text" value={(counterConfig?.label as string) ?? ''}
-                    onChange={e => uc('label', e.target.value)} className="input-field" placeholder="learning now" />
-                </Field>
-              </div>
-            </div>
-          </div>
-
           {/* ═══ FLASH BANNER ═══ */}
           <div className="border border-[#2d333b] rounded-xl overflow-hidden bg-[#161b22]">
             <div className="p-5 border-b border-[#2d333b] flex items-center justify-between">
@@ -377,16 +290,6 @@ const HomepageSettings = () => {
                   <input data-testid="input-promo-enddate" type="datetime-local" value={promoConfig?.end_date ? (promoConfig?.end_date as string).slice(0, 16) : ''}
                     onChange={e => up('end_date', e.target.value ? new Date(e.target.value).toISOString() : '')} className="input-field" />
                 </Field>
-                <div className="grid grid-cols-2 gap-4">
-                  <Field label="Social Proof Base" help="Base number shown as 'X people claimed today'">
-                    <input data-testid="input-social-proof-base" type="number" value={(promoConfig?.social_proof_base as number) ?? 42}
-                      onChange={e => up('social_proof_base', parseInt(e.target.value) || 0)} className="input-field" placeholder="42" />
-                  </Field>
-                  <Field label="Drift Range" help="Counter randomly drifts +/- this amount">
-                    <input data-testid="input-social-proof-drift" type="number" value={(promoConfig?.social_proof_drift as number) ?? 8}
-                      onChange={e => up('social_proof_drift', parseInt(e.target.value) || 0)} className="input-field" placeholder="8" />
-                  </Field>
-                </div>
                 {(promoConfig?.enabled as boolean) && (
                   <div className="rounded-lg p-3 border" style={{ backgroundColor: '#ef444410', borderColor: '#ef444430' }}>
                     <p className="text-xs text-[#ef4444] font-semibold">Preview</p>

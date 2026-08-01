@@ -194,35 +194,6 @@ const CoursesMegaMenu: FC<CoursesMegaMenuProps> = ({ courses, isDark, navigate, 
         </div>
       </div>
 
-      <button
-        data-testid="mega-menu-launch-banner"
-        onClick={() => { onClose(); navigate('/ai-engineering-for-beginners'); }}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '10px 24px',
-          borderBottom: `1px solid ${borderSubtle}`,
-          background: `linear-gradient(90deg, #22c55e14, #22c55e05)`,
-          cursor: 'pointer',
-          border: 'none',
-          textAlign: 'left',
-        }}
-        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = `linear-gradient(90deg, #22c55e22, #22c55e08)`}
-        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = `linear-gradient(90deg, #22c55e14, #22c55e05)`}
-      >
-        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.1em', padding: '2px 6px', borderRadius: 4, background: '#22c55e', color: '#052e16' }}>
-            NEW
-          </span>
-          <span style={{ fontSize: 12, color: textPrimary, fontWeight: 600 }}>
-            AI Engineering for Beginners
-          </span>
-          <span style={{ fontSize: 11, color: textMuted }}>
-            &middot; 8 modules &middot; 68 lessons &middot; zero to production
-          </span>
-        </span>
-        <ArrowRight size={13} style={{ color: '#22c55e' }} />
-      </button>
-
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <div style={{
           width: 240,

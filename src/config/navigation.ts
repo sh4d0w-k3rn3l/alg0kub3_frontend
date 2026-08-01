@@ -8,7 +8,7 @@ const _expires: Record<string, number> = { header: 0, footer: 0 };
 
 export const HEADER_FALLBACK: NavigationConfig = {
   primary_links: [
-    { id: 'pl-aieng',      label: 'AI Eng',     path: '/ai-engineering-for-beginners', is_new: true,  visible: true, order: 0 },
+    { id: 'pl-aieng',      label: 'AI Eng',     path: '/course/ai-engineering', is_new: true,  visible: true, order: 0 },
     { id: 'pl-playground', label: 'Playground', path: '/playground',                    is_new: false, visible: true, order: 1 },
     { id: 'pl-pricing',    label: 'Pricing',    path: '/pricing',                       is_new: false, visible: true, order: 2 },
   ],

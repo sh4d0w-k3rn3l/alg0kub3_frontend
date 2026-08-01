@@ -1,29 +1,7 @@
 import type { WhatsNewItem } from '@/types';
 import { api } from '@/lib/api';
 
-export const WHATS_NEW_FALLBACK: WhatsNewItem[] = [
-  {
-    title: 'AI Engineering for Beginners',
-    desc: 'New 68-lesson course on LLMs, RAG & agents',
-    url: '/ai-engineering-for-beginners',
-    date: '2026-04-15',
-    kind: 'course',
-  },
-  {
-    title: 'Regenerate lesson from PDF',
-    desc: 'One-click rewrite using the source pages',
-    url: '/admin',
-    date: '2026-04-19',
-    kind: 'feature',
-  },
-  {
-    title: 'AI Tutor per-lesson',
-    desc: 'Chat, quiz & flashcards \u2014 Pro only',
-    url: '/pricing',
-    date: '2026-04-12',
-    kind: 'feature',
-  },
-];
+export const WHATS_NEW_FALLBACK: WhatsNewItem[] = [];
 
 export const WHATS_NEW = WHATS_NEW_FALLBACK;
 

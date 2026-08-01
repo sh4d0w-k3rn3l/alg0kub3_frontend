@@ -5,7 +5,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import PageHeader from './PageHeader';
 import { useRouter } from 'next/navigation';
-import { Check, Zap, Star, Globe, X, Crown, Clock, Users } from 'lucide-react';
+import { Check, Zap, Star, Globe, X, Crown, Clock } from 'lucide-react';
 import MoneyBackBadge from './home/MoneyBackBadge';
 import SEO from './SEO';
 import { api } from '@/lib/api';
@@ -44,8 +44,6 @@ interface PromoData {
   end_date: string;
   label?: string;
   promo_price?: number;
-  social_proof_base?: number;
-  social_proof_drift?: number;
   ab_enabled?: boolean;
   ab_split?: number;
   variant_a?: { price: number; label: string };
@@ -98,28 +96,6 @@ const useCountdown = (targetDate?: string): TimeLeft => {
   }, [targetDate]);
 
   return timeLeft;
-};
-
-const useSocialProof = (base?: number, drift?: number): number => {
-  const [count, setCount] = useState(() => (base ? base + Math.floor(Math.random() * (drift || 5)) : 0));
-  const [prevBase, setPrevBase] = useState(base);
-  if (base !== prevBase) {
-    setPrevBase(base);
-    if (base) setCount(base + ((base * 7) % (drift || 5)));
-  }
-  useEffect(() => {
-    if (!base) return;
-    const interval = setInterval(() => {
-      const d = drift || 5;
-      setCount(prev => {
-        const change = Math.random() < 0.5 ? 1 : -1;
-        const next = prev + change;
-        return Math.max(base - d, Math.min(base + d, next));
-      });
-    }, 4000 + Math.random() * 6000);
-    return () => clearInterval(interval);
-  }, [base, drift]);
-  return count;
 };
 
 const CountdownUnit = ({ value, label }: { value: number; label: string }) => (
@@ -188,7 +164,6 @@ const PricingPage = () => {
 
   const countdown = useCountdown(promo?.end_date);
   const promoActive = promo?.enabled && !countdown.expired;
-  const claimsCount = useSocialProof(promo?.social_proof_base || 0, promo?.social_proof_drift || 5);
 
   const dismissPpp = () => {
     setPppDismissed(true);
@@ -590,18 +565,6 @@ const PricingPage = () => {
                       Or pay with PhonePe
                     </button>
                   )}
-                </div>
-              )}
-              {promoActive && claimsCount > 0 && (
-                <div
-                  data-testid="social-proof-counter"
-                  className="flex items-center justify-center gap-1.5 mt-3 py-1.5 rounded-md text-xs"
-                  style={{ backgroundColor: '#ef444412', border: '1px solid #ef444425' }}
-                >
-                  <Users size={12} style={{ color: '#ef4444' }} />
-                  <span style={{ color: colors.textSecondary }}>
-                    <strong style={{ color: '#ef4444' }}>{claimsCount}</strong> people claimed this deal today
-                  </span>
                 </div>
               )}
               <MoneyBackBadge variant="card" className="mt-4" />

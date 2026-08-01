@@ -13,7 +13,7 @@ import {
   Brain, Sparkles, ArrowRight, ChevronRight,
   Layers, Server, Clock, Play, Lock,
   Terminal, Search, Star, TrendingUp,
-  GraduationCap, Quote,
+  GraduationCap,
   Shield, Flame, Users,
   GitBranch,
 } from 'lucide-react';
@@ -23,9 +23,7 @@ import { handleApiError } from '@/lib/toast';
 import { COURSE_ICONS, COURSE_COLORS, CATEGORY_META } from '@/config/courseConfig';
 import SkillQuiz from './home/SkillQuiz';
 import SkillsCube from './home/SkillsCube';
-import SocialProofTicker from './home/SocialProofTicker';
 import MoneyBackBadge from './home/MoneyBackBadge';
-import LiveStudentCounter from './home/LiveStudentCounter';
 import FlashBanner from './home/FlashBanner';
 import HomeHeader from './home/HomeHeader';
 import SiteFooter from './SiteFooter';
@@ -93,21 +91,6 @@ const FEATURED_COURSES = [
     note: 'From zero-shot to chain-of-thought — master the art of getting the best output from any LLM.',
     tag: 'Hot',
   },
-];
-
-const TRUST_COMPANIES = [
-  { name: 'Meta', weight: 800, spacing: '0.06em', size: '15px', transform: 'none' },
-  { name: 'Amazon', weight: 800, spacing: '0.02em', size: '14px', transform: 'none' },
-  { name: 'Google', weight: 500, spacing: '0em', size: '16px', transform: 'none' },
-  { name: 'Stripe', weight: 700, spacing: '0.01em', size: '15px', transform: 'none' },
-  { name: 'Shopify', weight: 700, spacing: '0.02em', size: '14px', transform: 'none' },
-  { name: 'Apple', weight: 500, spacing: '0em', size: '16px', transform: 'none' },
-];
-
-const TESTIMONIALS = [
-  { quote: "The structured approach is exactly what I needed. Went from zero Python to building production APIs in 3 months.", name: "Priya Sharma", role: "Backend Engineer at Stripe", accent: '#3572A5' },
-  { quote: "Best learning platform for algorithms. The interactive code execution and AI tutor make concepts click instantly.", name: "Marcus Chen", role: "SDE II at Amazon", accent: '#22c55e' },
-  { quote: "I switched from Go tutorials on YouTube to AlgoKube. The difference in depth and structure is night and day.", name: "Elena Voronova", role: "DevOps Lead at Shopify", accent: '#00ADD8' },
 ];
 
 const dk: DesignTokens = {
@@ -213,9 +196,9 @@ const HomePage: React.FC = () => {
     const ac = new AbortController();
     const fetchContinue = async () => {
       try {
-        const res = await api.get<{ course: ContinueData }>(`/progress/continue`, { signal: ac.signal });
+        const res = await api.get<{ courses: ContinueData[] }>(`/progress/continue`, { signal: ac.signal });
         if (ac.signal.aborted) return;
-        if (res.data.course) setContinueData(res.data.course);
+        if (res.data.courses?.[0]) setContinueData(res.data.courses[0]);
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
       }
@@ -309,22 +292,7 @@ const HomePage: React.FC = () => {
                 >
                   <Sparkles size={12} /> {activeCourseCount} courses &middot; {totalLessons}+ lessons
                 </span>
-                <LiveStudentCounter />
               </motion.div>
-
-              <motion.button
-                variants={fadeUp}
-                onClick={() => router.push('/ai-engineering-for-beginners')}
-                data-testid="home-hero-launch-ribbon"
-                className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 border transition-all"
-                style={{ color: t.primary, borderColor: t.primary + '40', backgroundColor: t.primary + '10' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = t.primary; e.currentTarget.style.backgroundColor = t.primary + '18'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = t.primary + '40'; e.currentTarget.style.backgroundColor = t.primary + '10'; }}
-              >
-                <span className="text-sm">🎉</span>
-                <span>Just launched — <strong>AI Engineering for Beginners</strong> · 68 lessons</span>
-                <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
-              </motion.button>
 
               <motion.h1
                 variants={fadeUp}
@@ -411,34 +379,6 @@ const HomePage: React.FC = () => {
             >
               <SkillsCube />
             </motion.div>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-y" style={{ borderColor: t.borderSubtle, backgroundColor: t.surface }}>
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="text-[11px] uppercase tracking-[0.15em] font-semibold" style={{ color: t.textMut, fontFamily: 'JetBrains Mono, monospace' }}>
-            Trusted by engineers at
-          </span>
-          <div className="flex items-center gap-8 sm:gap-12 flex-wrap justify-center">
-            {TRUST_COMPANIES.map(c => (
-              <span
-                key={c.name}
-                className="select-none transition-opacity duration-200"
-                style={{
-                  color: t.textSec,
-                  fontWeight: c.weight,
-                  letterSpacing: c.spacing,
-                  fontSize: c.size,
-                  opacity: 0.7,
-                  fontFamily: c.name === 'Google' ? 'Product Sans, system-ui, sans-serif' : 'inherit',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.opacity = '1'; }}
-                onMouseLeave={e => { e.currentTarget.style.opacity = '0.7'; }}
-              >
-                {c.name}
-              </span>
-            ))}
           </div>
         </div>
       </div>
@@ -794,43 +734,6 @@ const HomePage: React.FC = () => {
         </Section>
       )}
 
-      <Section className="border-t" style={{ borderColor: t.borderSubtle, backgroundColor: isDark ? t.surface : t.surfaceHi }}>
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-8 py-24">
-          <motion.div variants={fadeUp} className="mb-12">
-            <span className="text-[11px] uppercase tracking-[0.15em] font-bold mb-3 block" style={{ color: t.orange, fontFamily: 'JetBrains Mono, monospace' }}>
-              Testimonials
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ color: t.text }}>
-              Developers love AlgoKube
-            </h2>
-          </motion.div>
-
-          <motion.div variants={stagger} className="grid grid-cols-1 md:grid-cols-3 gap-4" data-testid="testimonials-grid">
-            {TESTIMONIALS.map((tm, idx) => (
-              <motion.div
-                key={idx}
-                variants={scaleIn}
-                className="relative border rounded-xl p-6 transition-all duration-300"
-                style={{ backgroundColor: isDark ? t.surfaceHi : '#fff', borderColor: t.border }}
-              >
-                <div className="absolute top-0 left-6 w-12 h-[3px] rounded-b" style={{ backgroundColor: tm.accent }} />
-                <Quote size={18} className="mb-4" style={{ color: tm.accent, opacity: 0.4 }} />
-                <p className="text-sm leading-relaxed mb-6" style={{ color: t.textSec }}>&ldquo;{tm.quote}&rdquo;</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: tm.accent }}>
-                    {tm.name.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold" style={{ color: t.text }}>{tm.name}</div>
-                    <div className="text-[11px]" style={{ color: t.textMut }}>{tm.role}</div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </Section>
-
       <Section className="border-t" style={{ borderColor: t.borderSubtle, backgroundColor: t.bg }}>
         <div className="max-w-[1280px] mx-auto px-6 lg:px-8 py-24">
           <motion.div
@@ -870,8 +773,6 @@ const HomePage: React.FC = () => {
       </Section>
 
       <SiteFooter t={t} isDark={isDark} courses={courses} />
-
-      <SocialProofTicker courses={courses} />
     </div>
   );
 };

@@ -3,7 +3,7 @@ import {
   Route, Braces, FileText, Cpu, Target, Layers, Server,
   BarChart2, Sigma, Settings, Crosshair, Hexagon, SlidersHorizontal,
   Gamepad2, ThumbsUp, Image, Repeat, Box, Aperture,
-  Bot, Cloud, Plug, Shield,
+  Bot, Cloud, Plug, Shield, Network, Layout,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -35,6 +35,11 @@ export const COURSE_ICONS: Record<string, LucideIcon> = {
   'mlops-deployment': Cloud,
   'ai-api-design': Plug,
   'ai-safety-alignment': Shield,
+  'microservices': Network,
+  'ml-system-design': Layers,
+  'concurrency-interview': Cpu,
+  'lld': Braces,
+  'system-design-interviews': Layout,
 };
 
 export const COURSE_COLORS: Record<string, string> = {
@@ -65,6 +70,11 @@ export const COURSE_COLORS: Record<string, string> = {
   'mlops-deployment': '#6366f1',
   'ai-api-design': '#10b981',
   'ai-safety-alignment': '#ef4444',
+  'microservices': '#0ea5e9',
+  'ml-system-design': '#a855f7',
+  'concurrency-interview': '#f59e0b',
+  'lld': '#ec4899',
+  'system-design-interviews': '#14b8a6',
 };
 
 export const CATEGORY_META: Record<string, { icon: LucideIcon }> = {
@@ -73,4 +83,7 @@ export const CATEGORY_META: Record<string, { icon: LucideIcon }> = {
   'AI & Machine Learning': { icon: Cpu },
   'Data & Databases': { icon: Database },
   'DevOps': { icon: Server },
+  'Interview Prep': { icon: Target },
+  'System Design': { icon: Layout },
+  'Product Management': { icon: Target },
 };

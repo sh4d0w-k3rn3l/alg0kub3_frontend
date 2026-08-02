@@ -6,7 +6,7 @@ import Image from 'next/image';
 import CodeBlock from '@/components/CodeBlock';
 import QuizComponent from '@/components/QuizComponent';
 import SEO from '@/components/SEO';
-import { Clock, ChevronRight, ChevronDown, Info, AlertTriangle, Lightbulb, AlertCircle, Youtube, Play, Lock, Zap, CheckCircle } from 'lucide-react';
+import { Clock, ChevronRight, ChevronDown, Info, AlertTriangle, Lightbulb, AlertCircle, Youtube, Play, Lock, Zap, CheckCircle, Sparkles, X, Loader2, FileText } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { LanguagePrefProvider, useLanguagePref } from '@/context/LanguagePrefContext';
@@ -19,7 +19,7 @@ const Playground = lazy(() => import('@/components/article/Playground'));
 import LessonDiscussions from '@/components/LessonDiscussions';
 import LessonFeedback from '@/components/LessonFeedback';
 import BookmarkButton from '@/components/BookmarkButton';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { handleApiError } from '@/lib/toast';
 import { sanitizeHtml } from '@/lib/sanitize';
 
@@ -196,18 +196,25 @@ const formatUpdatedDate = (iso?: string): string => {
 
 const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, lineHeight, syntaxTheme, onSyntaxThemeChange, sectionId, sectionTitle, courseSlug }) => {
   const { colors, isDark } = useTheme();
-  const { user, login, isSubscribed } = useAuth();
+  const { user, login, isSubscribed, getAuthHeaders } = useAuth();
   const { preferredLang, setPreferredLang } = useLanguagePref();
   const router = useRouter();
   const [accordionOpen, setAccordionOpen] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<Record<string | number, number>>({});
   const [access, setAccess] = useState<{ has_access: boolean; is_free: boolean; is_subscribed: boolean; access_type: string; price?: number }>({ has_access: true, is_free: true, is_subscribed: false, access_type: 'free' });
   const [lessonCompleted, setLessonCompleted] = useState(false);
+  const [explainOpen, setExplainOpen] = useState(false);
+  const [explainLoading, setExplainLoading] = useState(false);
+  const [explainResult, setExplainResult] = useState('');
+  const [explainError, setExplainError] = useState('');
   const progressKey = `${courseSlug}:${lesson?.id ?? ''}:${user ? 'u' : 'g'}`;
   const [prevProgressKey, setPrevProgressKey] = useState(progressKey);
   if (prevProgressKey !== progressKey) {
     setPrevProgressKey(progressKey);
     setLessonCompleted(false);
+    setExplainOpen(false);
+    setExplainResult('');
+    setExplainError('');
   }
 
   useEffect(() => {
@@ -254,6 +261,32 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
       });
       setLessonCompleted(res.data.completed);
     } catch (err) { handleApiError(err); }
+  };
+
+  const handleExplain = async () => {
+    if (!lesson?.slug) return;
+    setExplainOpen(true);
+    if (explainResult && !explainError) return;
+    setExplainLoading(true);
+    setExplainError('');
+    const selected = window.getSelection()?.toString().trim() || '';
+    try {
+      const headers = await getAuthHeaders();
+      const res = await api.post<{ explanation: string }>('/tutor/explain', {
+        lesson_slug: lesson.slug,
+        course_slug: courseSlug || '',
+        text: selected,
+      }, { headers });
+      setExplainResult(res.data.explanation || '');
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.status === 403) {
+        setExplainError('AI explanations require a Pro subscription.');
+      } else if (!user) {
+        setExplainError('You need to sign in to use AI explanations.');
+      } else {
+        setExplainError('Something went wrong. Please try again.');
+      }
+    } finally { setExplainLoading(false); }
   };
 
   if (!lesson) return null;
@@ -807,6 +840,20 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
           {access.is_free && (
             <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: colors.green + '20', color: colors.green }}>Free</span>
           )}
+          <button
+            data-testid="explain-with-ai"
+            onClick={handleExplain}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors"
+            style={{
+              color: explainLoading ? colors.textMuted : colors.green,
+              border: `1px solid ${explainLoading ? colors.border : colors.green + '40'}`,
+              backgroundColor: explainLoading ? 'transparent' : colors.green + '12',
+            }}
+            title="Explain this lesson (or your selected passage) in plain language"
+          >
+            {explainLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+            {explainLoading ? 'Explaining…' : 'Explain with AI'}
+          </button>
           {user && (
             <button
               data-testid="mark-complete-btn"
@@ -825,12 +872,76 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
         </div>
       </div>
 
+      {explainOpen && (
+        <div className="mb-6 rounded-xl border p-4" style={{ borderColor: colors.green + '40', backgroundColor: colors.green + '08' }}>
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} style={{ color: colors.green }} />
+              <span className="text-sm font-semibold" style={{ color: colors.text }}>Explain with AI</span>
+            </div>
+            <button
+              data-testid="explain-close"
+              onClick={() => setExplainOpen(false)}
+              className="p-1 rounded transition-colors"
+              style={{ color: colors.textMuted }}
+              aria-label="Close AI explanation"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          {explainLoading ? (
+            <div className="flex items-center gap-2 py-2">
+              <Loader2 size={14} className="animate-spin" style={{ color: colors.green }} />
+              <span className="text-xs" style={{ color: colors.textMuted }}>Writing a plain-language explanation…</span>
+            </div>
+          ) : explainError ? (
+            <div>
+              <p className="text-xs mb-2" style={{ color: '#ef4444' }}>{explainError}</p>
+              {!user && (
+                <button
+                  onClick={login}
+                  className="text-xs font-medium px-3 py-1.5 rounded"
+                  style={{ backgroundColor: colors.green, color: '#fff' }}
+                >
+                  Sign in to use AI explanations
+                </button>
+              )}
+              {user && explainError.includes('Pro') && (
+                <button
+                  onClick={() => router.push('/pricing')}
+                  className="text-xs font-medium px-3 py-1.5 rounded"
+                  style={{ backgroundColor: colors.green, color: '#fff' }}
+                >
+                  Upgrade to Pro
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="text-sm leading-relaxed" style={{ color: colors.text }}>
+              <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(renderMarkdown(explainResult)) }} />
+            </div>
+          )}
+        </div>
+      )}
+
       {access.has_access ? (
         <>
           <div className="mb-8">
-            {(content_blocks || []).map((block, idx) => renderBlock(block, idx))}
+            {(content_blocks || []).length === 0 ? (
+              <div className="border rounded-xl p-8 text-center" style={{ backgroundColor: colors.bgCard, borderColor: colors.border }}>
+                <FileText size={40} className="mx-auto mb-4" style={{ color: colors.textMuted }} />
+                <h3 className="text-lg font-bold mb-2" style={{ color: colors.text }}>
+                  Content coming soon
+                </h3>
+                <p className="text-sm" style={{ color: colors.textSecondary }}>
+                  This lesson is being written and will be available shortly.
+                </p>
+              </div>
+            ) : (
+              (content_blocks || []).map((block, idx) => renderBlock(block, idx))
+            )}
           </div>
-          {sectionId && sectionTitle && (
+          {sectionId && sectionTitle && (content_blocks || []).length > 0 && (
             <QuizComponent sectionId={sectionId} sectionTitle={sectionTitle} />
           )}
         </>

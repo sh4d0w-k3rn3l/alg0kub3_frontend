@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useSignIn, useClerk } from '@clerk/nextjs';
 import { api } from '@/lib/api';
-import { Code, Sun, Moon, LogIn, Shield, Mail, Lock, AlertCircle, Loader2, Github, Twitter, Eye, EyeOff } from 'lucide-react';
+import { Code, Sun, Moon, LogIn, Shield, Mail, Lock, AlertCircle, Loader2, Github, Eye, EyeOff, KeyRound } from 'lucide-react';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0">
@@ -14,6 +14,12 @@ const GoogleIcon = () => (
     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+  </svg>
+);
+
+const LinkedInIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="#0A66C2">
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 1 1 0-4.124 2.062 2.062 0 0 1 0 4.124zM7.119 20.452H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
   </svg>
 );
 
@@ -29,8 +35,11 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState('');
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpInfo, setOtpInfo] = useState('');
 
-  const ssoLogin = (strategy: 'oauth_google' | 'oauth_github' | 'oauth_twitter') => async () => {
+  const ssoLogin = (strategy: 'oauth_google' | 'oauth_github' | 'oauth_linkedin_oidc') => async () => {
     if (!signIn?.sso || ssoLoading) return;
     setSsoLoading(strategy);
     try {
@@ -52,13 +61,31 @@ const LoginPage: React.FC = () => {
 
   const handleGoogleLogin = ssoLogin('oauth_google');
   const handleGithubLogin = ssoLogin('oauth_github');
-  const handleTwitterLogin = ssoLogin('oauth_twitter');
+  const handleLinkedInLogin = ssoLogin('oauth_linkedin_oidc');
 
   useEffect(() => {
     if (user) router.push('/dashboard');
   }, [user, router]);
 
   if (user) return null;
+
+  const getLiveSignIn = () => (clerk.client?.signIn as unknown as typeof signIn) ?? signIn;
+
+  const completeSignIn = async (target: typeof signIn) => {
+    await target.finalize({
+      navigate: async ({ session, decorateUrl }) => {
+        if (session?.getToken) {
+          const token = await session.getToken().catch(() => null);
+          if (token) {
+            await api.post('/auth/session', { session_id: token, email }).catch(() => {});
+          }
+        }
+        const url = decorateUrl('/dashboard');
+        if (url.startsWith('http')) window.location.href = url;
+        else router.push(url);
+      },
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,26 +104,19 @@ const LoginPage: React.FC = () => {
         }
         return;
       }
-      const live = clerk.client?.signIn as unknown as typeof signIn;
-      const target = live ?? signIn;
+      const target = getLiveSignIn();
       const siStatus = (target.status ?? signIn.status) as string | null;
       const createdSessionId = target.createdSessionId ?? signIn.createdSessionId;
       if (siStatus === 'complete' || (createdSessionId && !siStatus)) {
-        await target.finalize({
-          navigate: async ({ session, decorateUrl }) => {
-            if (session?.getToken) {
-              const token = await session.getToken().catch(() => null);
-              if (token) {
-                await api.post('/auth/session', { session_id: token, email }).catch(() => {});
-              }
-            }
-            const url = decorateUrl('/dashboard');
-            if (url.startsWith('http')) window.location.href = url;
-            else router.push(url);
-          },
-        });
+        await completeSignIn(target);
       } else if (siStatus === 'needs_second_factor' || siStatus === 'needs_client_trust') {
-        setError(`Sign-in requires additional verification (${siStatus}). This account has no configured second factor, so please use a social provider.`);
+        const { error: sendErr } = await target.mfa.sendEmailCode();
+        if (sendErr) {
+          setError(`Additional verification is required (${siStatus}) but the email code could not be sent: ${sendErr.longMessage || sendErr.message || 'Please try a social provider.'}`);
+          return;
+        }
+        setOtpInfo(`We've sent a verification code to ${email}. Enter it below to complete sign-in.`);
+        setOtpStep(true);
       } else {
         setError(`Sign-in requires additional verification (${siStatus}). Please try again or use a social provider.`);
       }
@@ -110,6 +130,52 @@ const LoginPage: React.FC = () => {
       } else {
         setError(e?.message || 'Login failed');
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setOtpInfo('');
+    if (!otpCode) { setError('Please enter the verification code'); return; }
+    setLoading(true);
+    try {
+      const target = getLiveSignIn();
+      const { error: verifyErr } = await target.mfa.verifyEmailCode({ code: otpCode });
+      if (verifyErr) {
+        if (verifyErr.code === 'form_code_incorrect') setError('Incorrect code. Please try again.');
+        else setError(verifyErr.longMessage || verifyErr.message || 'Verification failed');
+        return;
+      }
+      const after = getLiveSignIn();
+      if (after.status === 'complete' || after.createdSessionId) {
+        await completeSignIn(after);
+      } else {
+        setOtpStep(false);
+        setError(`Verification incomplete (${after.status}). Please try again or use a social provider.`);
+      }
+    } catch (err: unknown) {
+      const e = err as { errors?: { code?: string; longMessage?: string }[]; message?: string } | null;
+      if (e?.errors?.[0]?.longMessage) setError(e.errors[0].longMessage);
+      else setError(e?.message || 'Verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setError('');
+    setOtpInfo('');
+    setLoading(true);
+    try {
+      const target = getLiveSignIn();
+      const { error: sendErr } = await target.mfa.sendEmailCode();
+      if (sendErr) setError(sendErr.longMessage || sendErr.message || 'Failed to resend the code');
+      else setOtpInfo('A new code has been sent to your email.');
+    } catch {
+      setError('Failed to resend the code. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -165,7 +231,7 @@ const LoginPage: React.FC = () => {
               WebkitBackdropFilter: 'blur(12px)',
             }}
           >
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={otpStep ? handleVerifyOtp : handleSubmit} className="space-y-3">
               <div
                 className="flex items-center rounded-xl border overflow-hidden transition-all duration-200"
                 style={{
@@ -248,6 +314,53 @@ const LoginPage: React.FC = () => {
                   <AlertCircle size={12} className="shrink-0" /> {error}
                 </div>
               )}
+              {otpStep && (
+                <div className="space-y-2 animate-in fade-in duration-300">
+                  <div
+                    className="flex items-center rounded-xl border overflow-hidden transition-all duration-200"
+                    style={{
+                      borderColor: colors.border,
+                      backgroundColor: isDark ? '#0d1117' : '#fafbfc',
+                    }}
+                    onFocusCapture={e => {
+                      e.currentTarget.style.borderColor = colors.green;
+                      e.currentTarget.style.boxShadow = `0 0 0 3px ${colors.green}20`;
+                    }}
+                    onBlurCapture={e => {
+                      e.currentTarget.style.borderColor = colors.border;
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    <KeyRound size={15} className="ml-3.5 shrink-0" style={{ color: colors.textMuted }} />
+                    <input
+                      data-testid="login-otp-input"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      value={otpCode}
+                      onChange={e => setOtpCode(e.target.value)}
+                      placeholder="6-digit verification code"
+                      className="flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
+                      style={{ color: colors.text }}
+                    />
+                  </div>
+                  {otpInfo && (
+                    <p className="text-xs animate-in fade-in duration-300" style={{ color: colors.green }}>
+                      {otpInfo}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    data-testid="login-resend-otp-btn"
+                    onClick={handleResendOtp}
+                    disabled={loading}
+                    className="text-xs font-medium hover:underline transition-all duration-200 disabled:opacity-60"
+                    style={{ color: colors.textMuted }}
+                  >
+                    Resend code
+                  </button>
+                </div>
+              )}
               <button
                 type="submit"
                 data-testid="login-submit-btn"
@@ -259,8 +372,8 @@ const LoginPage: React.FC = () => {
                   boxShadow: `0 4px 14px ${colors.green}30`,
                 }}
               >
-                {loading ? <Loader2 size={15} className="animate-spin" /> : <LogIn size={15} />}
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? <Loader2 size={15} className="animate-spin" /> : otpStep ? <KeyRound size={15} /> : <LogIn size={15} />}
+                {loading ? 'Signing in...' : otpStep ? 'Verify & Sign In' : 'Sign In'}
               </button>
             </form>
 
@@ -316,8 +429,8 @@ const LoginPage: React.FC = () => {
                 GitHub
               </button>
               <button
-                data-testid="twitter-login-btn"
-                onClick={handleTwitterLogin}
+                data-testid="linkedin-login-btn"
+                onClick={handleLinkedInLogin}
                 disabled={!!ssoLoading}
                 className="flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{
@@ -326,16 +439,16 @@ const LoginPage: React.FC = () => {
                   backgroundColor: isDark ? 'rgba(13,17,23,0.6)' : 'rgba(250,251,252,0.8)',
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = '#1DA1F2';
-                  e.currentTarget.style.boxShadow = '0 0 0 2px #1DA1F220';
+                  e.currentTarget.style.borderColor = '#0A66C2';
+                  e.currentTarget.style.boxShadow = '0 0 0 2px #0A66C220';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.borderColor = colors.border;
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                {ssoLoading === 'oauth_twitter' ? <Loader2 size={15} className="animate-spin" /> : <Twitter size={15} className="shrink-0" />}
-                X
+                {ssoLoading === 'oauth_linkedin_oidc' ? <Loader2 size={15} className="animate-spin" /> : <LinkedInIcon />}
+                LinkedIn
               </button>
             </div>
 

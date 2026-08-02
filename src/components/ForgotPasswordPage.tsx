@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useSignIn } from '@clerk/nextjs';
 import { api } from '@/lib/api';
-import { Code, Sun, Moon, Mail, Lock, KeyRound, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
+import { Code, Sun, Moon, Mail, Lock, KeyRound, AlertCircle, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 type Step = 'email' | 'code';
 
@@ -26,6 +26,8 @@ const ForgotPasswordPage: React.FC = () => {
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -233,13 +235,23 @@ const ForgotPasswordPage: React.FC = () => {
                 >
                   <Lock size={15} className="ml-3.5 shrink-0" style={{ color: colors.textMuted }} />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="New password"
                     className="flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
                     style={{ color: colors.text }}
                   />
+                  <button
+                    type="button"
+                    data-testid="reset-password-toggle"
+                    onClick={() => setShowPassword(v => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="px-3 py-2.5 shrink-0 hover:opacity-70 transition-opacity"
+                    style={{ color: colors.textMuted }}
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
                 </div>
                 <div
                   className="flex items-center rounded-xl border overflow-hidden transition-all duration-200"
@@ -258,13 +270,23 @@ const ForgotPasswordPage: React.FC = () => {
                 >
                   <Lock size={15} className="ml-3.5 shrink-0" style={{ color: colors.textMuted }} />
                   <input
-                    type="password"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     placeholder="Confirm new password"
                     className="flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
                     style={{ color: colors.text }}
                   />
+                  <button
+                    type="button"
+                    data-testid="reset-confirm-password-toggle"
+                    onClick={() => setShowConfirmPassword(v => !v)}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    className="px-3 py-2.5 shrink-0 hover:opacity-70 transition-opacity"
+                    style={{ color: colors.textMuted }}
+                  >
+                    {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
                 </div>
                 {error && (
                   <div

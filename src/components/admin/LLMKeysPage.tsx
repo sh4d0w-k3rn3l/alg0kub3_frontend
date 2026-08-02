@@ -6,7 +6,7 @@ import { handleApiError, showConfirm } from '@/lib/toast';
 import {
   ArrowLeft, Key, Plus, Trash2, Loader2, CheckCircle2,
   XCircle, AlertTriangle, Shield, Zap, ToggleLeft, ToggleRight,
-  Pencil, Save, X, BarChart3,
+  Pencil, Save, X, BarChart3, Eye, EyeOff,
 } from 'lucide-react';
 
 const PROVIDER_COLORS: Record<string, { bg: string; border: string; text: string; label: string }> = {
@@ -33,6 +33,7 @@ const LLMKeysPage = () => {
   const [editFeatures, setEditFeatures] = useState<string[]>([]);
 
   const [form, setForm] = useState<{ provider: string; api_key: string; label: string; assigned_features: string[] }>({ provider: 'openai', api_key: '', label: '', assigned_features: [] });
+  const [showApiKey, setShowApiKey] = useState<boolean>(false);
 
   const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
@@ -213,14 +214,25 @@ const LLMKeysPage = () => {
             {/* API Key */}
             <div className="mb-4">
               <label className="block text-xs text-[#8b949e] mb-1.5">API Key</label>
-              <input
-                data-testid="api-key-input"
-                type="password"
-                placeholder="sk-..."
-                value={form.api_key}
+              <div className="flex items-center border border-[#2d333b] rounded-lg overflow-hidden focus-within:border-[#22c55e]" style={{ backgroundColor: '#0d1117' }}>
+                <input
+                  data-testid="api-key-input"
+                  type={showApiKey ? 'text' : 'password'}
+                  placeholder="sk-..."
+                  value={form.api_key}
                   onChange={e => setForm(f => ({ ...f, api_key: e.target.value }))}
-                className="w-full bg-[#0d1117] border border-[#2d333b] rounded-lg px-3 py-2 text-sm text-[#c9d1d9] font-mono focus:border-[#22c55e] focus:outline-none"
-              />
+                  className="w-full bg-transparent px-3 py-2 text-sm text-[#c9d1d9] font-mono outline-none placeholder-[#484f58]"
+                />
+                <button
+                  type="button"
+                  data-testid="api-key-toggle"
+                  onClick={() => setShowApiKey(v => !v)}
+                  aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
+                  className="px-3 py-2 shrink-0 text-[#8b949e] hover:opacity-70 transition-opacity"
+                >
+                  {showApiKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
             </div>
 
             {/* Feature Assignment */}

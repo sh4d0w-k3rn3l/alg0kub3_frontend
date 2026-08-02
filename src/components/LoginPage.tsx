@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useSignIn, useClerk } from '@clerk/nextjs';
 import { api } from '@/lib/api';
-import { Code, Sun, Moon, LogIn, Shield, Mail, Lock, AlertCircle, Loader2, Github, Twitter } from 'lucide-react';
+import { Code, Sun, Moon, LogIn, Shield, Mail, Lock, AlertCircle, Loader2, Github, Twitter, Eye, EyeOff } from 'lucide-react';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0">
@@ -25,6 +25,7 @@ const LoginPage: React.FC = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState('');
@@ -65,18 +66,23 @@ const LoginPage: React.FC = () => {
     if (!email || !password) { setError('Please enter email and password'); return; }
     setLoading(true);
     try {
-      const { error } = await signIn.password({ emailAddress: email, password });
-      if (error) {
-        if (error.code === 'form_password_incorrect' || error.code === 'form_identifier_not_found') {
+      const { error: createErr } = await signIn.create({ identifier: email });
+      if (createErr) { setError(createErr.longMessage || createErr.message || 'Login failed'); return; }
+      const { error: pwErr } = await signIn.password({ password, emailAddress: email });
+      if (pwErr) {
+        if (pwErr.code === 'form_password_incorrect' || pwErr.code === 'form_identifier_not_found') {
           setError('Invalid email or password');
         } else {
-          setError(error.longMessage || error.message || 'Login failed');
+          setError(pwErr.longMessage || pwErr.message || 'Login failed');
         }
         return;
       }
-      const siStatus = signIn.status as string || (clerk.client?.signIn?.status as string) || '';
-      if (siStatus === 'complete') {
-        await signIn.finalize({
+      const live = clerk.client?.signIn as unknown as typeof signIn;
+      const target = live ?? signIn;
+      const siStatus = (target.status ?? signIn.status) as string | null;
+      const createdSessionId = target.createdSessionId ?? signIn.createdSessionId;
+      if (siStatus === 'complete' || (createdSessionId && !siStatus)) {
+        await target.finalize({
           navigate: async ({ session, decorateUrl }) => {
             if (session?.getToken) {
               const token = await session.getToken().catch(() => null);
@@ -89,13 +95,16 @@ const LoginPage: React.FC = () => {
             else router.push(url);
           },
         });
+      } else if (siStatus === 'needs_second_factor' || siStatus === 'needs_client_trust') {
+        setError(`Sign-in requires additional verification (${siStatus}). This account has no configured second factor, so please use a social provider.`);
       } else {
-        setError('Additional verification required. Please try signing in with a social provider.');
+        setError(`Sign-in requires additional verification (${siStatus}). Please try again or use a social provider.`);
       }
     } catch (err: unknown) {
       const e = err as { errors?: { code?: string; longMessage?: string }[]; message?: string } | null;
-      if (e?.errors?.[0]?.code === 'form_password_incorrect' || e?.errors?.[0]?.code === 'form_identifier_not_found') {
-        setError('Invalid email or password');
+      const code = e?.errors?.[0]?.code;
+      if (code === 'captcha_unavailable' || code === 'requires_captcha') {
+        setError('Bot protection could not be completed. Please try again or use a social provider.');
       } else if (e?.errors?.[0]?.longMessage) {
         setError(e.errors[0].longMessage);
       } else {
@@ -201,7 +210,7 @@ const LoginPage: React.FC = () => {
                 >
                   <Lock size={15} className="ml-3.5 shrink-0" style={{ color: colors.textMuted }} />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     data-testid="login-password-input"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
@@ -209,6 +218,16 @@ const LoginPage: React.FC = () => {
                     className="flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
                     style={{ color: colors.text }}
                   />
+                  <button
+                    type="button"
+                    data-testid="login-password-toggle"
+                    onClick={() => setShowPassword(v => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="px-3 py-2.5 shrink-0 hover:opacity-70 transition-opacity"
+                    style={{ color: colors.textMuted }}
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
                 </div>
                 <div className="flex justify-end mt-1.5">
                   <button

@@ -2508,6 +2508,7 @@ const AdminPanel = () => {
   const [authed, setAuthed] = useState<boolean>(false);
   const [checking, setChecking] = useState<boolean>(true);
   const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [logging, setLogging] = useState<boolean>(false);
   const { logout: userLogout } = useAuth();
@@ -2557,15 +2558,26 @@ const AdminPanel = () => {
             <p className="text-sm text-[#8b949e] mt-1">Enter password to continue</p>
           </div>
           <div className="border border-[#2d333b] rounded-xl p-5 space-y-4" style={{ backgroundColor: '#161b22' }}>
-            <input
-              data-testid="admin-password-input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              autoFocus
-              className="w-full bg-[#0d1117] border border-[#2d333b] rounded-lg px-3 py-2.5 text-[#c9d1d9] text-sm outline-none focus:border-[#22c55e] placeholder-[#484f58]"
-            />
+            <div className="flex items-center border border-[#2d333b] rounded-lg overflow-hidden focus-within:border-[#22c55e]" style={{ backgroundColor: '#0d1117' }}>
+              <input
+                data-testid="admin-password-input"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                autoFocus
+                className="w-full bg-transparent px-3 py-2.5 text-[#c9d1d9] text-sm outline-none placeholder-[#484f58]"
+              />
+              <button
+                type="button"
+                data-testid="admin-password-toggle"
+                onClick={() => setShowPassword(v => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="px-3 py-2.5 shrink-0 text-[#8b949e] hover:opacity-70 transition-opacity"
+              >
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
             {error && <p className="text-red-400 text-xs">{error}</p>}
             <button
               data-testid="admin-login-btn"

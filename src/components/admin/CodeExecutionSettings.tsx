@@ -193,7 +193,7 @@ const CodeExecutionSettings = () => {
             <div style={{ display: 'flex', gap: 10 }}>
               <input
                 data-testid="sandbox-key"
-                style={{ ...input, fontFamily: 'ui-monospace,monospace' }}
+                style={{ ...input, flex: 1, minWidth: 0, fontFamily: 'ui-monospace,monospace' }}
                 type={showKey ? 'text' : 'password'}
                 value={keyInput}
                 onChange={(e) => setKeyInput(e.target.value)}
@@ -202,7 +202,7 @@ const CodeExecutionSettings = () => {
               />
               <button
                 onClick={() => setShowKey(v => !v)}
-                style={{ ...btn, background: 'rgba(255,255,255,0.05)', color: '#a1a1aa' }}
+                style={{ ...btn, flexShrink: 0, background: 'rgba(255,255,255,0.05)', color: '#a1a1aa' }}
               >
                 {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -210,7 +210,7 @@ const CodeExecutionSettings = () => {
                 data-testid="sandbox-key-save"
                 onClick={saveKey}
                 disabled={!keyInput.trim() || saving}
-                style={{ ...btn, background: '#22c55e', color: '#0a0a0a', opacity: !keyInput.trim() || saving ? 0.5 : 1 }}
+                style={{ ...btn, flexShrink: 0, whiteSpace: 'nowrap', background: '#22c55e', color: '#0a0a0a', opacity: !keyInput.trim() || saving ? 0.5 : 1 }}
               >
                 <Save size={16} /> Save key
               </button>

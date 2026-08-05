@@ -87,9 +87,13 @@ const CodeExecutionSettings = () => {
     setTestResult(null);
     try {
       const r = await api.post<Record<string, unknown>>('/admin/code-execution/settings/test');
-      setTestResult(r.data);
+      const msg = typeof (r.data as { message?: unknown })?.message === 'string'
+        ? (r.data as { message: string }).message
+        : JSON.stringify((r.data as { message?: unknown })?.message);
+      setTestResult({ ...r.data, message: msg });
     } catch (e: unknown) {
-      setTestResult({ ok: false, message: (e as { detail?: string }).detail || 'Test failed' });
+      const detail = (e as { detail?: unknown }).detail;
+      setTestResult({ ok: false, message: typeof detail === 'string' ? detail : (detail ? JSON.stringify(detail) : 'Test failed') });
     }
     setTesting(false);
   };

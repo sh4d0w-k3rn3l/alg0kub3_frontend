@@ -3,7 +3,7 @@ import {
   Route, Braces, FileText, Cpu, Target, Layers, Server,
   BarChart2, Sigma, Settings, Crosshair, Hexagon, SlidersHorizontal,
   Gamepad2, ThumbsUp, Image, Repeat, Box, Aperture,
-  Bot, Cloud, Plug, Shield, Network, Layout,
+  Bot, Cloud, Plug, Shield, Network, Layout, GitBranch,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -40,6 +40,14 @@ export const COURSE_ICONS: Record<string, LucideIcon> = {
   'concurrency-interview': Cpu,
   'lld': Braces,
   'system-design-interviews': Layout,
+  'ai-engineering': Bot,
+  'behavioral': FileText,
+  'cpp': Code,
+  'csharp': Code,
+  'dsa': Sigma,
+  'git': GitBranch,
+  'sql-interview': Database,
+  'system-design': Layout,
 };
 
 export const COURSE_COLORS: Record<string, string> = {
@@ -75,6 +83,14 @@ export const COURSE_COLORS: Record<string, string> = {
   'concurrency-interview': '#f59e0b',
   'lld': '#ec4899',
   'system-design-interviews': '#14b8a6',
+  'ai-engineering': '#7c3aed',
+  'behavioral': '#f59e0b',
+  'cpp': '#00599C',
+  'csharp': '#512BD4',
+  'dsa': '#22c55e',
+  'git': '#f05032',
+  'sql-interview': '#e38c00',
+  'system-design': '#06b6d4',
 };
 
 export const CATEGORY_META: Record<string, { icon: LucideIcon }> = {

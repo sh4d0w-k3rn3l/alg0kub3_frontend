@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 
 import Link from 'next/link';
 import { Bookmark } from 'lucide-react';
+import { displayDifficulty } from '@/hooks/useAnimations';
 
 interface Algorithm {
   id: string;
@@ -19,12 +20,12 @@ const AlgorithmCard = ({ algorithm }: AlgorithmCardProps) => {
   const [isBookmarked, setIsBookmarked] = useState(false);
 
   const getDifficultyStyles = (difficulty: string): string => {
-    switch (difficulty) {
-      case 'Easy':
+    switch (difficulty.toLowerCase()) {
+      case 'easy':
         return 'bg-[#0d2818] text-[#22c55e] border border-[#22c55e]/30';
-      case 'Medium':
+      case 'medium':
         return 'bg-[#2d2305] text-[#eab308] border border-[#eab308]/30';
-      case 'Hard':
+      case 'hard':
         return 'bg-[#2d0a0a] text-[#ef4444] border border-[#ef4444]/30';
       default:
         return 'bg-gray-800 text-gray-400';
@@ -48,7 +49,7 @@ const AlgorithmCard = ({ algorithm }: AlgorithmCardProps) => {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className={`px-2 py-0.5 rounded text-xs font-medium ${getDifficultyStyles(algorithm.difficulty)}`}>
-              {algorithm.difficulty}
+              {displayDifficulty(algorithm.difficulty)}
             </span>
             <button
               onClick={(e: React.MouseEvent) => {

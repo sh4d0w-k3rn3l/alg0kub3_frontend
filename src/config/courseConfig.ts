@@ -4,6 +4,7 @@ import {
   BarChart2, Sigma, Settings, Crosshair, Hexagon, SlidersHorizontal,
   Gamepad2, ThumbsUp, Image, Repeat, Box, Aperture,
   Bot, Cloud, Plug, Shield, Network, Layout, GitBranch,
+  Briefcase,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -48,6 +49,7 @@ export const COURSE_ICONS: Record<string, LucideIcon> = {
   'git': GitBranch,
   'sql-interview': Database,
   'system-design': Layout,
+  'job-search': Briefcase,
 };
 
 export const COURSE_COLORS: Record<string, string> = {
@@ -91,6 +93,7 @@ export const COURSE_COLORS: Record<string, string> = {
   'git': '#f05032',
   'sql-interview': '#e38c00',
   'system-design': '#06b6d4',
+  'job-search': '#84cc16',
 };
 
 export const CATEGORY_META: Record<string, { icon: LucideIcon }> = {

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/DSAHeader';
-import { algorithms } from '@/data/mockData';
+import { api } from '@/lib/api';
 
 const sortingBars = [
   { h: 40, delay: 0 },
@@ -38,57 +38,52 @@ const threadBars = [
 
 const animationCategories = [
   {
-    id: 'dsa',
+    id: 'dsa-concepts',
     title: 'DSA Concept Animations',
-    description: 'Interactive step-by-step visualizations of sorting, searching, and fundamental data structures',
-    color: '#22c55e',
-    count: algorithms.length,
-    href: '/animations/dsa',
+    description: 'Core data structures and algorithms: arrays, trees, graphs, heaps, sorting, and searching.',
+    color: '#14b8a6',
+    count: 107,
+    href: '/animations/dsa-concepts',
   },
   {
-    id: 'dsa-problems',
+    id: 'dsa',
     title: 'DSA Problem Animations',
-    description: 'Visual walkthroughs of LeetCode-style problems with real-time algorithm execution',
-    color: '#3b82f6',
-    count: 0,
-    href: '#',
-    comingSoon: true,
+    description: 'Step-by-step animated walkthroughs of popular coding interview problems.',
+    color: '#10b981',
+    count: 646,
+    href: '/animations/dsa',
   },
   {
     id: 'system-design',
     title: 'System Design Animations',
-    description: 'Visualize distributed systems, caching strategies, load balancers, and microservices architecture',
-    color: '#a855f7',
-    count: 0,
-    href: '#',
-    comingSoon: true,
+    description: 'Distributed systems, networking, databases, caching, scaling, and real-world architectures.',
+    color: '#3b82f6',
+    count: 279,
+    href: '/animations/system-design',
   },
   {
     id: 'concurrency',
     title: 'Concurrency Animations',
-    description: 'Understand threading, synchronization, deadlocks, and concurrent data structures visually',
-    color: '#f59e0b',
-    count: 0,
-    href: '#',
-    comingSoon: true,
+    description: 'Threads, locks, synchronization primitives, and classic concurrency problems.',
+    color: '#8b5cf6',
+    count: 37,
+    href: '/animations/concurrency',
   },
   {
     id: 'ai-ml',
-    title: 'AI/ML Animations',
-    description: 'Explore neural networks, gradient descent, transformers, and machine learning algorithms',
+    title: 'AI / ML Animations',
+    description: 'LLMs, transformers, RAG, agents, and core machine learning concepts.',
     color: '#ec4899',
-    count: 0,
-    href: '#',
-    comingSoon: true,
+    count: 95,
+    href: '/animations/ai-ml',
   },
   {
     id: 'sql',
     title: 'SQL Animations',
-    description: 'Visualize query execution plans, joins, indexes, and database optimization techniques',
-    color: '#06b6d4',
-    count: 0,
-    href: '#',
-    comingSoon: true,
+    description: 'Joins, window functions, and how queries actually execute.',
+    color: '#f59e0b',
+    count: 31,
+    href: '/animations/sql',
   },
 ];
 
@@ -313,7 +308,7 @@ function SqlPreview({ color }: { color: string }) {
 
 const previewComponents: Record<string, React.FC<{ color: string }>> = {
   dsa: SortingPreview,
-  'dsa-problems': ProblemPreview,
+  'dsa-concepts': ProblemPreview,
   'system-design': SystemDesignPreview,
   concurrency: ConcurrencyPreview,
   'ai-ml': NeuralNetPreview,
@@ -322,6 +317,26 @@ const previewComponents: Record<string, React.FC<{ color: string }>> = {
 
 export default function AnimationsPage() {
   const mounted = useRef(false);
+  const [counts, setCounts] = useState<Record<string, number> | null>(null);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    api.get<{ total: number; dsa_total: number; component_counts: Record<string, number> }>('/animations/meta', { signal: ac.signal })
+      .then((res) => {
+        if (!ac.signal.aborted) {
+          setCounts({
+            'dsa-concepts': res.data.component_counts?.['dsa-concepts'] ?? 107,
+            dsa: res.data.dsa_total ?? res.data.total,
+            'system-design': res.data.component_counts?.['system-design'] ?? 279,
+            concurrency: res.data.component_counts?.['concurrency'] ?? 37,
+            'ai-ml': res.data.component_counts?.['ai-ml'] ?? 95,
+            sql: res.data.component_counts?.['sql'] ?? 31,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, []);
 
   useEffect(() => {
     if (mounted.current) return;
@@ -410,21 +425,15 @@ export default function AnimationsPage() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {animationCategories.map((cat) => {
             const Preview = previewComponents[cat.id];
+            const count = counts?.[cat.id] ?? cat.count;
             return (
               <Link
                 key={cat.id}
-                href={cat.comingSoon ? '#' : cat.href}
+                href={cat.href}
                 className="group block"
-                onClick={(e) => {
-                  if (cat.comingSoon) e.preventDefault();
-                }}
               >
                 <div
-                  className={`flex h-full flex-col overflow-hidden rounded-2xl border transition-all duration-300 ${
-                    cat.comingSoon
-                      ? 'border-gray-800 bg-black/60 opacity-60'
-                      : 'border-gray-800 bg-black hover:shadow-xl hover:border-gray-700'
-                  }`}
+                  className={`flex h-full flex-col overflow-hidden rounded-2xl border transition-all duration-300 border-gray-800 bg-black hover:shadow-xl hover:border-gray-700`}
                   style={{ '--accent': cat.color } as React.CSSProperties}
                 >
                   <div
@@ -448,7 +457,7 @@ export default function AnimationsPage() {
                           color: cat.color,
                         }}
                       >
-                        {cat.comingSoon ? 'Soon' : cat.count}
+                        {count}
                       </span>
                     </div>
                     <p className="flex-1 text-sm leading-relaxed text-gray-400">

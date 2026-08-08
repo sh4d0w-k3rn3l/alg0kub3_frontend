@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Play, Pause, RotateCcw, Trophy } from 'lucide-react';
+import { ArrowLeft, Play, Pause, RotateCcw, Trophy, Loader2 } from 'lucide-react';
 import Header from '@/components/DSAHeader';
-import { algorithms } from '@/data/mockData';
 import { generateAnimationSteps } from '@/utils/animationEngine';
+import { useAnimationsCatalog, displayCategory, type AnimationSummary } from '@/hooks/useAnimations';
 
 interface AlgorithmData {
   id: string;
@@ -26,13 +26,14 @@ interface AnimationStep {
   description?: string;
 }
 
-const getAlgorithmsByCategory = () => {
+const getAlgorithmsByCategory = (algorithms: AnimationSummary[]) => {
   const grouped: Record<string, AlgorithmData[]> = {};
   algorithms.forEach(algo => {
-    if (!grouped[algo.category]) {
-      grouped[algo.category] = [];
+    const cat = displayCategory(algo.category);
+    if (!grouped[cat]) {
+      grouped[cat] = [];
     }
-    grouped[algo.category].push(algo);
+    grouped[cat].push(algo);
   });
   return grouped;
 };
@@ -95,15 +96,17 @@ const AlgorithmLane = ({
         </div>
         <div className="flex items-center gap-3">
           <span className={`text-xs px-2 py-0.5 rounded ${
-            algorithm.difficulty === 'Easy' ? 'bg-green-500/20 text-green-400' :
-            algorithm.difficulty === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
+            algorithm.difficulty.toLowerCase() === 'easy' ? 'bg-green-500/20 text-green-400' :
+            algorithm.difficulty.toLowerCase() === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
             'bg-red-500/20 text-red-400'
           }`}>
             {algorithm.difficulty}
           </span>
-          <code className="text-[#22c55e] text-xs bg-[#22c55e]/10 px-2 py-0.5 rounded">
-            {algorithm.timeComplexity}
-          </code>
+          {algorithm.timeComplexity && (
+            <code className="text-[#22c55e] text-xs bg-[#22c55e]/10 px-2 py-0.5 rounded">
+              {algorithm.timeComplexity}
+            </code>
+          )}
           <button
             onClick={onRemove}
             className="text-gray-500 hover:text-red-400 text-sm transition-colors"
@@ -141,13 +144,11 @@ const AlgorithmLane = ({
 };
 
 const ComparisonView = () => {
-  const algorithmsByCategory = getAlgorithmsByCategory();
+  const { animations, loading } = useAnimationsCatalog();
+  const algorithmsByCategory = getAlgorithmsByCategory(animations);
 
-  const [selectedCategory, setSelectedCategory] = useState('Sorting');
-  const [selectedAlgorithms, setSelectedAlgorithms] = useState<string[]>(() => {
-    const sortingAlgos = algorithmsByCategory['Sorting'] || [];
-    return sortingAlgos.length >= 3 ? sortingAlgos.slice(0, 3).map((a: AlgorithmData) => a.id) : [];
-  });
+  const [selectedCategory, setSelectedCategory] = useState('Sorting Algorithms');
+  const [selectedAlgorithms, setSelectedAlgorithms] = useState<string[]>([]);
   const [inputArray, setInputArray] = useState([64, 34, 25, 12, 22, 11, 90, 45, 33, 18]);
   const [customInput, setCustomInput] = useState('64, 34, 25, 12, 22, 11, 90, 45, 33, 18');
   const [isRacing, setIsRacing] = useState(false);
@@ -157,6 +158,18 @@ const ComparisonView = () => {
   const [finishOrder, setFinishOrder] = useState<string[]>([]);
 
   const raceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoSelectedRef = useRef(false);
+
+  useEffect(() => {
+    if (autoSelectedRef.current || loading || animations.length === 0) return;
+    const initial = algorithmsByCategory[selectedCategory] || [];
+    const firstThree = initial.slice(0, 3).map((a: AlgorithmData) => a.id);
+    if (firstThree.length > 0) {
+      autoSelectedRef.current = true;
+      const id = setTimeout(() => setSelectedAlgorithms(firstThree), 0);
+      return () => clearTimeout(id);
+    }
+  }, [loading, animations, algorithmsByCategory, selectedCategory]);
 
   const animationKey = JSON.stringify([selectedAlgorithms, inputArray]);
   const [prevAnimationKey, setPrevAnimationKey] = useState(animationKey);
@@ -255,6 +268,20 @@ const ComparisonView = () => {
 
   const categories = Object.keys(algorithmsByCategory);
   const availableAlgorithms = algorithmsByCategory[selectedCategory] || [];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0b]">
+        <Header />
+        <div className="flex items-center justify-center py-32">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-6 h-6 text-[#22c55e] animate-spin" />
+            <p className="text-gray-500 text-sm">Loading algorithms...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0b]">
@@ -374,7 +401,7 @@ const ComparisonView = () => {
         {selectedAlgorithms.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {selectedAlgorithms.map((algoId) => {
-              const algo = algorithms.find(a => a.id === algoId);
+              const algo = animations.find(a => a.id === algoId);
               if (!algo) return null;
               const steps = animationData[algoId] || [];
               const currentStep = currentSteps[algoId] || 0;
@@ -418,7 +445,7 @@ const ComparisonView = () => {
             </h3>
             <div className="space-y-2">
               {finishOrder.map((algoId, index) => {
-                const algo = algorithms.find(a => a.id === algoId);
+                const algo = animations.find(a => a.id === algoId);
                 const steps = animationData[algoId] || [];
                 return (
                   <div key={algoId} className="flex items-center gap-4 text-sm">
@@ -432,9 +459,11 @@ const ComparisonView = () => {
                     <span className="text-white font-medium">{algo?.title}</span>
                     <span className="text-gray-500">—</span>
                     <span className="text-gray-400">{steps.length} steps</span>
-                    <code className="text-[#22c55e] text-xs bg-[#22c55e]/10 px-2 py-0.5 rounded">
-                      {algo?.timeComplexity}
-                    </code>
+                    {algo?.timeComplexity && (
+                      <code className="text-[#22c55e] text-xs bg-[#22c55e]/10 px-2 py-0.5 rounded">
+                        {algo.timeComplexity}
+                      </code>
+                    )}
                   </div>
                 );
               })}

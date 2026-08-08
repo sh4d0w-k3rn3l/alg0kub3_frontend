@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { handleApiError } from '@/lib/toast';
-import { Map, BookOpen, ChevronRight, Loader2 } from 'lucide-react';
+import { Map, BookOpen, ChevronRight, Loader2, ListTree } from 'lucide-react';
 
 interface Course {
   id: string;
@@ -17,17 +17,33 @@ interface Course {
   section_count: number;
 }
 
+interface RoadmapSummary {
+  slug: string;
+  title: string;
+  description: string;
+  order: number;
+  groups: number;
+  topics: number;
+}
+
 export default function RoadmapsPage() {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [roadmaps, setRoadmaps] = useState<RoadmapSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const ac = new AbortController();
-    api.get<{ courses: Course[] }>('/courses', { signal: ac.signal })
-      .then((res) => {
+    Promise.all([
+      api.get<{ courses: Course[] }>('/courses', { signal: ac.signal }),
+      api.get<{ roadmaps: RoadmapSummary[] }>('/roadmaps', { signal: ac.signal }),
+    ])
+      .then(([coursesRes, roadmapsRes]) => {
         if (ac.signal.aborted) return;
-        if (res.ok && res.data?.courses) {
-          setCourses(res.data.courses.filter((c: Course) => c.lesson_count > 0));
+        if (coursesRes.ok && coursesRes.data?.courses) {
+          setCourses(coursesRes.data.courses.filter((c: Course) => c.lesson_count > 0));
+        }
+        if (roadmapsRes.ok && roadmapsRes.data?.roadmaps) {
+          setRoadmaps(roadmapsRes.data.roadmaps);
         }
       })
       .catch((err: unknown) => {
@@ -56,8 +72,8 @@ export default function RoadmapsPage() {
             <Map className="w-5 h-5 text-[#22c55e]" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Course Roadmaps</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Pick a course and follow its structured learning path</p>
+            <h1 className="text-2xl font-bold text-white">Roadmaps</h1>
+            <p className="text-xs text-gray-500 mt-0.5">Pick a topic roadmap or follow a course&apos;s structured learning path</p>
           </div>
         </div>
 
@@ -65,35 +81,70 @@ export default function RoadmapsPage() {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 text-[#22c55e] animate-spin" />
           </div>
-        ) : courses.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-gray-500">No courses with roadmaps available yet.</p>
-          </div>
         ) : (
-          <div className="grid gap-4">
-            {courses.map((course) => (
-              <Link
-                key={course.id}
-                href={`/learn/${course.slug}/course-roadmap`}
-                className="group flex items-center gap-4 p-4 rounded-xl border border-[#1f1f23] bg-[#0f0f11] hover:border-[#2f2f35] hover:bg-[#111113] transition-all"
-              >
-                <div className="w-10 h-10 rounded-lg bg-[#22c55e]/10 flex items-center justify-center shrink-0">
-                  <Map className="w-4 h-4 text-[#22c55e]" />
+          <>
+            {roadmaps.length > 0 && (
+              <>
+                <h2 className="text-lg font-semibold text-white mb-3">Topic Roadmaps</h2>
+                <div className="grid gap-4 mb-10 sm:grid-cols-2">
+                  {roadmaps.map((roadmap) => (
+                    <Link
+                      key={roadmap.slug}
+                      href={`/roadmaps/${roadmap.slug}`}
+                      className="group flex items-center gap-4 p-4 rounded-xl border border-[#1f1f23] bg-[#0f0f11] hover:border-[#2f2f35] hover:bg-[#111113] transition-all"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-[#22c55e]/10 flex items-center justify-center shrink-0">
+                        <Map className="w-4 h-4 text-[#22c55e]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-white font-semibold text-sm group-hover:text-[#22c55e] transition-colors">
+                          {roadmap.title}
+                        </h3>
+                        <p className="text-gray-500 text-xs mt-0.5 line-clamp-1">{roadmap.description}</p>
+                        <div className="flex items-center gap-3 text-[10px] text-gray-600 mt-1.5">
+                          <span className="flex items-center gap-1"><ListTree className="w-3 h-3" />{roadmap.groups} groups</span>
+                          <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" />{roadmap.topics} topics</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-[#22c55e] transition-colors shrink-0" />
+                    </Link>
+                  ))}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-white font-semibold text-sm group-hover:text-[#22c55e] transition-colors">
-                    {course.title}
-                  </h3>
-                  <p className="text-gray-500 text-xs mt-0.5 line-clamp-1">{course.description}</p>
-                  <div className="flex items-center gap-3 text-[10px] text-gray-600 mt-1.5">
-                    <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" />{course.section_count} sections</span>
-                    <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" />{course.lesson_count} lessons</span>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-[#22c55e] transition-colors shrink-0" />
-              </Link>
-            ))}
-          </div>
+              </>
+            )}
+
+            <h2 className="text-lg font-semibold text-white mb-3">Course Roadmaps</h2>
+            {courses.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-gray-500">No course roadmaps available yet.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {courses.map((course) => (
+                  <Link
+                    key={course.id}
+                    href={`/learn/${course.slug}/course-roadmap`}
+                    className="group flex items-center gap-4 p-4 rounded-xl border border-[#1f1f23] bg-[#0f0f11] hover:border-[#2f2f35] hover:bg-[#111113] transition-all"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-[#22c55e]/10 flex items-center justify-center shrink-0">
+                      <Map className="w-4 h-4 text-[#22c55e]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-white font-semibold text-sm group-hover:text-[#22c55e] transition-colors">
+                        {course.title}
+                      </h3>
+                      <p className="text-gray-500 text-xs mt-0.5 line-clamp-1">{course.description}</p>
+                      <div className="flex items-center gap-3 text-[10px] text-gray-600 mt-1.5">
+                        <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" />{course.section_count} sections</span>
+                        <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" />{course.lesson_count} lessons</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-[#22c55e] transition-colors shrink-0" />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

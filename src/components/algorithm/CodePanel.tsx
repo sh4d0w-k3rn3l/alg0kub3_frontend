@@ -133,7 +133,7 @@ const CodePanel = ({
   const codeContainerRef = useRef<HTMLDivElement>(null);
 
   const theme = CODE_THEMES[selectedTheme as keyof typeof CODE_THEMES];
-  const currentCode = code[selectedLanguage] || code.java;
+  const currentCode = code[selectedLanguage] || code.java || code.python || '';
   const codeLines = currentCode.split('\n');
 
   const languageLabels: Record<string, string> = {

@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Bookmark } from 'lucide-react';
+import { ArrowLeft, Bookmark, Loader2 } from 'lucide-react';
 import Header from '@/components/DSAHeader';
-import { algorithms } from '@/data/mockData';
 import { getAlgorithmCode } from '@/data/codeImplementations/index';
 import { generateAnimationSteps } from '@/utils/animationEngine';
 import { algorithmInfo } from '@/data/algorithmInfo';
+import { useAnimationDetail } from '@/hooks/useAnimations';
 import {
   ControlPanel,
   CodePanel,
@@ -99,7 +99,7 @@ const computeAnimationInput = (
 const AlgorithmDetail = () => {
   const params = useParams();
   const algorithmId = (params?.algorithmId as string) || '';
-  const algorithm = algorithms.find(a => a.id === algorithmId);
+  const { algorithm, loading, error } = useAnimationDetail(algorithmId);
 
   const [selectedLanguage, setSelectedLanguage] = useState('java');
   const [selectedPreset, setSelectedPreset] = useState('Array 1');
@@ -117,7 +117,12 @@ const AlgorithmDetail = () => {
 
   const presets = useMemo(() => getInputPresets(algorithmId, algorithm?.category), [algorithmId, algorithm?.category]);
   const presetNames = Object.keys(presets);
-  const code = getAlgorithmCode(algorithmId, algorithm?.title || 'Algorithm');
+  const code = useMemo(
+    () => algorithm?.code && Object.keys(algorithm.code).length > 0
+      ? algorithm.code
+      : getAlgorithmCode(algorithmId, algorithm?.title || 'Algorithm'),
+    [algorithm, algorithmId]
+  );
 
   // Reset preset selection and playback when the algorithm changes
   const [prevAlgorithmId, setPrevAlgorithmId] = useState(algorithmId);
@@ -263,11 +268,26 @@ const AlgorithmDetail = () => {
   const maxValue = Math.max(...currentArray.map(v => Math.abs(v)), 1);
   const currentDescription = animationSteps[currentStep]?.description || 'Ready';
 
-  if (!algorithm) {
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0b]">
+        <Header />
+        <div className="flex items-center justify-center py-32">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-6 h-6 text-[#22c55e] animate-spin" />
+            <p className="text-gray-500 text-sm">Loading algorithm...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!algorithm || error) {
     return (
       <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
         <div className="text-white text-center">
-          <h1 className="text-2xl font-bold mb-4">Algorithm not found</h1>
+          <h1 className="text-2xl font-bold mb-2">Algorithm not found</h1>
+          {error && <p className="text-gray-500 text-sm mb-4">{error}</p>}
           <Link href="/animations/dsa" className="text-[#22c55e] hover:underline">
             Back to all animations
           </Link>
@@ -293,6 +313,26 @@ const AlgorithmDetail = () => {
             <div>
               <h1 className="text-2xl font-bold text-white" data-testid="algorithm-title">{algorithm.title}</h1>
               <p className="text-gray-400 text-sm mt-1">{algorithm.description}</p>
+              {(algorithm.topics?.length > 0 || algorithm.companies?.length > 0) && (
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  {algorithm.topics?.filter(Boolean).map((topic: string) => (
+                    <span
+                      key={`topic-${topic}`}
+                      className="px-2 py-0.5 rounded-full text-[10px] bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20"
+                    >
+                      {topic}
+                    </span>
+                  ))}
+                  {algorithm.companies?.filter(Boolean).map((company: string) => (
+                    <span
+                      key={`company-${company}`}
+                      className="px-2 py-0.5 rounded-full text-[10px] bg-[#3b82f6]/10 text-[#3b82f6] border border-[#3b82f6]/20"
+                    >
+                      {company}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-4">

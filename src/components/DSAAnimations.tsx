@@ -2,10 +2,10 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Search, ChevronDown, Bookmark } from 'lucide-react';
+import { ArrowLeft, Search, ChevronDown, Bookmark, Loader2 } from 'lucide-react';
 import Header from '@/components/DSAHeader';
 import AlgorithmCard from '@/components/AlgorithmCard';
-import { algorithms, categories, difficulties } from '@/data/mockData';
+import { useAnimationsCatalog, displayCategory, displayDifficulty } from '@/hooks/useAnimations';
 
 interface Algorithm {
   id: string;
@@ -16,6 +16,7 @@ interface Algorithm {
 }
 
 const DSAAnimations = () => {
+  const { animations, categories, difficulties, total, loading, error } = useAnimationsCatalog();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All Difficulties');
@@ -24,27 +25,58 @@ const DSAAnimations = () => {
   const [showBookmarked, setShowBookmarked] = useState(false);
 
   const filteredAlgorithms = useMemo(() => {
-    return algorithms.filter((algo: Algorithm) => {
+    return animations.filter((algo: Algorithm) => {
       const matchesSearch = algo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         algo.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'All Categories' || algo.category === selectedCategory;
-      const matchesDifficulty = selectedDifficulty === 'All Difficulties' || algo.difficulty === selectedDifficulty;
+      const matchesCategory = selectedCategory === 'All Categories' || displayCategory(algo.category) === selectedCategory;
+      const matchesDifficulty = selectedDifficulty === 'All Difficulties' || algo.difficulty.toLowerCase() === selectedDifficulty.toLowerCase();
       return matchesSearch && matchesCategory && matchesDifficulty;
     });
-  }, [searchQuery, selectedCategory, selectedDifficulty]);
+  }, [animations, searchQuery, selectedCategory, selectedDifficulty]);
 
   const groupedAlgorithms = useMemo(() => {
     const groups: Record<string, Algorithm[]> = {};
     filteredAlgorithms.forEach((algo: Algorithm) => {
-      if (!groups[algo.category]) {
-        groups[algo.category] = [];
+      const cat = displayCategory(algo.category);
+      if (!groups[cat]) {
+        groups[cat] = [];
       }
-      groups[algo.category].push(algo);
+      groups[cat].push(algo);
     });
     return groups;
   }, [filteredAlgorithms]);
 
   const categoryOrder = categories.filter((c: string) => c !== 'All Categories');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0b]">
+        <Header />
+        <main className="max-w-[1000px] mx-auto px-4 py-8 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3 py-24">
+            <Loader2 className="w-6 h-6 text-[#22c55e] animate-spin" />
+            <p className="text-gray-500 text-sm">Loading animations...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0b]">
+        <Header />
+        <main className="max-w-[1000px] mx-auto px-4 py-8 flex items-center justify-center">
+          <div className="text-center py-24">
+            <p className="text-gray-500 text-sm">{error}</p>
+            <Link href="/animations" className="inline-block mt-4 text-[#22c55e] text-sm hover:underline">
+              Back to All Animations
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0b]">
@@ -115,7 +147,7 @@ const DSAAnimations = () => {
             </button>
             {showCategoryDropdown && (
               <div className="absolute top-full left-0 mt-1 bg-[#141416] border border-[#1f1f23] rounded-md shadow-xl z-50 w-64 max-h-80 overflow-y-auto">
-                {categories.map((cat: string) => (
+                {categoryOrder.map((cat: string) => (
                   <button
                     key={cat}
                     onClick={() => {
@@ -141,7 +173,7 @@ const DSAAnimations = () => {
               }}
               className="flex items-center gap-2 bg-[#141416] border border-[#1f1f23] rounded-md px-4 py-2 text-gray-300 hover:border-[#2f2f35] transition-colors text-sm min-w-[140px]"
             >
-              <span className="flex-1 text-left">{selectedDifficulty}</span>
+              <span className="flex-1 text-left">{selectedDifficulty === 'All Difficulties' ? selectedDifficulty : displayDifficulty(selectedDifficulty)}</span>
               <ChevronDown className="w-4 h-4 text-gray-500" />
             </button>
             {showDifficultyDropdown && (
@@ -154,10 +186,10 @@ const DSAAnimations = () => {
                       setShowDifficultyDropdown(false);
                     }}
                     className={`w-full text-left px-4 py-2 text-sm hover:bg-[#1f1f23] transition-colors ${
-                      selectedDifficulty === diff ? 'text-[#22c55e]' : 'text-gray-300'
+                      selectedDifficulty.toLowerCase() === diff.toLowerCase() ? 'text-[#22c55e]' : 'text-gray-300'
                     }`}
                   >
-                    {diff}
+                    {displayDifficulty(diff)}
                   </button>
                 ))}
               </div>
@@ -205,7 +237,7 @@ const DSAAnimations = () => {
         </div>
 
         <div className="mt-8 text-center text-gray-500 text-sm">
-          {filteredAlgorithms.length} of {algorithms.length} algorithms shown
+          {filteredAlgorithms.length} of {total} algorithms shown
         </div>
       </main>
     </div>

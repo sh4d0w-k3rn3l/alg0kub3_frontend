@@ -1,8 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { BookOpen, Info, Lightbulb, Hash } from 'lucide-react';
+import { BookOpen, Info, Lightbulb } from 'lucide-react';
 import { algorithmInfo } from '@/data/algorithmInfo';
-import { algorithms } from '@/data/mockData';
 
 interface AlgorithmInfo {
   title?: string;
@@ -82,31 +81,20 @@ const InfoPanels = ({ algorithmId, algorithm = {} }: InfoPanelsProps) => {
           {info.relatedProblems && info.relatedProblems.length > 0 && (
             <div data-testid="related-problems">
               <div className="flex items-center gap-2 mb-3">
-                <Hash className="w-3.5 h-3.5 text-[#3b82f6]" />
+                <BookOpen className="w-3.5 h-3.5 text-[#3b82f6]" />
                 <span className="text-[#3b82f6] font-medium text-xs uppercase tracking-wide">Related Problems</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {info.relatedProblems.map((relatedId) => {
-                  const relatedAlgo = algorithms.find(a => a.id === relatedId);
-                  if (!relatedAlgo) return null;
-                  return (
-                    <Link
-                      key={relatedId}
-                      href={`/animations/dsa/${relatedId}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1f1f23] hover:bg-[#2a2a2e] text-gray-300 hover:text-white text-sm rounded-full transition-colors"
-                      data-testid={`related-problem-${relatedId}`}
-                    >
-                      <span>{relatedAlgo.title}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded ${
-                        relatedAlgo.difficulty === 'Easy' ? 'bg-green-500/20 text-green-400' :
-                        relatedAlgo.difficulty === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-red-500/20 text-red-400'
-                      }`}>
-                        {relatedAlgo.difficulty}
-                      </span>
-                    </Link>
-                  );
-                })}
+                {info.relatedProblems.map((relatedId) => (
+                  <Link
+                    key={relatedId}
+                    href={`/animations/dsa/${relatedId}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1f1f23] hover:bg-[#2a2a2e] text-gray-300 hover:text-white text-sm rounded-full transition-colors"
+                    data-testid={`related-problem-${relatedId}`}
+                  >
+                    <span>{relatedId}</span>
+                  </Link>
+                ))}
               </div>
             </div>
           )}

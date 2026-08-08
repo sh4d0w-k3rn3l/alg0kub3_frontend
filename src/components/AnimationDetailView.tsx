@@ -86,7 +86,7 @@ const AnimationDetailView = () => {
               className="rounded-2xl border border-[#1f1f23] bg-[#0d0d0f] overflow-hidden"
               style={{ ['--accent' as string]: meta.accent }}
             >
-              <SimulationViewer id={id} />
+              <SimulationViewer id={id} category={category} animation={algorithm.animation} />
             </div>
           </>
         )}

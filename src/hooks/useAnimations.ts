@@ -76,12 +76,16 @@ export function useAnimationsCatalog() {
   return { animations, categories, difficulties, total, loading, error };
 }
 
-export function useAnimationDetail(algorithmId: string, category?: string) {
+export function useAnimationDetail(algorithmId: string, category?: string, skip?: boolean) {
   const [algorithm, setAlgorithm] = useState<AnimationDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!skip);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (skip) {
+      const t = setTimeout(() => setLoading(false), 0);
+      return () => clearTimeout(t);
+    }
     const ac = new AbortController();
     if (!algorithmId) {
       const id = setTimeout(() => {
@@ -120,7 +124,7 @@ export function useAnimationDetail(algorithmId: string, category?: string) {
       clearTimeout(id);
       ac.abort();
     };
-  }, [algorithmId, category]);
+  }, [algorithmId, category, skip]);
 
   return { algorithm, loading, error };
 }

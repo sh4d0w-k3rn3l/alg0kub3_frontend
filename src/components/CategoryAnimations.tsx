@@ -13,6 +13,8 @@ interface AnimationItem {
   description: string;
   category: string;
   is_premium: boolean;
+  group?: string;
+  group_order?: number;
 }
 
 const CATEGORY_META: Record<string, { title: string; accent: string }> = {
@@ -67,6 +69,53 @@ const CategoryAnimations = () => {
       (a) => a.title.toLowerCase().includes(q) || a.id.toLowerCase().includes(q),
     );
   }, [items, searchQuery]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, AnimationItem[]>();
+    for (const item of filtered) {
+      const g = item.group || 'Other';
+      if (!map.has(g)) map.set(g, []);
+      map.get(g)!.push(item);
+    }
+    const groups = Array.from(map.entries());
+    groups.sort((a, b) => {
+      const oa = items.find((i) => (i.group || 'Other') === a[0])?.group_order ?? 999;
+      const ob = items.find((i) => (i.group || 'Other') === b[0])?.group_order ?? 999;
+      return oa - ob;
+    });
+    return groups;
+  }, [filtered, items]);
+
+  const renderGrid = (groupItems: AnimationItem[]) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {groupItems.map((item) => (
+        <Link
+          key={item.id}
+          href={`/animations/${category}/${item.id}`}
+          className="block group"
+        >
+          <div className="bg-[#141416] border border-[#1f1f23] rounded-lg p-4 hover:border-[#2f2f35] hover:bg-[#18181b] transition-all duration-200">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-white font-medium text-base mb-1 group-hover:text-[color:var(--accent)] transition-colors truncate">
+                  {item.title}
+                </h3>
+                <p className="text-gray-500 text-sm line-clamp-2">{item.description || item.id}</p>
+              </div>
+              {item.is_premium && (
+                <span
+                  className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"
+                  style={{ backgroundColor: `${meta.accent}1a`, color: meta.accent }}
+                >
+                  Premium
+                </span>
+              )}
+            </div>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
 
   if (loading) {
     return (
@@ -131,34 +180,18 @@ const CategoryAnimations = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filtered.map((item) => (
-            <Link
-              key={item.id}
-              href={`/animations/${category}/${item.id}`}
-              className="block group"
+        {grouped.map(([groupTitle, groupItems]) => (
+          <section key={groupTitle} className="mb-8">
+            <h2
+              className="text-lg font-semibold text-white mb-3 flex items-center gap-2"
+              style={{ color: meta.accent }}
             >
-              <div className="bg-[#141416] border border-[#1f1f23] rounded-lg p-4 hover:border-[#2f2f35] hover:bg-[#18181b] transition-all duration-200">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-medium text-base mb-1 group-hover:text-[color:var(--accent)] transition-colors truncate">
-                      {item.title}
-                    </h3>
-                    <p className="text-gray-500 text-sm line-clamp-2">{item.description || item.id}</p>
-                  </div>
-                  {item.is_premium && (
-                    <span
-                      className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"
-                      style={{ backgroundColor: `${meta.accent}1a`, color: meta.accent }}
-                    >
-                      Premium
-                    </span>
-                  )}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+              {groupTitle}
+              <span className="text-sm font-normal text-gray-500">{groupItems.length}</span>
+            </h2>
+            {renderGrid(groupItems)}
+          </section>
+        ))}
 
         {filtered.length === 0 && (
           <p className="text-center text-gray-500 text-sm py-16">No animations match your search.</p>

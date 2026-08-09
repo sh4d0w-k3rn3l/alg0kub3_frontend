@@ -226,7 +226,7 @@ const DSAAnimations = () => {
             return (
               <section key={category}>
                 <h2 className="text-xl font-semibold text-white mb-4">{category}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {algos.map((algo: Algorithm) => (
                     <AlgorithmCard key={algo.id} algorithm={algo} />
                   ))}

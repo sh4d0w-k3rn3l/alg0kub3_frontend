@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Bookmark, Loader2 } from 'lucide-react';
 import Header from '@/components/DSAHeader';
-import { getAlgorithmCode } from '@/data/codeImplementations/index';
+import { getAlgorithmCode, algorithmCode } from '@/data/codeImplementations/index';
 import { generateAnimationSteps } from '@/utils/animationEngine';
 import { algorithmInfo } from '@/data/algorithmInfo';
 import { useAnimationDetail } from '@/hooks/useAnimations';
@@ -118,9 +118,14 @@ const AlgorithmDetail = () => {
   const presets = useMemo(() => getInputPresets(algorithmId, algorithm?.category), [algorithmId, algorithm?.category]);
   const presetNames = Object.keys(presets);
   const code = useMemo(
-    () => algorithm?.code && Object.keys(algorithm.code).length > 0
-      ? algorithm.code
-      : getAlgorithmCode(algorithmId, algorithm?.title || 'Algorithm'),
+    () => {
+      if (algorithmId in algorithmCode) {
+        return getAlgorithmCode(algorithmId, algorithm?.title || 'Algorithm');
+      }
+      return algorithm?.code && Object.keys(algorithm.code).length > 0
+        ? algorithm.code
+        : getAlgorithmCode(algorithmId, algorithm?.title || 'Algorithm');
+    },
     [algorithm, algorithmId]
   );
 

@@ -201,7 +201,8 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
   const router = useRouter();
   const [accordionOpen, setAccordionOpen] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<Record<string | number, number>>({});
-  const [access, setAccess] = useState<{ has_access: boolean; is_free: boolean; is_subscribed: boolean; access_type: string; price?: number }>({ has_access: true, is_free: true, is_subscribed: false, access_type: 'free' });
+  const [access, setAccess] = useState<{ has_access: boolean; is_free: boolean; is_subscribed: boolean; access_type: string; price?: number }>({ has_access: false, is_free: false, is_subscribed: false, access_type: 'premium' });
+  const [accessLoading, setAccessLoading] = useState(true);
   const [lessonCompleted, setLessonCompleted] = useState(false);
   const [explainOpen, setExplainOpen] = useState(false);
   const [explainLoading, setExplainLoading] = useState(false);
@@ -219,6 +220,7 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
 
   useEffect(() => {
     if (!lesson?.slug) return;
+    setAccessLoading(true);
     const ac = new AbortController();
     api.get<{ has_access: boolean; is_free: boolean; is_subscribed: boolean; access_type: string; price?: number }>(`/lessons/${lesson.slug}/access`, { params: { course: courseSlug || '' }, signal: ac.signal })
       .then(r => {
@@ -227,7 +229,10 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
       })
       .catch((err) => {
         if (err instanceof DOMException && err.name === 'AbortError') return;
-        setAccess({ has_access: true, is_free: true, is_subscribed: false, access_type: 'free' });
+        setAccess({ has_access: false, is_free: false, is_subscribed: false, access_type: 'premium' });
+      })
+      .finally(() => {
+        if (!ac.signal.aborted) setAccessLoading(false);
       });
     return () => ac.abort();
   }, [lesson?.slug, courseSlug]);
@@ -924,7 +929,17 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
         </div>
       )}
 
-      {access.has_access ? (
+      {accessLoading ? (
+        <div className="space-y-4 animate-pulse">
+          <div className="h-5 w-3/4 rounded" style={{ backgroundColor: colors.bgSecondary }} />
+          <div className="h-4 w-full rounded" style={{ backgroundColor: colors.bgSecondary }} />
+          <div className="h-4 w-5/6 rounded" style={{ backgroundColor: colors.bgSecondary }} />
+          <div className="h-4 w-2/3 rounded" style={{ backgroundColor: colors.bgSecondary }} />
+          <div className="h-32 w-full rounded-lg mt-6" style={{ backgroundColor: colors.bgSecondary }} />
+          <div className="h-4 w-full rounded" style={{ backgroundColor: colors.bgSecondary }} />
+          <div className="h-4 w-4/5 rounded" style={{ backgroundColor: colors.bgSecondary }} />
+        </div>
+      ) : access.has_access ? (
         <>
           <div className="mb-8">
             {(content_blocks || []).length === 0 ? (

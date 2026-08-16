@@ -40,20 +40,34 @@ const LoginPage: React.FC = () => {
   const [otpInfo, setOtpInfo] = useState('');
 
   const ssoLogin = (strategy: 'oauth_google' | 'oauth_github' | 'oauth_linkedin_oidc') => async () => {
-    if (!signIn?.sso || ssoLoading) return;
+    if (ssoLoading) return;
+    if (!signIn?.sso) {
+      console.error('[SSO] signIn or signIn.sso is not available yet', { signIn: !!signIn, sso: !!signIn?.sso });
+      setError('Authentication service is still loading. Please wait a moment and try again.');
+      return;
+    }
     setSsoLoading(strategy);
     try {
       const cbUrl = `${window.location.origin}/auth/callback`;
-      const { error } = await signIn.sso({
+      console.log('[SSO] Initiating', strategy, 'redirect to', cbUrl);
+      const result = await signIn.sso({
         strategy,
         redirectUrl: cbUrl,
         redirectCallbackUrl: cbUrl,
       });
-      setSsoLoading('');
-      if (error) {
-        setError('Social login failed. Please try again.');
+      console.log('[SSO] sso() returned:', JSON.stringify(result));
+      if (result.error) {
+        console.error('[SSO] Clerk returned error:', result.error);
+        const detail = result.error.message || result.error.longMessage || result.error.code || '';
+        if (detail.includes('not enabled') || detail.includes('not configured') || detail.includes('not found')) {
+          setError(`Social login (${strategy.replace('oauth_', '')}) is not enabled. Please contact support.`);
+        } else {
+          setError(detail || 'Social login failed. Please try again.');
+        }
+        setSsoLoading('');
       }
-    } catch {
+    } catch (err) {
+      console.error('[SSO] Exception:', err);
       setSsoLoading('');
       setError('Social login failed. Please try again.');
     }

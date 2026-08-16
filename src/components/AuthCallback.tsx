@@ -16,21 +16,27 @@ const AuthCallback = () => {
   }, [user, router]);
 
   useEffect(() => {
+    console.log('[AuthCallback] clerk.loaded:', clerk.loaded, 'user:', !!user);
     if (!clerk.loaded || user) return;
 
     const process = async () => {
       try {
+        console.log('[AuthCallback] Calling handleRedirectCallback...');
         await clerk.handleRedirectCallback({
           signInFallbackRedirectUrl: '/dashboard',
           signUpFallbackRedirectUrl: '/dashboard',
           transferable: true,
         });
+        console.log('[AuthCallback] handleRedirectCallback succeeded');
       } catch (err: unknown) {
-        const e = err as { errors?: { longMessage?: string; message?: string }[]; message?: string } | null;
+        console.error('[AuthCallback] handleRedirectCallback failed:', err);
+        const e = err as { errors?: { longMessage?: string; message?: string; code?: string }[]; message?: string } | null;
+        const code = e?.errors?.[0]?.code;
         const msg = e?.errors?.[0]?.longMessage
           || e?.errors?.[0]?.message
           || e?.message
           || 'Authentication failed. Please try signing in again.';
+        if (code) console.error('[AuthCallback] Error code:', code);
         setError(msg);
       }
     };

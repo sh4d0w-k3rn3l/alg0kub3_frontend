@@ -50,20 +50,34 @@ const SignUpPage: React.FC = () => {
   const [ssoLoading, setSsoLoading] = useState('');
 
   const ssoSignUp = (strategy: string) => async () => {
-    if (!signUp?.sso || ssoLoading) return;
+    if (ssoLoading) return;
+    if (!signUp?.sso) {
+      console.error('[SSO] signUp or signUp.sso is not available yet', { signUp: !!signUp, sso: !!signUp?.sso });
+      setError('Authentication service is still loading. Please wait a moment and try again.');
+      return;
+    }
     setSsoLoading(strategy);
     try {
       const cbUrl = `${window.location.origin}/auth/callback`;
-      const { error } = await signUp.sso({
+      console.log('[SSO-SignUp] Initiating', strategy, 'redirect to', cbUrl);
+      const result = await signUp.sso({
         strategy,
         redirectUrl: cbUrl,
         redirectCallbackUrl: cbUrl,
       });
-      setSsoLoading('');
-      if (error) {
-        setError('Social sign up failed. Please try again.');
+      console.log('[SSO-SignUp] sso() returned:', JSON.stringify(result));
+      if (result.error) {
+        console.error('[SSO-SignUp] Clerk returned error:', result.error);
+        const detail = result.error.message || result.error.longMessage || result.error.code || '';
+        if (detail.includes('not enabled') || detail.includes('not configured') || detail.includes('not found')) {
+          setError(`Social sign up (${strategy.replace('oauth_', '')}) is not enabled. Please contact support.`);
+        } else {
+          setError(detail || 'Social sign up failed. Please try again.');
+        }
+        setSsoLoading('');
       }
-    } catch {
+    } catch (err) {
+      console.error('[SSO-SignUp] Exception:', err);
       setSsoLoading('');
       setError('Social sign up failed. Please try again.');
     }

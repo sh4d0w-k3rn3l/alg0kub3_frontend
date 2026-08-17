@@ -64,12 +64,12 @@ const LoginPage: React.FC = () => {
         } else {
           setError(detail || 'Social login failed. Please try again.');
         }
-        setSsoLoading('');
       }
     } catch (err) {
       console.error('[SSO] Exception:', err);
-      setSsoLoading('');
       setError('Social login failed. Please try again.');
+    } finally {
+      setSsoLoading('');
     }
   };
 

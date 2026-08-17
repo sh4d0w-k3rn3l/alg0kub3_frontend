@@ -74,12 +74,12 @@ const SignUpPage: React.FC = () => {
         } else {
           setError(detail || 'Social sign up failed. Please try again.');
         }
-        setSsoLoading('');
       }
     } catch (err) {
       console.error('[SSO-SignUp] Exception:', err);
-      setSsoLoading('');
       setError('Social sign up failed. Please try again.');
+    } finally {
+      setSsoLoading('');
     }
   };
 

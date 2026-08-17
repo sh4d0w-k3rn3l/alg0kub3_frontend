@@ -107,7 +107,11 @@ const QuizComponent = ({ sectionId, sectionTitle }: QuizComponentProps) => {
 
   const applyQuizResult = (result: { status: number; data?: QuizData & { user_best?: UserBest } }) => {
     if (result.status === 404) { setError('no_quiz'); return; }
-    if (!result.data) { setError('load_error'); return; }
+    if (!result.data) { setError('no_quiz'); return; }
+    const data = result.data as Record<string, unknown>;
+    if (data.quiz === null || data.quiz === undefined || !Array.isArray(data.questions) || data.questions.length === 0) {
+      setError('no_quiz'); return;
+    }
     setError(null);
     setQuiz(result.data);
     if (result.data.user_best) setUserBest(result.data.user_best);
@@ -242,12 +246,7 @@ const QuizComponent = ({ sectionId, sectionTitle }: QuizComponentProps) => {
   }
 
   if (!quiz || !quiz.questions?.length) {
-    return (
-      <div className="mt-10 mb-4 rounded-xl p-6" style={{ border: `1px solid ${colors.border}`, backgroundColor: colors.bgCard }}>
-        <p className="text-sm" style={{ color: colors.textSecondary }}>Quiz could not be loaded.</p>
-        <button onClick={() => { setStarted(false); void refreshQuiz(); }} className="mt-3 text-sm underline" style={{ color: colors.green }}>Retry</button>
-      </div>
-    );
+    return null;
   }
 
   if (submitted && result) {

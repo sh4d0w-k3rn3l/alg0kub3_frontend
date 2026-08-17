@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useSignIn, useClerk } from '@clerk/nextjs';
+import { useSignIn } from '@clerk/nextjs';
 import { api } from '@/lib/api';
 import { Code, Sun, Moon, LogIn, Shield, Mail, Lock, AlertCircle, Loader2, Github, Eye, EyeOff, KeyRound } from 'lucide-react';
 
@@ -27,7 +27,6 @@ const LoginPage: React.FC = () => {
   const { colors, isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { signIn } = useSignIn();
-  const clerk = useClerk();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -83,10 +82,8 @@ const LoginPage: React.FC = () => {
 
   if (user) return null;
 
-  const getLiveSignIn = () => (clerk.client?.signIn as unknown as typeof signIn) ?? signIn;
-
-  const completeSignIn = async (target: typeof signIn) => {
-    await target.finalize({
+  const completeSignIn = async () => {
+    await signIn.finalize({
       navigate: async ({ session, decorateUrl }) => {
         if (session?.getToken) {
           const token = await session.getToken().catch(() => null);
@@ -118,13 +115,12 @@ const LoginPage: React.FC = () => {
         }
         return;
       }
-      const target = getLiveSignIn();
-      const siStatus = (target.status ?? signIn.status) as string | null;
-      const createdSessionId = target.createdSessionId ?? signIn.createdSessionId;
+      const siStatus = signIn.status as string | null;
+      const createdSessionId = signIn.createdSessionId;
       if (siStatus === 'complete' || (createdSessionId && !siStatus)) {
-        await completeSignIn(target);
+        await completeSignIn();
       } else if (siStatus === 'needs_second_factor' || siStatus === 'needs_client_trust') {
-        const { error: sendErr } = await target.mfa.sendEmailCode();
+        const { error: sendErr } = await signIn.mfa.sendEmailCode();
         if (sendErr) {
           setError(`Additional verification is required (${siStatus}) but the email code could not be sent: ${sendErr.longMessage || sendErr.message || 'Please try a social provider.'}`);
           return;
@@ -156,19 +152,17 @@ const LoginPage: React.FC = () => {
     if (!otpCode) { setError('Please enter the verification code'); return; }
     setLoading(true);
     try {
-      const target = getLiveSignIn();
-      const { error: verifyErr } = await target.mfa.verifyEmailCode({ code: otpCode });
+      const { error: verifyErr } = await signIn.mfa.verifyEmailCode({ code: otpCode });
       if (verifyErr) {
         if (verifyErr.code === 'form_code_incorrect') setError('Incorrect code. Please try again.');
         else setError(verifyErr.longMessage || verifyErr.message || 'Verification failed');
         return;
       }
-      const after = getLiveSignIn();
-      if (after.status === 'complete' || after.createdSessionId) {
-        await completeSignIn(after);
+      if (signIn.status === 'complete' || signIn.createdSessionId) {
+        await completeSignIn();
       } else {
         setOtpStep(false);
-        setError(`Verification incomplete (${after.status}). Please try again or use a social provider.`);
+        setError(`Verification incomplete (${signIn.status}). Please try again or use a social provider.`);
       }
     } catch (err: unknown) {
       const e = err as { errors?: { code?: string; longMessage?: string }[]; message?: string } | null;
@@ -184,8 +178,7 @@ const LoginPage: React.FC = () => {
     setOtpInfo('');
     setLoading(true);
     try {
-      const target = getLiveSignIn();
-      const { error: sendErr } = await target.mfa.sendEmailCode();
+      const { error: sendErr } = await signIn.mfa.sendEmailCode();
       if (sendErr) setError(sendErr.longMessage || sendErr.message || 'Failed to resend the code');
       else setOtpInfo('A new code has been sent to your email.');
     } catch {

@@ -95,22 +95,20 @@ const SignUpPage: React.FC = () => {
     if (!clerk.loaded || !signUp) return;
     const ac = new AbortController();
     (async () => {
-      const live = (clerk.client?.signUp as unknown as typeof signUp) ?? signUp;
-      if (!live || live.status !== 'missing_requirements') return;
-      const missing = live.missingFields as string[];
+      if (signUp.status !== 'missing_requirements') return;
+      const missing = signUp.missingFields as string[];
       if (missing.length === 0 || missing.some(f => f !== 'username')) return;
-      const oauthEmail = live.emailAddress || clerk.user?.primaryEmailAddress?.emailAddress || '';
+      const oauthEmail = signUp.emailAddress || clerk.user?.primaryEmailAddress?.emailAddress || '';
       const base = (oauthEmail.split('@')[0] || 'user').replace(/[^a-zA-Z0-9_-]/g, '_');
       const username = base.length >= 4 ? base : `${base}${Math.floor(Math.random() * 90000 + 10000)}`;
       try {
-        const { error: updErr } = await live.update({ username });
+        const { error: updErr } = await signUp.update({ username });
         if (updErr) {
           setError(updErr.longMessage || updErr.message || 'Could not complete sign up');
           return;
         }
-        const after = (clerk.client?.signUp as unknown as typeof signUp) ?? signUp;
-        if (after.status === 'complete') {
-          await after.finalize({
+        if ((signUp.status as string) === 'complete') {
+          await signUp.finalize({
             navigate: async ({ session, decorateUrl }) => {
               const token = await session?.getToken?.().catch(() => null) ?? null;
               if (token) {
@@ -165,7 +163,7 @@ const SignUpPage: React.FC = () => {
         setError(error.message || 'Sign up failed');
         return;
       }
-      const suStatus = signUp.status as string || (clerk.client?.signUp?.status as string) || '';
+      const suStatus = signUp.status as string || '';
       if (suStatus === 'complete') {
         await signUp.finalize({
           navigate: async ({ session, decorateUrl }) => {
@@ -208,7 +206,7 @@ const SignUpPage: React.FC = () => {
         return;
       }
       // Check both React snapshot and live Clerk client (stale closure mitigation)
-      const isComplete = signUp.status === 'complete' || (clerk.client?.signUp?.status as string) === 'complete';
+      const isComplete = signUp.status === 'complete';
       if (isComplete) {
         await signUp.finalize({
           navigate: async ({ session, decorateUrl }) => {

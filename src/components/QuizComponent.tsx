@@ -108,8 +108,8 @@ const QuizComponent = ({ sectionId, sectionTitle }: QuizComponentProps) => {
   const applyQuizResult = (result: { status: number; data?: QuizData & { user_best?: UserBest } }) => {
     if (result.status === 404) { setError('no_quiz'); return; }
     if (!result.data) { setError('no_quiz'); return; }
-    const data = result.data as Record<string, unknown>;
-    if (data.quiz === null || data.quiz === undefined || !Array.isArray(data.questions) || data.questions.length === 0) {
+    const data = result.data;
+    if (!data.questions || !Array.isArray(data.questions) || data.questions.length === 0) {
       setError('no_quiz'); return;
     }
     setError(null);

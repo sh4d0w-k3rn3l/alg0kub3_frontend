@@ -120,13 +120,13 @@ const Sidebar = ({ isOpen, onToggle, sections = [], activeSlug, onLessonClick, t
             <div key={section.id}>
               <button
                 onClick={() => toggleSection(section.id)}
-                className="w-full flex items-center justify-between px-4 py-2.5 transition-colors group"
+                className="w-full flex items-center justify-between px-4 py-2.5 transition-colors group text-left"
               >
-                <div className="flex items-center gap-2">
-                  <IconComp size={15} style={{ color: colors.textSecondary }} />
-                  <span className="text-[13px] font-medium" style={{ color: colors.text }}>{section.title}</span>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span className="flex-shrink-0"><IconComp size={15} style={{ color: colors.textSecondary }} /></span>
+                  <span className="text-[13px] font-medium truncate" style={{ color: colors.text }} title={section.title}>{section.title}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                   <span className="text-xs" style={{ color: colors.textMuted }}>{section.completed || 0}/{section.total || 0}</span>
                   {isExpanded ? <ChevronUp size={14} style={{ color: colors.textMuted }} /> : <ChevronDown size={14} style={{ color: colors.textMuted }} />}
                 </div>
@@ -141,7 +141,7 @@ const Sidebar = ({ isOpen, onToggle, sections = [], activeSlug, onLessonClick, t
                         key={lesson.id || lesson.slug}
                         data-testid={`sidebar-lesson-${lesson.slug}`}
                         onClick={() => onLessonClick(lesson.slug)}
-                        className="w-full text-left pl-10 pr-4 py-2 text-[13px] transition-all duration-150 border-l-2"
+                        className="w-full text-left pl-10 pr-4 py-2 text-[13px] transition-all duration-150 border-l-2 min-w-0"
                         style={{
                           color: lesson.slug === activeSlug ? colors.green : isLocked ? colors.textMuted : colors.textSecondary,
                           backgroundColor: lesson.slug === activeSlug ? colors.activeBg : 'transparent',
@@ -149,11 +149,11 @@ const Sidebar = ({ isOpen, onToggle, sections = [], activeSlug, onLessonClick, t
                           opacity: isLocked ? 0.7 : 1,
                         }}
                       >
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-2 min-w-0">
                           {lesson.completed && (
                             <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: colors.green }} />
                           )}
-                          <span className="flex-1 truncate">{lesson.title}</span>
+                          <span className="flex-1 truncate min-w-0" title={lesson.title}>{lesson.title}</span>
                           {isLocked && (
                             <Lock size={11} className="flex-shrink-0" style={{ color: colors.textMuted }} />
                           )}

@@ -194,6 +194,25 @@ const formatUpdatedDate = (iso?: string): string => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
+const ROUTE_LEAK_RE = /learn\S*d__PAGE__/i;
+const MIN_READ_RE = /^\s*(?:Low |Medium |High )?(?:Priority\s*)?(?:easy|medium|hard)?\s*(?:Frequency)?\s*min read\s*Updated\s+\w+\s+\d{1,2},\s*\d{4}\s*$/i;
+const MIN_READ_RE2 = /^min readUpdated\s+\w+\s+\d{1,2},\s+\d{4}\s*$/i;
+
+const filterContentBlocks = (blocks: ContentBlock[] | undefined, lessonTitle?: string): ContentBlock[] => {
+  if (!blocks || !Array.isArray(blocks)) return [];
+  const titleLower = (lessonTitle || '').trim().toLowerCase();
+  return blocks.filter(block => {
+    if (!block || typeof block !== 'object') return false;
+    const btype = block.type || '';
+    const text = (block.text || '').trim();
+    if (btype === 'paragraph' && ROUTE_LEAK_RE.test(text)) return false;
+    if (btype === 'paragraph' && (MIN_READ_RE.test(text) || MIN_READ_RE2.test(text))) return false;
+    if (btype === 'paragraph' && text.startsWith('Subscribe to unlock') && text.toLowerCase().includes('premium')) return false;
+    if (titleLower && (btype === 'heading' || btype === 'subheading') && text.trim().toLowerCase() === titleLower) return false;
+    return true;
+  });
+};
+
 const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, lineHeight, syntaxTheme, onSyntaxThemeChange, sectionId, sectionTitle, courseSlug }) => {
   const { colors, isDark } = useTheme();
   const { user, login, isSubscribed, getAuthHeaders } = useAuth();
@@ -296,7 +315,8 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
 
   if (!lesson) return null;
 
-  const { title, last_updated, read_time, content_blocks } = lesson;
+  const { title, last_updated, read_time, content_blocks: raw_content_blocks } = lesson;
+  const content_blocks = filterContentBlocks(raw_content_blocks, title);
   const fs: FontSizeData = fontSize || { content: '15.5px', heading: '32px', subheading: '20px' };
   const lh: number = lineHeight || 1.8;
 
@@ -304,7 +324,7 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
     switch (block.type) {
       case 'paragraph':
         return (
-          <p key={idx} className="mb-5" style={{ fontSize: fs.content, color: colors.text, lineHeight: lh }}>
+          <p key={idx} className="mb-5 leading-relaxed" style={{ fontSize: fs.content, color: isDark ? '#d1d5db' : '#374151', lineHeight: lh }}>
             <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(renderMarkdown(block.text || '')) }} />
           </p>
         );
@@ -314,7 +334,10 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
         const level = block.level || 2;
         const headingId = (block.text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         const Tag = level === 2 ? 'h2' as const : level === 3 ? 'h3' as const : 'h4' as const;
-        const size = level === 2 ? 'text-2xl' : level === 3 ? 'text-xl' : 'text-lg';
+        const headingColor = level === 2 ? colors.green : level === 3 ? (isDark ? '#e2e8f0' : '#1e293b') : (isDark ? '#cbd5e1' : '#334155');
+        const headingStyle: React.CSSProperties = level === 2
+          ? { color: headingColor, borderLeft: `3px solid ${colors.green}`, paddingLeft: 16 }
+          : { color: headingColor };
         const TIER_STYLES: Record<string, { dot: string; label: string; bg: string; border: string; text: string }> = {
           starter:  { dot: '#22c55e', label: 'L1 · Starter', bg: 'rgba(34,197,94,0.12)',  border: 'rgba(34,197,94,0.45)',  text: isDark ? '#86efac' : '#15803d' },
           improved: { dot: '#eab308', label: 'L2 · Better',  bg: 'rgba(234,179,8,0.14)',  border: 'rgba(234,179,8,0.45)',  text: isDark ? '#fde68a' : '#a16207' },
@@ -322,7 +345,7 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
         };
         const tier = block.tier ? TIER_STYLES[block.tier as keyof typeof TIER_STYLES] : undefined;
         return (
-          <Tag key={idx} id={headingId} className={`font-bold mt-8 mb-4 scroll-mt-20 ${size}`} style={{ color: colors.text, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <Tag key={idx} id={headingId} className={`font-bold mt-8 mb-4 scroll-mt-20 text-${level === 2 ? '2xl' : level === 3 ? 'xl' : 'lg'}`} style={{ ...headingStyle, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <span>{block.text}</span>
             {tier && (
               <span
@@ -412,12 +435,12 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
         const style = CALLOUT_STYLES[block.variant || 'note'] || CALLOUT_STYLES.note;
         const Icon = style.icon;
         return (
-          <div key={idx} className="mb-5 rounded-lg border px-4 py-3" style={{ backgroundColor: style.bg, borderColor: style.border }}>
-            <div className="flex items-center gap-2 mb-1">
+          <div key={idx} className="mb-5 rounded-lg border-l-4 px-4 py-3" style={{ backgroundColor: style.bg, borderColor: style.border, borderLeftColor: style.color }}>
+            <div className="flex items-center gap-2 mb-1.5">
               <span style={{ color: style.color }}><Icon size={16} /></span>
-              <span className="text-sm font-semibold" style={{ color: style.color }}>{block.title || (block.variant || 'note').charAt(0).toUpperCase() + (block.variant || 'note').slice(1)}</span>
+              <span className="text-sm font-bold" style={{ color: style.color }}>{block.title || (block.variant || 'note').charAt(0).toUpperCase() + (block.variant || 'note').slice(1)}</span>
             </div>
-            <p className="text-sm leading-relaxed" style={{ color: colors.text }}>
+            <p className="text-sm leading-relaxed" style={{ color: isDark ? '#d1d5db' : '#374151' }}>
               <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(renderMarkdown(block.text || '')) }} />
             </p>
           </div>
@@ -426,27 +449,41 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
 
       case 'accordion': {
         const items = block.items || [];
+        const isQuiz = items.length > 0 && items.some(it => (it.title || '').includes('?'));
         return (
-          <div key={idx} className="mb-5 space-y-2">
-            {items.map((item, i) => {
-              const isOpen = accordionOpen[`${idx}-${i}`];
-              return (
-                <div key={i} className="border rounded-lg overflow-hidden" style={{ borderColor: colors.border, backgroundColor: colors.bgCard }}>
-                  <button
-                    onClick={() => setAccordionOpen({ ...accordionOpen, [`${idx}-${i}`]: !isOpen })}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-left"
-                  >
-                    {isOpen ? <ChevronDown size={16} style={{ color: colors.green }} /> : <ChevronRight size={16} style={{ color: colors.textMuted }} />}
-                    <span className="font-medium" style={{ color: colors.text }}>{item.title}</span>
-                  </button>
-                  {isOpen && (
-                    <div className="px-4 pb-3 border-t pt-3" style={{ borderColor: colors.border, color: colors.text }}>
-                      <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(renderMarkdown(item.content ?? item.text ?? '')) }} />
-                    </div>
-                  )}
+          <div key={idx} className="mb-5">
+            {isQuiz && (
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: colors.green + '20' }}>
+                  <span style={{ color: colors.green, fontSize: 16 }}>?</span>
                 </div>
-              );
-            })}
+                <span className="text-sm font-semibold" style={{ color: colors.text }}>Knowledge Check</span>
+              </div>
+            )}
+            <div className="space-y-2">
+              {items.map((item, i) => {
+                const isOpen = accordionOpen[`${idx}-${i}`];
+                return (
+                  <div key={i} className="border rounded-lg overflow-hidden transition-all" style={{ borderColor: isOpen ? colors.green + '40' : colors.border, backgroundColor: colors.bgCard }}>
+                    <button
+                      onClick={() => setAccordionOpen({ ...accordionOpen, [`${idx}-${i}`]: !isOpen })}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.02]"
+                    >
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: isOpen ? colors.green + '20' : colors.bgSecondary, color: isOpen ? colors.green : colors.textMuted }}>
+                        {i + 1}
+                      </span>
+                      <span className="font-medium text-sm flex-1" style={{ color: colors.text }}>{item.title}</span>
+                      {isOpen ? <ChevronDown size={16} style={{ color: colors.green }} className="flex-shrink-0" /> : <ChevronRight size={16} style={{ color: colors.textMuted }} className="flex-shrink-0" />}
+                    </button>
+                    {isOpen && (
+                      <div className="px-4 pb-4 pt-2 border-t" style={{ borderColor: colors.border, color: isDark ? '#d1d5db' : '#374151' }}>
+                        <div className="text-sm leading-relaxed pl-9" dangerouslySetInnerHTML={{ __html: sanitizeHtml(renderMarkdown(item.content ?? item.text ?? '')) }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
       }
@@ -519,13 +556,15 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
       case 'list': {
         const Tag = block.ordered ? 'ol' as const : 'ul' as const;
         return (
-          <Tag key={idx} className={`${block.ordered ? 'list-decimal' : 'list-disc'} pl-6 mb-5 space-y-2`}>
-            {(block.items || []).map((item, i) => (
-              <li key={i} style={{ fontSize: fs.content, color: colors.text, lineHeight: lh }}>
-                <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(renderMarkdown(typeof item === 'string' ? item : item.text || '')) }} />
-              </li>
-            ))}
-          </Tag>
+          <div key={idx} className="mb-5 pl-2">
+            <Tag className={`${block.ordered ? 'list-decimal' : 'list-disc'} pl-5 space-y-2`}>
+              {(block.items || []).map((item, i) => (
+                <li key={i} className="leading-relaxed" style={{ fontSize: fs.content, color: isDark ? '#d1d5db' : '#374151', lineHeight: lh }}>
+                  <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(renderMarkdown(typeof item === 'string' ? item : item.text || '')) }} />
+                </li>
+              ))}
+            </Tag>
+          </div>
         );
       }
 
@@ -535,12 +574,12 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
         const hdrBg = block.headerColor || '#22c55e';
         const hdrText = block.headerTextColor || '#000000';
         return (
-          <div key={idx} className="mb-5 overflow-x-auto border rounded-lg" style={{ borderColor: colors.border }}>
-            <table className="w-full text-sm">
+          <div key={idx} className="mb-5 overflow-x-auto rounded-lg border shadow-sm" style={{ borderColor: colors.border }}>
+            <table className="w-full text-sm" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
               <thead>
                 <tr style={{ backgroundColor: hdrBg }}>
                   {headers.map((h, i) => (
-                    <th key={i} className="border-b px-4 py-2 text-left font-semibold" style={{ borderColor: colors.border, color: hdrText }}>
+                    <th key={i} className="px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider" style={{ color: hdrText, borderBottom: `2px solid ${hdrBg}` }}>
                       {h}
                     </th>
                   ))}
@@ -548,9 +587,9 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
               </thead>
               <tbody>
                 {rows.map((row, ri) => (
-                  <tr key={ri}>
+                  <tr key={ri} style={{ backgroundColor: ri % 2 === 0 ? 'transparent' : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)') }}>
                     {row.map((cell, ci) => (
-                      <td key={ci} className="border-b px-4 py-2" style={{ borderColor: colors.border, color: colors.text }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(cell) }}>
+                      <td key={ci} className="px-4 py-2.5" style={{ borderBottom: `1px solid ${colors.border}`, color: isDark ? '#d1d5db' : '#374151' }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(cell) }}>
                       </td>
                     ))}
                   </tr>
@@ -563,7 +602,7 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
 
       case 'blockquote':
         return (
-          <blockquote key={idx} className="mb-5 border-l-4 pl-4 py-2 italic" style={{ borderColor: colors.green, color: colors.textSecondary }}>
+          <blockquote key={idx} className="mb-5 border-l-4 pl-4 py-3 italic rounded-r-lg" style={{ borderColor: colors.green, backgroundColor: colors.green + '08', color: isDark ? '#9ca3af' : '#6b7280' }}>
             <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(renderMarkdown(block.text || '')) }} />
           </blockquote>
         );
@@ -829,9 +868,9 @@ const ArticleContentInner: FC<ArticleContentInnerProps> = ({ lesson, fontSize, l
           teaches: title ? [title] : [],
         }}
       />
-      <div className="mb-6">
+      <div className="mb-8 pb-6 border-b" style={{ borderColor: colors.border }}>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-1 gap-2">
-          <h1 className="font-bold leading-tight" style={{ fontSize: fs.heading, color: colors.text }}>{title}</h1>
+          <h1 className="font-bold leading-tight" style={{ fontSize: fs.heading, color: isDark ? '#f1f5f9' : '#0f172a' }}>{title}</h1>
           <span className="text-sm whitespace-nowrap sm:mt-2" style={{ color: colors.textMuted }}>
             Last Updated: {formatUpdatedDate(last_updated)}
           </span>

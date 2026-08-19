@@ -1,13 +1,13 @@
-# AlgoMaster Scraper → AlgoKube Data Instructions
+# AlgoKube Scraper → AlgoKube Data Instructions
 
 This document is the **single source of truth** for the AI agent that scrapes
-content from **algomaster.io** and converts it into data that plugs **100%**
+content from **algokube.in** and converts it into data that plugs **100%**
 into the AlgoKube production database (Postgres) **without breaking anything**.
 
 > Context: AlgoKube is purging its DB of all current course content and replacing
-> it with AlgoMaster's content. Everything that currently exists in
+> it with AlgoKube's content. Everything that currently exists in
 > `courses`, `sections`, `lessons`, `learning_paths`, `navigation`, and the DSA
-> animation data will be replaced by AlgoMaster equivalents.
+> animation data will be replaced by AlgoKube equivalents.
 >
 > **HARD RULE: never touch auth/user tables** (`users`, `user_sessions`,
 > `admin_sessions`, `user_progress`, `bookmarks`, `lesson_feedback`, `quiz_results`,
@@ -19,7 +19,7 @@ into the AlgoKube production database (Postgres) **without breaking anything**.
 
 ## 1. Mission
 
-Scrape `https://algomaster.io` (all public course/lesson pages, course-roadmap
+Scrape `https://algokube.in` (all public course/lesson pages, course-roadmap
 pages, and any embedded content) and emit **content payloads** that map 1:1 to
 the AlgoKube schema described below. The payloads will be loaded by a seed
 pipeline (`backend/scripts/`). Your output must be **deterministic, complete,
@@ -27,15 +27,15 @@ and schema-valid** — no placeholders, no TODOs, no "coming soon", no empty
 lessons.
 
 **Deliverable format:** a set of JSON files (one per course, e.g.
-`algomaster_ai_engineering.json`, plus `algomaster_dsa.json` for the animation
+`algokube_ai_engineering.json`, plus `algokube_dsa.json` for the animation
 dataset), validated against the schema in §4–§9, plus a `manifest.json`
 indexing all slugs for cross-referencing.
 
 ---
 
-## 2. What to scrape from algomaster.io
+## 2. What to scrape from algokube.in
 
-1. **Course roadmaps** — `https://algomaster.io/learn/<course>/course-roadmap`
+1. **Course roadmaps** — `https://algokube.in/learn/<course>/course-roadmap`
    for every course. Capture the exact section titles, lesson/chapter titles,
    and their order.
 2. **Every lesson page** for every course — full body content, code samples,
@@ -43,16 +43,16 @@ indexing all slugs for cross-referencing.
 3. **Problem pages / practice problems** — any per-problem data (title,
    difficulty, topics, companies, LeetCode links) for the `problem_header`
    block.
-4. **Visualizations/animations** — algomaster's DSA content has step-by-step
+4. **Visualizations/animations** — algokube's DSA content has step-by-step
    visualizations. Capture the algorithmic data needed to reproduce them
    (§8 / §10).
-5. **Images** — download and re-host locally; never reference algomaster's
+5. **Images** — download and re-host locally; never reference algokube's
    image URLs (§4, `image` block).
 
 The 6 primary courses already targeted (current slugs):
 `ai-engineering`, `ml-system-design`, `concurrency-interview`, `lld`,
 `system-design-interviews`, `microservices` — plus a **DSA course** for the
-animation dataset. Capture whatever else algomaster exposes and classify it.
+animation dataset. Capture whatever else algokube exposes and classify it.
 
 ---
 
@@ -209,7 +209,7 @@ solutions. Tabs are NOT runnable.
 { "type": "image", "url": "https://assets.algokube.in/...", "alt": "Alt text", "caption": "Caption" }
 ```
 ✔ `url` · ✔ `alt` · ○ `caption`. **URLs MUST be re-hosted** (download and serve
-from our CDN/backend `/api/files`), never algomaster's origin.
+from our CDN/backend `/api/files`), never algokube's origin.
 
 **table**
 ```json
@@ -261,7 +261,7 @@ from our CDN/backend `/api/files`), never algomaster's origin.
 ```
 ✔ `title` · ○ `difficulty` (`easy|medium|hard`) · ○ `topics` (string[]) ·
 ○ `companies` (string[]) · ○ `leetcode_url`. **1 per lesson, placed right after
-the intro** — never use algomaster's copyrighted problem text verbatim; write
+the intro** — never use algokube's copyrighted problem text verbatim; write
 your own paraphrase.
 
 ### 4.5 Animation blocks (DSA / walkthroughs)
@@ -375,7 +375,7 @@ Apply this to every lesson in your JSON so the seed pipeline doesn't have to.
 
 The DSA course (`dsa`) is special: lessons are **algorithm pages** whose
 interactive visualizations are driven by **frontend static data files** (NOT
-content_blocks). To replace with algomaster DSA content you must produce a
+content_blocks). To replace with algokube DSA content you must produce a
 **separate animation dataset** in the same shape:
 
 - `frontend/src/data/mockData.js` — `algorithms: [{id, title, description,
@@ -389,8 +389,8 @@ content_blocks). To replace with algomaster DSA content you must produce a
   producing `AnimationStep[]` (§4.5 step schema) — for the 175 current
   algorithms.
 
-Produce an equivalent dataset from algomaster's DSA content (or keep + enrich
-the existing 175 if algomaster's set is smaller). Algomaster DSA slugs map to
+Produce an equivalent dataset from algokube's DSA content (or keep + enrich
+the existing 175 if algokube's set is smaller). Algomaster DSA slugs map to
 the `dsa` course sections (categories) and lessons (algorithms) in `courses`/
 `sections`/`lessons` as normal content (seeded via `seed_dsa_course.py`).
 
@@ -399,7 +399,7 @@ the `dsa` course sections (categories) and lessons (algorithms) in `courses`/
 ## 9. Non-course content you must also produce
 
 ### 9.1 Learning paths (`learning_paths` + `learning_path_courses`)
-Re-derive from algomaster's course ordering:
+Re-derive from algokube's course ordering:
 ```json
 { "title": "AI Engineer Path", "slug": "ai-engineer",
   "description": "...", "icon": "brain", "difficulty": "Intermediate",
@@ -416,7 +416,7 @@ Re-point every course link to the new course slugs. Remove links to courses
 that no longer exist (e.g. old `/ai-engineering-for-beginners`).
 
 ### 9.3 Announcements
-Derive 1–2 real announcements from algomaster content (e.g. new course launch),
+Derive 1–2 real announcements from algokube content (e.g. new course launch),
 matching `{title, message, audience:"all", type:"general", active:true,
 dismissible:true, link?}`.
 
@@ -428,7 +428,7 @@ dismissible:true, link?}`.
 
 ## 10. Content-quality rules (scraped → original)
 
-1. **Rewrite, don't copy.** Do NOT dump algomaster's text/HTML verbatim —
+1. **Rewrite, don't copy.** Do NOT dump algokube's text/HTML verbatim —
    paraphrase into original teaching content. Code samples are fine to
    reproduce (they're the functional part), but surrounding prose must be yours.
 2. **No copyrighted verbatim problem statements.** For problem_header, write a
@@ -474,7 +474,7 @@ Rules:
 - `read_time` present on every lesson (§7).
 - Every `content_blocks` array non-empty (§5).
 
-`algomaster_dsa.json` (or equivalent) holds the animation dataset (§8).
+`algokube_dsa.json` (or equivalent) holds the animation dataset (§8).
 
 `manifest.json`:
 ```json
@@ -539,7 +539,7 @@ After loading, verify with:
 - `backend/app/models.py` — Course/Section/Lesson/LearningPath/Announcement.
 - `backend/scripts/content_lib_helpers.py` — block-builder helpers (reference
   for field names only; your JSON is the actual output).
-- `backend/scripts/algomaster_curriculum.py` — current roadmap source of truth
+- `backend/scripts/algokube_curriculum.py` — current roadmap source of truth
   for the 6 courses (section titles, chapter titles, ordering).
 - `backend/scripts/content_diagrams_*.py` — mermaid style reference.
 
@@ -547,7 +547,7 @@ After loading, verify with:
 
 ## 15. Deliverable summary (final handoff)
 
-- `algomaster_<course>.json` for every course (incl. DSA animation dataset).
+- `algokube_<course>.json` for every course (incl. DSA animation dataset).
 - `manifest.json` (slug index).
 - Validation report showing §12 items all green.
 - Any new images downloaded to a local `assets/` dir with a mapping to where
